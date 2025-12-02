@@ -1,0 +1,828 @@
+
+-- ##############################################################################################################
+-- CREAR LAS TABLAS
+-- ##############################################################################################################
+
+
+
+-- #######################################################
+-- # 1. TABLAS MAESTRAS BÁSICAS (CATÁLOGOS)
+-- #######################################################
+
+-- 1.1. BANCO
+CREATE TABLE banco (
+    "id_banco" SERIAL PRIMARY KEY,
+    "nombre" VARCHAR(100) NOT NULL,
+	"codigo_nacional" VARCHAR(4) UNIQUE NOT NULL,
+    "codigo_swift" VARCHAR(15) UNIQUE NOT NULL
+);
+
+-- 1.2. TIPO_PAGO
+CREATE TABLE tipo_pago (
+    "id_tipo_pago" SERIAL PRIMARY KEY,
+    "nombre" VARCHAR(50) NOT NULL,
+    "requiere_referencia" BOOLEAN NOT NULL
+);
+
+-- 1.3. TIPO_IDENTIFICACION
+CREATE TABLE tipo_identificacion (
+    "id_tipo_identificacion" SERIAL PRIMARY KEY,
+    "nombre" VARCHAR(50) NOT NULL,
+    "abreviatura" VARCHAR(10) UNIQUE
+);
+
+-- 1.4. TIPO_COMPROBANTE (Documento Legal/Fiscal)
+CREATE TABLE tipo_comprobante (
+    "id_comprobante" SERIAL PRIMARY KEY,
+    "nombre_comprobante" VARCHAR(50) NOT NULL,
+    "es_egreso" BOOLEAN NOT NULL,
+    "es_ingreso" BOOLEAN NOT NULL
+);
+
+-- 1.5. FUENTE_ASIENTO (Catálogo de Orígenes de Transacción)
+CREATE TABLE fuente_asiento (
+    "id_fuente" SERIAL PRIMARY KEY,
+    "nombre_tabla" VARCHAR(50) UNIQUE NOT NULL,
+    "descripcion" VARCHAR(100)
+);
+
+-- 1.6. DIVISA
+CREATE TABLE divisa (
+    "id_divisa" SERIAL PRIMARY KEY,
+	"nombre" VARCHAR(50) NOT NULL,
+	"codigo" VARCHAR(10) NOT NULL,
+	"simbolo" VARCHAR(5) NOT NULL
+);
+
+-- 1.7. TIPO_PROVEEDOR
+CREATE TABLE tipo_proveedor (
+    "id_tipo_proveedor" SERIAL PRIMARY KEY,
+    "nombre" VARCHAR(50) NOT NULL,
+    "descripcion" VARCHAR(100)
+);
+
+-- 1.8. TIPO_ENTIDAD
+CREATE TABLE tipo_entidad (
+    "id_tipo_entidad" SERIAL PRIMARY KEY,
+    "nombre" VARCHAR(50) NOT NULL,
+	"descripcion" VARCHAR(100) NOT NULL
+);
+
+-- 1.9. PREFIJO_IDENTIFICACION
+CREATE TABLE prefijo_identificacion (
+    "id_prefijo" SERIAL PRIMARY KEY,
+    "letra_prefijo" CHAR(1) NOT NULL,
+	"descripcion" VARCHAR(50) NOT NULL
+);
+
+-- 1.10. ESTADO_ACADEMICO
+CREATE TABLE estado_academico (
+    "id_estado_academico" SERIAL PRIMARY KEY,
+    "nombre" VARCHAR(150) NOT NULL,
+	"descripcion" VARCHAR(120) NOT NULL,
+	"permite_inscripcion" BOOLEAN NOT NULL
+);
+
+-- 1.11. CATEGORIA_CURSO
+CREATE TABLE categoria_curso (
+    "id_categoria_curso" SERIAL PRIMARY KEY,
+    "nombre" VARCHAR(50) NOT NULL,
+	"descripcion" VARCHAR(50) NOT NULL,
+	"estado" BOOLEAN NOT NULL
+);
+
+-- 1.12. ESTADO_GRUPO
+CREATE TABLE estado_grupo (
+    "id_estado_grupo" SERIAL PRIMARY KEY,
+    "nombre" VARCHAR(50) NOT NULL,
+	"descripcion" VARCHAR(50) NOT NULL
+);
+
+-- 1.13. ESTADO_INSCRIPCION
+CREATE TABLE estado_inscripcion (
+    "id_estado_inscripcion" SERIAL PRIMARY KEY,
+    "nombre" VARCHAR(50) NOT NULL,
+	"ciclo_cerrado" BOOLEAN NOT NULL
+);
+
+-- 1.14. NATURALEZA
+CREATE TABLE naturaleza (
+    "id_naturaleza" SERIAL PRIMARY KEY,
+    "nombre" VARCHAR(50) NOT NULL
+);
+
+-- 1.15. CLASIFICACION
+CREATE TABLE clasificacion (
+    "id_clasificacion" SERIAL PRIMARY KEY,
+    "nombre" VARCHAR(50) NOT NULL
+);
+
+-- 1.16. ESTADO_PLAN
+CREATE TABLE estado_plan (
+    "id_estado_plan" SERIAL PRIMARY KEY,
+    "nombre" VARCHAR(50) NOT NULL
+);
+
+-- 1.17. ESTADO_DOCENTE
+CREATE TABLE estado_docente (
+    "id_estado_docente" SERIAL PRIMARY KEY,
+    "nombre" VARCHAR(50) NOT NULL,
+	"descripcion" VARCHAR(100) NOT NULL,
+	"permite_asignacion" BOOLEAN NOT NULL,
+	"aplica_pago" BOOLEAN NOT NULL
+);
+
+-- 1.18. ESTADO_FACTURA
+CREATE TABLE estado_factura (
+    "id_estado_factura" SERIAL PRIMARY KEY,
+    "estado" VARCHAR(50) NOT NULL
+);
+
+
+-- 1.19. ESTADO_CUENTA_BANCARIA (Estado de la cuenta: Activa, Bloqueada, Cerrada)
+CREATE TABLE estado_cuenta_bancaria (
+    "id_estado_cuenta" SERIAL PRIMARY KEY,
+    "nombre" VARCHAR(50) NOT NULL UNIQUE,
+    "descripcion" VARCHAR(255) NOT NULL,
+    "permite_operacion" BOOLEAN NOT NULL
+);
+
+
+-- 1.20. TIPO_CUENTA_BANCARIA (Ahorro, Corriente, etc.)
+CREATE TABLE tipo_cuenta_bancaria (
+    "id_tipo_cuenta" SERIAL PRIMARY KEY,
+    "nombre" VARCHAR(50) NOT NULL UNIQUE,
+    "descripcion" VARCHAR(255)
+);
+
+-- 1.21. TIPO_ROL_ASOCIADO (se usa para asociar una cuenta a un tipo de entidad, pero se necesita diferenciar si la cuenta es 
+-- para pagarle a un docente o proveedor, o para recibir pagos de un estudiante
+CREATE TABLE tipo_rol_asociado (
+    "id_tipo_rol" SERIAL PRIMARY KEY,
+    "nombre" VARCHAR(50) NOT NULL UNIQUE,  -- Ej: 'docente', 'proveedor', 'estudiante'
+    "descripcion" VARCHAR(255) NOT NULL
+);
+
+
+
+
+-- #######################################################
+-- # 2. TABLAS MAESTRAS DE ENTIDADES
+-- #######################################################
+
+-- 2.1. ENTIDAD (Superclase para Personas/Empresas)
+CREATE TABLE entidad (
+    "id_entidad" SERIAL PRIMARY KEY,
+	"id_tipo_entidad" INT REFERENCES tipo_entidad(id_tipo_entidad) NOT NULL,
+	"id_tipo_identificacion" INT REFERENCES tipo_identificacion(id_tipo_identificacion) NOT NULL,
+    "id_prefijo" INT REFERENCES prefijo_identificacion(id_prefijo) NOT NULL,
+	"numero_identificacion" VARCHAR(20) NOT NULL,
+	"nombre" VARCHAR(100) NOT NULL,
+    "apellido" VARCHAR(100),
+	"email" VARCHAR(100) UNIQUE NOT NULL,
+    "telefono" VARCHAR(20) NOT NULL,
+	"direccion" VARCHAR(255) NOT NULL,
+    "estado" BOOLEAN DEFAULT TRUE,
+	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+
+    CONSTRAINT entidad_unica UNIQUE (id_prefijo , id_tipo_identificacion, numero_identificacion) -- Esto garantiza que una persona no pueda tener dos Cédulas, dos RIF, o dos Pasaportes. Sin embargo, sí puede tener un Pasaporte, una Cédula y un RIF, aunque los números sean iguales (como es común con los RIF de personas naturales).
+);
+
+
+
+-- 2.2. ESTUDIANTE (Rol)
+CREATE TABLE estudiante (
+    "id_estudiante" INT PRIMARY KEY REFERENCES entidad(id_entidad),
+	"codigo_estudiantil" VARCHAR(8) UNIQUE NOT NULL,
+    "id_estado_academico" INT REFERENCES estado_academico(id_estado_academico) NOT NULL,
+	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
+);
+
+
+-- 2.3. DOCENTE (Rol)
+CREATE TABLE docente (
+    "id_docente" INT PRIMARY KEY REFERENCES entidad(id_entidad),
+	"id_estado_docente" INT REFERENCES estado_docente(id_estado_docente) NOT NULL,
+	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
+);
+
+
+
+-- 2.4. PROVEEDOR (Rol)
+CREATE TABLE proveedor (
+    "id_proveedor" INT PRIMARY KEY REFERENCES entidad(id_entidad),
+    "id_tipo_proveedor" INT REFERENCES tipo_proveedor(id_tipo_proveedor),
+    "estado" BOOLEAN DEFAULT TRUE,
+	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
+);
+
+
+
+-- #######################################################
+-- # 3. MÓDULO ACADÉMICO/SERVICIOS
+-- #######################################################
+
+-- 3.1. CURSO
+CREATE TABLE curso (
+    "id_curso" SERIAL PRIMARY KEY,
+    "nombre" VARCHAR(100) NOT NULL,
+    "descripcion" VARCHAR(255) NOT NULL,
+	"id_categoria" INT REFERENCES categoria_curso(id_categoria_curso) NOT NULL,
+    "total_clases" INT NOT NULL,
+	"costo_matricula_base_usd" NUMERIC(5, 2) NOT NULL,
+	"costo_cuota_base_usd" NUMERIC(5, 2) NOT NULL,
+	"estado" BOOLEAN DEFAULT TRUE,
+	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
+);
+
+
+-- 3.2. DIA
+CREATE TABLE dia (
+    "id_dia" SERIAL PRIMARY KEY,
+    "nombre" VARCHAR(10) NOT NULL
+);
+
+
+-- 3.3. BLOQUE_HORARIO (Catálogo de Horarios Fijos: Lunes Bloque 1, etc.)
+CREATE TABLE bloque_horario (
+    "id_bloque" SERIAL PRIMARY KEY,
+    "id_dia" INT REFERENCES dia(id_dia) NOT NULL,
+    "bloque_numero" INT NOT NULL, 
+    "hora_inicio" TIME NOT NULL,
+    "hora_fin" TIME NOT NULL,
+    "nombre" VARCHAR(50) NOT NULL,
+    UNIQUE (id_dia, bloque_numero)
+);
+
+
+-- 3.4. GRUPO (Instancia de un curso)
+CREATE TABLE grupo (
+    "id_grupo" SERIAL PRIMARY KEY,
+    "id_curso" INT REFERENCES curso(id_curso) NOT NULL,
+    "nombre" VARCHAR(50) NOT NULL,
+    "fecha_inicio" DATE NOT NULL,
+    "fecha_fin" DATE,
+	"cupo_maximo" INT NOT NULL,
+	"id_estado_grupo" INT REFERENCES estado_grupo(id_estado_grupo) NOT NULL,
+	createdAt TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	updatedAt TIMESTAMP WITHOUT TIME ZONE NOT NULL
+);
+
+
+-- 3.5. ASIGNACION_HORARIO_GRUPO (Unión entre Grupo y Bloques)
+CREATE TABLE asignacion_horario_grupo (
+    "id_asignacion" SERIAL PRIMARY KEY,
+    "id_grupo" INT REFERENCES grupo(id_grupo) NOT NULL,
+    "id_bloque" INT REFERENCES bloque_horario(id_bloque) NOT NULL,
+    UNIQUE (id_grupo, id_bloque)
+);
+
+
+-- 3.6. ASIGNACION_DOCENTE
+CREATE TABLE asignacion_docente (
+    "id_asignacion" SERIAL PRIMARY KEY,
+    "id_grupo" INT REFERENCES grupo(id_grupo) NOT NULL,
+	"id_docente" INT REFERENCES docente(id_docente),
+	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
+);
+
+
+-- 3.7. inscripcion (Estudiante inscrito en un grupo)
+CREATE TABLE inscripcion (
+    "id_inscripcion" SERIAL PRIMARY KEY,
+    "id_estudiante" INT REFERENCES estudiante(id_estudiante) NOT NULL,
+    "id_grupo" INT REFERENCES grupo(id_grupo) NOT NULL,
+	"id_estado_inscripcion" INT REFERENCES estado_inscripcion(id_estado_inscripcion) NOT NULL,
+	"costo_total_curso" NUMERIC(8, 2) NOT NULL,
+	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+
+    UNIQUE (id_estudiante, id_grupo)
+);
+
+
+
+-- 3.8. TARIFA_DOCENTE_GRUPO (Tarifa específica por docente/grupo)
+CREATE TABLE tarifa_docente_grupo (
+    "id_tarifa" SERIAL PRIMARY KEY,
+    "id_asignacion" INT REFERENCES asignacion_docente(id_asignacion) NOT NULL,
+    "tarifa_hora_usd" NUMERIC(8, 2) NOT NULL,
+	"fecha_vigencia_desde" DATE NOT NULL,
+	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
+);
+
+
+
+
+
+
+-- #######################################################
+-- # 4. MÓDULO CONTABLE (PLAN DE CUENTAS)
+-- #######################################################
+
+-- 4.1. PLAN_CUENTA
+CREATE TABLE plan_cuenta (
+    "id_plan_cuenta" SERIAL PRIMARY KEY,
+	"nombre" VARCHAR(100) NOT NULL,
+    "codigo" VARCHAR(20) UNIQUE NOT NULL,
+    "nivel" INT NOT NULL,
+    "id_naturaleza" INT REFERENCES naturaleza(id_naturaleza) NOT NULL,
+	"id_clasificacion" INT REFERENCES clasificacion(id_clasificacion) NOT NULL,
+    "id_padre" INT REFERENCES plan_cuenta(id_plan_cuenta),
+	"estado" BOOL DEFAULT TRUE,
+	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
+
+);
+
+
+
+-- 4.2. ASIENTO_ENCABEZADO (Cabecera del Asiento Contable)
+CREATE TABLE asiento_encabezado (
+    "id_asiento" SERIAL PRIMARY KEY,
+    "id_fuente" INT REFERENCES fuente_asiento(id_fuente) NOT NULL,
+    "id_referencia_origen" INT NOT NULL, -- PK de la tabla de origen (e.g., pagos_estudiantes.id_pago_estudiante)
+    "id_tipo_comprobante" INT REFERENCES tipo_comprobante(id_comprobante) NOT NULL,
+    "numero_comprobante" VARCHAR(50) NOT NULL,
+    "fecha_transaccion" DATE NOT NULL,
+    "descripcion" VARCHAR(255) NOT NULL,
+    "total_debito" NUMERIC(12, 2) NOT NULL,
+    "total_credito" NUMERIC(12, 2) NOT NULL,
+	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    
+    CHECK (total_debito = total_credito)
+);
+
+
+
+-- 4.3. ASIENTO_DETALLE (Detalle de las Cuentas Afectadas)
+CREATE TABLE asiento_detalle (
+    "id_detalle" SERIAL PRIMARY KEY,
+    "id_asiento" INT REFERENCES asiento_encabezado(id_asiento) NOT NULL,
+    "id_plan_cuenta" INT REFERENCES plan_cuenta(id_plan_cuenta) NOT NULL,
+    "monto" NUMERIC(12, 2) NOT NULL DEFAULT 0,
+    "naturaleza_movimiento" INT REFERENCES naturaleza(id_naturaleza) NOT NULL,
+    "descripcion" VARCHAR(255),
+	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
+);
+
+-- 4.4. CUENTA_BANCARIA (Almacena el registro único y físico de la cuenta)
+CREATE TABLE cuenta_bancaria (
+
+    "id_cuenta_bancaria" SERIAL PRIMARY KEY,
+    
+    -- Datos de la cuenta
+    "numero_cuenta" VARCHAR(20) NOT NULL, -- 20 dígitos estándar venezolano
+    
+    -- Tipo de cuenta (Ahorro/Corriente)
+    "id_tipo_cuenta" INTEGER NOT NULL REFERENCES tipo_cuenta_bancaria(id_tipo_cuenta),
+    
+    -- Banco al que pertenece
+    "id_banco" INTEGER NOT NULL REFERENCES banco(id_banco),
+    
+    -- PROPIETARIO/TITULAR DE LA CUENTA
+    "id_entidad_titular" INTEGER NOT NULL REFERENCES entidad(id_entidad),
+    
+    -- ESTADO DE LA CUENTA
+    "id_estado_cuenta" INTEGER NOT NULL REFERENCES estado_cuenta_bancaria(id_estado_cuenta),
+
+    "createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+"approvedAt" TIMESTAMP WITHOUT TIME ZONE,
+    
+
+    -- Restricción: No puede haber dos cuentas con el mismo número y banco (solo el objeto físico es único)
+    UNIQUE (numero_cuenta, id_banco)
+);
+
+
+
+-- 4.5. ENTIDAD_CUENTA_ASOCIACION (Tabla de enlace entre la entidad asociada y la cuenta)
+CREATE TABLE entidad_cuenta_asociacion (
+
+    "id_asociacion" SERIAL PRIMARY KEY,
+    
+    -- Referencia a la cuenta física única
+    "id_cuenta_bancaria" INTEGER NOT NULL REFERENCES cuenta_bancaria(id_cuenta_bancaria),
+    
+    -- ENTIDAD ASOCIADA 
+    "id_entidad_asociada" INTEGER NOT NULL REFERENCES entidad(id_entidad), 
+    
+    -- El clasificador que indica el CONTEXTO del rol asociado (para pagar por ser docente o proveedor o para recibir pagos por 
+    --ser estudiante)
+    id_tipo_rol INTEGER NOT NULL REFERENCES tipo_rol_asociado(id_tipo_rol), 
+    
+    -- VIGENCIA DE LA ASOCIACIÓN 
+    es_vigente BOOLEAN NOT NULL DEFAULT TRUE,
+
+    -- Una Entidad solo puede usar una Cuenta Maestra una vez para un Contexto de Rol (e.g., No puede tener la misma cuenta para dos roles de "docente").
+    UNIQUE (id_entidad_asociada, id_tipo_rol, id_cuenta_bancaria)
+);
+
+
+
+
+-- #######################################################
+-- # 5. algunas tablas que se olvidó la ia
+-- #######################################################
+
+-- 5.1. TASA CAMBIO
+CREATE TABLE tasa_cambio (
+    "id_tasa_cambio" SERIAL PRIMARY KEY,
+	"divisa_origen" INT REFERENCES divisa(id_divisa) NOT NULL,
+	"divisa_destino" INT REFERENCES divisa(id_divisa) NOT NULL,
+	"fecha_vigencia" DATE NOT NULL,
+	"tasa_valor" NUMERIC(8, 2) NOT NULL,
+    "fuente" VARCHAR(50) NOT NULL
+);
+
+
+-- 5.2. REGLA_PREFIJO_DOCUMENTO
+CREATE TABLE regla_prefijo_documento(
+    "id_regla" SERIAL PRIMARY KEY,
+	"id_tipo_identificacion" INT REFERENCES tipo_identificacion(id_tipo_identificacion) NOT NULL,
+	"id_prefijo" INT REFERENCES prefijo_identificacion(id_prefijo),
+	"es_obligatorio" BOOL NOT NULL
+);
+
+
+
+
+-- #######################################################
+-- # 6. MÓDULO FINANCIERO: INGRESOS
+-- #######################################################
+
+-- 6.1. PLAN_PAGO (Obligaciones del Estudiante)
+CREATE TABLE plan_pago (
+    "id_plan_pago" SERIAL PRIMARY KEY,
+    "id_inscripcion" INT REFERENCES inscripcion(id_inscripcion) NOT NULL,
+    "numero_cuota" INT NOT NULL,
+    "monto_cuota_usd" NUMERIC(8, 2) NOT NULL,
+    "fecha_vencimiento" DATE NOT NULL,
+    "id_estado_plan" INT REFERENCES estado_plan(id_estado_plan) NOT NULL,
+	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
+);
+
+
+
+-- 6.2. PAGOS_ESTUDIANTES (Transacción de Ingreso Real)
+CREATE TABLE pagos_estudiantes (
+    "id_pago" SERIAL PRIMARY KEY,
+    "id_plan_pago" INT REFERENCES plan_pago(id_plan_pago) NOT NULL,
+    "fecha_pago" TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+	"monto_pagado" NUMERIC(10, 2) NOT NULL,
+    "id_tipo_pago" INT REFERENCES tipo_pago(id_tipo_pago) NOT NULL,
+	"id_divisa_pagada" INT REFERENCES divisa(id_divisa) NOT NULL,
+	"id_tasa_cambio" INT REFERENCES tasa_cambio(id_tasa_cambio) NOT NULL,
+    "referencia_pago" VARCHAR(50) NOT NULL,
+	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
+);
+
+
+
+
+-- #######################################################
+-- # 7. MÓDULO FINANCIERO: EGRESOS (NÓMINA)
+-- #######################################################
+
+-- 7.1. LIQUIDACION_NOMINA (Cálculo del período de pago)
+CREATE TABLE liquidacion_nomina (
+    "id_liquidacion" SERIAL PRIMARY KEY,
+    "id_docente" INT REFERENCES docente(id_docente) NOT NULL,
+    "fecha_inicio_periodo" DATE NOT NULL,
+    "fecha_fin_periodo" DATE NOT NULL,
+    "total_horas" NUMERIC(6, 2) NOT NULL,
+    "monto_calculado_usd" NUMERIC(10, 2) NOT NULL,
+    "pagado" BOOLEAN NOT NULL default FALSE, -- Ej: Pendiente de Pago
+	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
+);
+
+
+
+-- 7.2. registro_horas (Horas trabajadas por clase)
+CREATE TABLE registro_horas (
+    "id_registro" SERIAL PRIMARY KEY,
+    "id_docente" INT REFERENCES docente(id_docente) NOT NULL,
+    "id_grupo" INT REFERENCES grupo(id_grupo) NOT NULL,
+    "fecha_clase" DATE NOT NULL,
+    "numero_clase_secuencial" INT NOT NULL, 
+    "horas_impartidas" NUMERIC(5, 2) NOT NULL,
+    "id_liquidacion" INT REFERENCES liquidacion_nomina(id_liquidacion), -- NULL si no ha sido pagado
+	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
+);
+
+
+
+-- 7.3. PAGOS_DOCENTES (Transacción de Pago de Nómina)
+CREATE TABLE pagos_docentes (
+    "id_pago_docente" SERIAL PRIMARY KEY,
+    "id_liquidacion" INT REFERENCES liquidacion_nomina(id_liquidacion) NOT NULL,
+    "fecha_pago" TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+    "id_tasa_cambio" INT REFERENCES tasa_cambio(id_tasa_cambio) NOT NULL,
+    "monto_pagado_bs" NUMERIC(10, 2) NOT NULL,
+    "referencia_pago" VARCHAR(50) NOT NULL,
+	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
+);
+
+
+
+-- #######################################################
+-- # 8. MÓDULO FINANCIERO: EGRESOS (GASTOS OPERACIONALES)
+-- #######################################################
+
+-- 8.1. FACTURAS_GASTO (Cuentas por Pagar / Documento de Deuda)
+CREATE TABLE facturas_gasto (
+    "id_factura_gasto" SERIAL PRIMARY KEY,
+    "id_proveedor" INT REFERENCES proveedor(id_proveedor) NOT NULL,
+    "numero_factura" VARCHAR(50) NOT NULL,
+    "fecha_emision" DATE NOT NULL,
+    "fecha_vencimiento" DATE,
+    "id_tipo_comprobante" INT REFERENCES tipo_comprobante(id_comprobante) NOT NULL,
+    "monto_total" NUMERIC(12, 2) NOT NULL,
+    "divisa_factura" INT REFERENCES divisa(id_divisa) NOT NULL,
+    "id_tasa_registro" INT REFERENCES tasa_cambio(id_tasa_cambio), -- Tasa usada para registro interno
+    "id_estado_factura" INT REFERENCES estado_factura(id_estado_factura) NOT NULL,
+	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
+);
+
+
+
+-- 8.2. DETALLE_FACTURA (Imputación Contable del Gasto)
+CREATE TABLE detalle_factura (
+    "id_detalle" SERIAL PRIMARY KEY,
+    "id_factura_gasto" INT REFERENCES facturas_gasto(id_factura_gasto) NOT NULL,
+    "descripcion" VARCHAR(255) NOT NULL,
+    "id_cuenta_gasto" INT REFERENCES plan_cuenta(id_plan_cuenta) NOT NULL,
+    "monto_usd" NUMERIC(12, 2) NOT NULL,
+    "monto_ves" NUMERIC(12, 2) NOT NULL, -- Monto para registro contable legal
+	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
+);
+
+
+
+
+-- 8.3. PAGOS_PROVEEDORES (Transacción de Pago a Proveedor)
+CREATE TABLE pagos_proveedores (
+    "id_pago_proveedor" BIGSERIAL PRIMARY KEY,
+    "id_factura_gasto" INT REFERENCES facturas_gasto(id_factura_gasto) NOT NULL,
+    "fecha_pago" DATE NOT NULL,
+    "id_banco" INT REFERENCES banco(id_banco), 
+    "id_tasa_cambio" INT REFERENCES tasa_cambio(id_tasa_cambio) NOT NULL,
+    "monto_pagado_bs" NUMERIC(12, 2) NOT NULL,
+    "referencia_pago" VARCHAR(50),
+	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
+);
+
+
+
+
+
+-- ##############################################################################################################
+-- INSERTAR DATOS
+-- ##############################################################################################################
+
+
+-- Primero hacemos que se borren los datos de todas las tablas (que igual no tienen datos pero hay que reiniciar la secuencia (la clave primaria)
+--) para evitar problemas (ya que por ejemplo, si apenas estamos insertando datos puede salir que el id comience en "10", rompiendo cualquier lógica
+-- si contamos con que inicien con el 1)
+TRUNCATE TABLE naturaleza RESTART IDENTITY CASCADE;
+TRUNCATE TABLE clasificacion RESTART IDENTITY CASCADE;
+TRUNCATE TABLE plan_cuenta RESTART IDENTITY CASCADE;
+TRUNCATE TABLE tipo_entidad RESTART IDENTITY CASCADE;
+TRUNCATE TABLE prefijo_identificacion RESTART IDENTITY CASCADE;
+TRUNCATE TABLE tipo_identificacion RESTART IDENTITY CASCADE;
+TRUNCATE TABLE regla_prefijo_documento RESTART IDENTITY CASCADE;
+TRUNCATE TABLE estado_academico RESTART IDENTITY CASCADE;
+TRUNCATE TABLE estado_docente RESTART IDENTITY CASCADE;
+TRUNCATE TABLE estado_cuenta_bancaria RESTART IDENTITY CASCADE;
+TRUNCATE TABLE tipo_cuenta_bancaria RESTART IDENTITY CASCADE;
+TRUNCATE TABLE banco RESTART IDENTITY CASCADE;
+TRUNCATE TABLE cuenta_bancaria RESTART IDENTITY CASCADE;
+TRUNCATE TABLE tipo_rol_asociado RESTART IDENTITY CASCADE;
+
+
+
+
+-- 1.1. NATURALEZA (Naturalezas de las cuentas)
+INSERT INTO naturaleza ("nombre") VALUES ('Deudora'), ('Acreedora');
+
+
+-- 1.2. CLASIFICACION (Naturalezas de las cuentas)
+INSERT INTO clasificacion ("nombre") VALUES ('Real'), ('Nominal');
+
+
+
+
+-- 1.3. PLAN_CUENTA (Algunas cuentas del plan)
+INSERT INTO plan_cuenta ("nombre", "codigo", "nivel", "id_naturaleza", "id_clasificacion", "estado", "id_padre", "createdAt", "updatedAt") VALUES
+
+    -- Cuentas de nivel 1
+
+    ('activo', '1', 1, 1, 1, true, null, NOW(), NOW()),
+    ('pasivo', '2', 1, 2, 1, true, null, NOW(), NOW()),
+    ('patrimonio', '3', 1, 2, 1, true, null, NOW(), NOW()),
+    ('ingreso', '4', 1, 2, 2, true, null, NOW(), NOW()),
+    ('costo', '5', 1, 1, 2, true, null, NOW(), NOW()),
+    ('gasto', '6', 1, 1, 2, true, null, NOW(), NOW());
+
+    -- Cuentas de nivel 2
+
+        ('activo corriente', '11', 2, 1, 1, true, 1, NOW(), NOW()),
+        ('activo no corriente', '12', 2, 1, 1, true, 1, NOW(), NOW()),
+
+        ('pasivo corriente', '21', 2, 2, 1, true, 2, NOW(), NOW()),
+        ('pasivo no corriente', '22', 2, 2, 1, true, 2, NOW(), NOW()),
+
+        ('capital', '31', 2, 2, 1, true, 3, NOW(), NOW()),
+        ('resultados', '32', 2, 2, 1, true, 3, NOW(), NOW()),
+
+        ('ingresos operacionales', '41', 2, 2, 2, true, 4, NOW(), NOW()),
+        ('ingreso no operacionales', '42', 2, 2, 2, true, 4, NOW(), NOW()),
+
+        ('costo de producción', '51', 2, 1, 2, true, 5, NOW(), NOW()),
+        ('costo de venta', '52', 2, 1, 2, true, 5, NOW(), NOW()),
+        ('costo de servicios', '53', 2, 1, 2, true, 5, NOW(), NOW()),
+        ('costo contrato de construcción', '54', 2, 1, 2, true, 5, NOW(), NOW()),
+
+        ('gastos operacionales', '61', 2, 1, 2, true, 6, NOW(), NOW()),
+        ('gastos no operacionales', '62', 2, 1, 2, true, 6, NOW(), NOW());
+
+
+
+-- 1.4. TIPO_ENTIDAD (Tipos de entidades del sistema)
+INSERT INTO tipo_entidad ("nombre", "descripcion") VALUES
+('Persona Natural', 'Individuo con identidad propia'),
+('Persona Jurídica', 'Empresa, institución o sociedad'),
+('Entidad Interna', 'La propia academia como sujeto contable'); -- Para registrar sus cuentas bancarias, movimientos internos, etc. Por ejemplo, si la academia transfiere dinero entre sus propias cuentas (como de una cuenta de ahorro a una cuenta corriente), necesita aparecer como el remitente y el receptor en esa transacción)
+
+
+-- 1.5. PREFIJO_IDENTIFICACION (Para saber que se coloca antes del número de identificación)
+INSERT INTO prefijo_identificacion ("letra_prefijo", "descripcion") VALUES
+('V', 'Venezolano'),
+('E', 'Extranjero (Residente)'),
+('P', 'Pasaporte (Uso Temporal)'),
+('J', 'Persona Jurídica (Empresa)'),
+('G', 'Gubernamental (Estado)');
+
+
+-- 1.6. TIPO_IDENTIFICACION (Documentos de Identidad)
+INSERT INTO tipo_identificacion ("id_tipo_identificacion", "nombre", "abreviatura") VALUES
+(1, 'Cédula de Identidad Venezolana', 'C.I.'),
+(2, 'Pasaporte', 'PAS'),
+(3, 'Registro de Información Fiscal', 'R.I.F.'),
+(4, 'Partida de Nacimiento', 'P.N.'); -- Para menores de edad
+-- (5, 'Otro Documento', 'OTRO'); Para casos especiales. Omitido de este sistema
+
+
+-- 1.7. regla_prefijo_documento (Las identificaciones con sus prefijos)
+INSERT INTO regla_prefijo_documento ("id_tipo_identificacion", "id_prefijo", "es_obligatorio") VALUES
+(1, 1, TRUE), -- Cédula -> Venezolano (Obligatorio el prefijo)
+(1, 2, TRUE), -- Cédula -> Extranjero (Obligatorio el prefijo)
+(2, 3, TRUE), -- Pasaporte (Obligatorio el prefijo)
+(3, 4, TRUE), -- RIF -> Persona Jurídica (Obligatorio el prefijo)
+(3, 5, TRUE), -- RIF -> Gubernamental (Obligatorio el prefijo)
+(3, 1, false), -- RIF -> Venezolano (Personas naturales venezolanas que solo usan RIF) (No obligatorio el prefijo)
+(3, 2, false), -- RIF -> Extranjero (Personas naturales extranjeras que solo usan RIF) (No obligatorio el prefijo)
+(4, 1, TRUE); -- Partida de Nacimiento -> Venezolano (Obligatorio el prefijo)
+-- (5, null, null); Otro Documento -> Ninguno (Actualmente, no tiene reglas de prefijo asignadas)
+
+
+
+-- 1.8. ENTIDAD
+INSERT INTO entidad (
+    "id_tipo_entidad", 
+    "id_tipo_identificacion", 
+    "id_prefijo", 
+    "numero_identificacion", 
+    "nombre", 
+    "apellido",
+    "email",
+    "telefono",
+    "direccion",
+    "estado",
+    "createdAt",
+    "updatedAt"
+) VALUES
+(3, 3, 4, '20015849', 'academia', null, 'academia@gmail.com', '04268675867', 'barquisimeto', true, NOW(), NOW()),
+(1, 3, 5, '20010014-1', 'corpoelec', null, 'corpoelec@gmail.com', '04127564982', 'barquisimeto', true, NOW(), NOW()),
+(1, 3, 5, '20009014-6', 'hidrolara', null, 'hidrolara@gmail.com', '04269857619', 'barquisimeto', true, NOW(), NOW()),
+(1, 1, 1, '147567458', 'maria', 'lopez', 'ml57@gmail.com', '04145636985', 'el manzano', true, NOW(), NOW()),
+(1, 1, 1, '156987458', 'carlos', 'gomez', 'carlitos54@gmail.com', '02124569878', 'trinitarias', true, NOW(), NOW()),
+(1, 1, 2, '327465458', 'enrique', 'peña', 'enrique46@gmail.com', '04124569874', 'el manzano', true, NOW(), NOW()),
+(1, 2, 3, '145647849', 'vladimir', 'putin', 'vladimir66@hotmail.com', '04245847968', 'rusia', true, NOW(), NOW()),
+(1, 1, 1, '145647849', 'petra', 'ribas', 'petra77@gmail.com', '04165897458', 'cabudare', true, NOW(), NOW());
+
+
+
+-- 1.9. estado_academico
+INSERT INTO estado_academico ("nombre", "descripcion", "permite_inscripcion") VALUES 
+('Activo', 'El estudiante está cursando actualmente, o se encuentra en una pausa autorizada', true),
+('Egresado', 'Ha completado satisfactoriamente todos los cursos en los que se ha inscrito', true),
+('Retirado', 'El estudiante abandonó formalmente todos los cursos antes de finalizarlos', true),
+('Suspendido', 'El estudiante no puede inscribirse en nuevos cursos por motivos disciplinarios o incumplimiento de normas', false),
+('Moroso', 'El estudiante tiene cuotas pendientes de pago y no puede inscribirse en nuevos cursos', false);
+
+
+
+-- 1.10. ESTADO_DOCENTE (Estado del Docente)
+INSERT INTO estado_docente ("nombre", "descripcion", "permite_asignacion", "aplica_pago") VALUES
+('Activo', 'Docente disponible para recibir asignaciones de cursos y liquidación por horas.', TRUE, TRUE),
+('Inactivo', 'Docente que no está asignado a cursos y no debe recibir pagos por hora.', FALSE, FALSE),
+('Ausencia Autorizada', 'Docente con permiso temporal autorizado, que no puede ser asignado ni se le paga por hora.', FALSE, FALSE),
+('Suspendido', 'Docente que no puede ser asignado por motivos disciplinarios o legales, y no aplica pago.', FALSE, FALSE);
+
+
+-- 1.11. ESTADO_CUENTA_BANCARIA (Estado Operativo de la Cuenta)
+INSERT INTO estado_cuenta_bancaria ("nombre", "descripcion", "permite_operacion") VALUES
+('Activa', 'La cuenta está verificada y lista para recibir pagos.', TRUE),
+('Inactiva', 'Cuenta desactivada temporalmente por administración o porque ya no es necesaria.', FALSE),
+('Bloqueada', 'La cuenta ha sido reportada como suspendida por el banco.', FALSE),
+('Cerrada', 'El titular canceló la cuenta en el banco.', FALSE),
+('Pendiente de Validación', 'Cuenta recién ingresada y pendiente de verificación interna.', FALSE); 
+
+
+-- 1.12. TIPO_CUENTA_BANCARIA (Ahorro, Corriente)
+-- Nota: Para simplificar por factor tiempo se descarta el tipo de cuenta de moneda extranjera
+--ya que habria que verificar la divisa, codigos adicionales, que la transferencia sea
+--del mismo tipo de moneda, etc
+INSERT INTO tipo_cuenta_bancaria ("nombre", "descripcion") VALUES
+('Corriente', 'Cuenta bancaria que permite el uso de cheques y transferencias frecuentes.'),
+('Ahorro', 'Cuenta bancaria destinada a la custodia de fondos con menos transacciones.');
+
+
+-- 1.13. BANCO (Instituciones Financieras Venezolanas)
+INSERT INTO banco ("nombre", "codigo_nacional", "codigo_swift") VALUES
+('Banco de Venezuela', '0102', 'BVSA VE CC'),
+('Banesco', '0134', 'BFNC VE CM'),
+('Banco Mercantil', '0105', 'BVEN VE CC'),
+('BBVA Provincial', '0108', 'BPVA VE CP'),
+('BOD (Bco. Occidental de Descuento)', '0116', 'BODV VE CA'),
+('Banco Activo', '0138', 'BACP VE CA'),
+('Bancaribe', '0114', 'CARV VE CM'),
+('Banco del Tesoro', '0163', 'BTVO VE CA'),
+('Bancrecer', '0168', 'BLCF VE CA');
+
+
+
+-- 1.14. CUENTA BANCARIA
+INSERT INTO cuenta_bancaria (
+    "numero_cuenta", 
+    "id_banco", 
+    "id_tipo_cuenta",    
+    "id_entidad_titular", 
+    "id_estado_cuenta", 
+    "createdAt",
+    "updatedAt",
+    "approvedAt"   
+    ) VALUES
+
+    -- Cuentas aprobadas
+('01026574386954345607', 1, 2, 1, 1, '2025-03-12 14:30:00', '2025-05-14 14:30:00', '2025-04-10 14:30:00'),
+('01346574373737375607', 2, 1, 2, 2, '2025-09-09 14:30:00', '2025-09-09 14:30:00', '2025-10-02 14:30:00'),
+('01026574847346345607', 1, 2, 3, 3, '2025-08-07 14:30:00', '2025-08-07 14:30:00', '2025-08-15 14:30:00'),
+('01086574968703345607', 4, 1, 4, 4, '2025-10-06 14:30:00', '2025-11-06 14:30:00', '2025-10-13 14:30:00'),
+('01021728446954345607', 1, 1, 5, 2, '2025-05-04 14:30:00', '2025-05-09 14:30:00', '2025-05-06 14:30:00'),
+('01386424375485545607', 6, 1, 6, 1, NOW(), NOW(), NOW()),
+('01054800203954345607', 3, 2, 7, 3, '2025-09-09 14:30:00', '2025-09-09 14:30:00', NOW()),
+('01026574535454345607', 1, 2, 8, 2, '2024-08-02 14:30:00', '2025-09-09 14:30:00', '2025-03-02 14:30:00'),
+('01026388244954345607', 1, 1, 1, 3, NOW(), NOW(), NOW()),
+
+    -- Cuentas por aprobar
+('01686572423454345607', 9, 1, 2, 5, '2025-05-10 14:30:00', '2025-05-10 14:30:00', null),
+('01146574600864345607', 7, 1, 3, 5, '2025-06-15 14:30:00', '2025-06-15 14:30:00', null),
+('01026564564444345607', 1, 2, 4, 5, '2025-04-12 14:30:00', '2025-04-12 14:30:00', null),
+('01686573819954345607', 9, 1, 5, 5, NOW(), NOW(), null),
+('01026559490000445607', 1, 2, 6, 5, '2025-05-15 14:30:00', '2025-05-15 14:30:00', null),
+('01026574654334345607', 1, 1, 7, 5, '2025-03-14 14:30:00', '2025-03-14 14:30:00', null),
+('01026564644332345607', 1, 2, 8, 5, NOW(), NOW(), null),
+('01686578678678645607', 9, 1, 1, 5, '2025-02-20 14:30:00', '2025-02-20 14:30:00', null),
+('01026559490353534607', 1, 2, 2, 5, '2025-01-02 14:30:00', '2025-01-02 14:30:00', null),
+('01026573456667345607', 1, 1, 3, 5, '2024-07-28 14:30:00', '2024-07-28 14:30:00', null),
+('01636574300043045607', 8, 1, 4, 5, NOW(), NOW(), null);
+
+
+
+-- 1.14. TIPO_ROL_ASOCIADO (Roles que pueden tener cuentas bancarias asociadas para PAGAR o RECIBIR pagos.)
+INSERT INTO tipo_rol_asociado ("nombre", "descripcion") VALUES
+('docente', 'Contexto para pagos de nómina o viáticos dirigidos al Docente.'),
+('proveedor', 'Contexto para pagos de facturas dirigidos al Proveedor.'),
+('estudiante', 'Contexto para cuentas de donde el Estudiante realiza los pagos (Matrículas/Aranceles).');
+
+

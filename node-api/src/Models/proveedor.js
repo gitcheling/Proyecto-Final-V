@@ -1,0 +1,82 @@
+const {DataTypes} = require('sequelize');
+const sequelize = require('../Config/database');
+
+
+const Proveedor = sequelize.define('Proveedor',{
+    id_proveedor  :{
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        unique: true, // Unico en éste lado de la relación para garantizar el 1 a 1 con la tabla Entidad
+         references: {
+
+            // Nombre exacto de la tabla foránea en la base de datos
+            model: 'entidad', 
+
+            // El nombre exacto de la columna en la tabla foránea (model) a la que apunta. Que sería, la clave primaria
+            key: 'id_entidad'
+        }
+    },
+
+           
+    // ===============================================
+    // clave foránea para el tipo de proveedor
+    // ===============================================
+    id_tipo_proveedor  : {
+        type: DataTypes.INTEGER,
+        allowNull: false, 
+        references: {
+
+             // Nombre exacto de la tabla foránea en la base de datos
+            model: 'tipo_proveedor', 
+
+            // El nombre exacto de la columna en la tabla foránea (model) a la que apunta. Que sería, la clave primaria       
+            key: 'id_tipo_proveedor'
+        }
+    },
+
+
+    createdAt: {
+        type: 'TIMESTAMP WITHOUT TIME ZONE'
+    },
+    updatedAt: {
+        type: 'TIMESTAMP WITHOUT TIME ZONE'
+    },
+    estado: {
+        type:DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true
+    },
+}, {
+    tableName: 'proveedor', 
+    timestamps: true,  
+    
+});
+
+
+
+// Asociaciones (para relacionar las claves foráneas con sus tablas, y asi obtener también datos de esas tablas)
+Proveedor.associate = (models) => {
+
+    // Un proveedor solo puede tener una entidad de "entidad"
+    Proveedor.belongsTo(models.Entidad, {
+        foreignKey: 'id_proveedor', // La FK que está en ESTA MISMA tabla (en este caso que es el lado muchos)
+        as: 'entidad' // Usamos éste prefijo para obtener los datos del otro modelo (la entidad de un docente)
+    });
+
+
+    // Un proveedor solo puede tener tipo de proveedor de "tipo_proveedor"
+    Proveedor.belongsTo(models.Tipo_Proveedor, {
+        foreignKey: 'id_tipo_proveedor', // La FK que está en ESTA MISMA tabla (en este caso que es el lado muchos)
+        as: 'tipo_proveedor' // Usamos éste prefijo para obtener los datos del otro modelo (el tipo de proveedor de un proveedor)
+    });
+
+
+    // Un proveedor puede aparecer muchas veces en "facturas_gasto"
+    Proveedor.hasMany(models.Facturas_Gasto, {
+        foreignKey: 'id_proveedor', // La FK que está en la tabla 'facturas_gasto'
+        as: 'facturas_gasto' // Usamos éste prefijo para obtener los datos del otro modelo (todas las facturas de gasto de un proveedor)
+    });
+
+};
+
+module.exports = Proveedor;

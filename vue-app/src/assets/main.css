@@ -1,0 +1,80 @@
+/* frontend/src/assets/main.css */
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #F0F2F5; /* Fondo claro institucional */
+}
+
+html, body {
+    /* 🛑 Solución para desbordamiento 🛑 */
+    width: 100%;
+    overflow-x: hidden !important; 
+    margin: 0 !important;
+}
+
+/* Paleta de Colores Hexadecimal */
+.morado-oscuro { color: #4B0082 !important; }
+.morado-medio { background-color: #8A2BE2 !important; }
+
+/* Clases de utilidad para botones */
+.btn-primary {
+  background-color: #8A2BE2; /* Morado Medio */
+  border-color: #8A2BE2;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+.btn-primary:hover {
+  background-color: #4B0082; /* Morado Oscuro */
+  border-color: #4B0082;
+}
+
+/* Estilos de botones de acción para las tablas/tarjetas */
+.btn-outline-info {
+  color: #8A2BE2;
+  border-color: #8A2BE2;
+}
+.btn-outline-info:hover {
+  background-color: #8A2BE2;
+  color: white;
+  border-color: #8A2BE2;
+}
+
+/* Estilos para el Layout Principal (App.vue) */
+#wrapper {
+  display: flex;
+  min-height: 100vh;
+}
+
+#content-area {
+  flex-grow: 1;
+  padding: 0;
+  background-color: white; /* El contenido principal es blanco */
+}
+
+/* Estilos para el Header Superior */
+.header-custom {
+  background-color: white !important;
+  border-bottom: 1px solid #E0E0E0;
+  box-shadow: 0 1px 4px rgba(0,0,0,.05);
+  padding: 1rem 1.5rem;
+}
+
+.contenedor-toast {
+    position: fixed !important; 
+    bottom: 20px !important; 
+    z-index: 10001 !important; 
+    right: 0 !important; 
+    transform: translateX(-20px) !important; 
+
+    /* Dejar: Apilamiento */
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px; /* Si usas espaciado entre toasts */
+    
+
+}
+
+/* Asegura que los popovers/tooltips de Element Plus floten encima del modal (z-index: 10000) */
+.el-popper {
+    z-index: 10001 !important; 
+}

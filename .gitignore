@@ -1,0 +1,71 @@
+# ----------------------------------------------------------------------
+# 1. Dependencias de Node (Obligatorio)
+# ----------------------------------------------------------------------
+# Ignorar la carpeta de módulos que se generan al instalar dependencias.
+# Es lo más importante y lo primero que debes poner.
+# 1. Dependencias de Node (Original, para la raíz)
+/node_modules
+
+# 2. Para dependencias en subcarpetas
+**/node_modules
+
+# Archivos de depuración (debugging)
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+
+# ----------------------------------------------------------------------
+# 2. Compilación y Build (Vue/Frontend)
+# ----------------------------------------------------------------------
+# Ignorar las carpetas de salida de la compilación (Build).
+# Los archivos dentro de 'dist' se generan automáticamente.
+/dist
+/build
+/out
+
+# Ignorar archivos temporales de Vite/Webpack/Vue CLI
+.temp
+.cache
+
+# ----------------------------------------------------------------------
+# 3. Entorno y Configuración (Backend)
+# ----------------------------------------------------------------------
+# Archivos de entorno. Estos NUNCA deben subirse a GitHub
+# porque contienen claves secretas, contraseñas de bases de datos, etc.
+# pero en este caso si
+# .env
+# .env.*
+# !.env.example # Si tienes un archivo de ejemplo para las variables
+
+# Archivos generados por las herramientas de bases de datos
+# Como Sequelize, si genera archivos de migración o configuración.
+# Si tu base de datos está en SQLite:
+*.sqlite
+*.sqlite3
+/db/*.sqlite3
+/db/*.sqlite # Si está en una subcarpeta 'db'
+
+# ----------------------------------------------------------------------
+# 4. Entornos de Desarrollo Local (IDE)
+# ----------------------------------------------------------------------
+# Archivos específicos de los IDE (Visual Studio Code, JetBrains, etc.)
+# Estos son archivos de configuración personal del desarrollador.
+
+# VS Code
+.vscode/*
+!.vscode/settings.json # Si quieres compartir configuraciones de equipo
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history
+
+# WebStorm / IntelliJ / Otros JetBrains IDEs
+.idea
+
+# macOS (Si usas Mac)
+.DS_Store
+
+# Windows
+Thumbs.db
