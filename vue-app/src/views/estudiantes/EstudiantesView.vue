@@ -5,7 +5,7 @@
     <h2>Gestión de Estudiantes</h2>
     <div class="mb-3">
         <!-- Botón para crear una nueva cuenta -->
-        <button @click="openModal" class="btn btn-outline-primary flex-fill py-2 shadow-sm ms-2 mb-2">
+        <button @click="openModal" class="btn btn-outline-pink flex-fill py-2 shadow-sm ms-2 mb-2">
         + Agregar Nuevo Estudiante
         </button>
 
@@ -26,7 +26,7 @@
     </div>
 
     <Transition name="fade-slide">
-        <div class="filters-container" v-if="areFiltersVisible">
+        <div class="filters-container hover-lift" v-if="areFiltersVisible">
             <h3>Filtros</h3>
 
             <div class="row">
@@ -129,67 +129,84 @@
 
     </Transition>
 
-    <!-- Tabla de las cuentas -->
-    <div class="table-responsive">
-        <table class="table table-striped table-hover table-bordered table-custom">
+    <!-- Mensaje de la cantidad de resultados encontrados -->
+    <div 
+    v-if="studentTypes.length > 0 && !isLoadingTable" 
+    class="mb-3 text-start"
+    >
+        <span class="results-summary" v-html="resultsText"></span>
+    </div>
 
-        <thead class="header-personalizado">
-            <tr>
-                <th class="text-center col-codigo_estudiantil">Código estudiantil</th>
-                <th class="text-center col-numero_identificacion">Número de identificación</th>
-                <th class="text-center col-nombre">Nombre</th>
-                <th class="text-center col-apellido">Apellido</th>
-                <th class="text-center col-fecha_creacion">Fecha de registro como estudiante</th>
-                <th class="text-center col-fecha_actualizacion">Última modificación</th>
-                <th class="text-center col-estado">Estado</th>
-                <th class="text-center col-puede_inscribirse">¿Puede inscribirse en nuevos cursos?</th>
-                <th class="text-center col-acciones">Acciones</th>
-            </tr>
-        </thead>
+    <!-- Tabla de los estudiantes -->
+    <div class="table-card-wrapper hover-lift">
+        <div class="table-responsive ">
+            <table class="table table-striped table-hover table-bordered table-custom">
 
-        
-        <tbody>
-            <tr v-if="isLoadingTable">
-                <td colspan="10" class="text-center">
-                    <span class="loading-message">Cargando datos...</span>
-                </td>
-            </tr>
-            <tr v-else-if="studentTypes.length === 0">
-                <td colspan="10" class="text-center">
-                    <span class="no-results-message">No se encontraron estudiantes. Intenta ajustar los filtros.</span>
-                </td>
-            </tr>
-            <tr v-else v-for="student in studentTypes" :key="student.id">
-                <td>{{ student.codigo_estudiantil }}</td>
-                <td>{{`${student.entidad.prefijo.letra_prefijo} - ${student.entidad.numero_identificacion}` }}</td>
-                <td>{{ student.entidad.nombre }}</td>
-                <td>{{ student.entidad.apellido }}</td>
-                <td>{{ formatDateTime(student.fechaCreacion) }}</td>
-                <td>{{ formatDateTime(student.fechaActualizacion) }}</td>
-
-                <td>{{ student.estado.nombre  }}</td>
-                <td>{{ student.estado.puede_inscribirse  }}</td>
+            <thead class="header-personalizado">
+                <tr>
+                    <th class="text-center col-codigo_estudiantil">Código estudiantil</th>
+                    <th class="text-center col-numero_identificacion">Número de identificación</th>
+                    <th class="text-center col-nombre">Nombre</th>
+                    <th class="text-center col-apellido">Apellido</th>
+                    <th class="text-center col-fecha_creacion">Fecha de registro como estudiante</th>
+                    <th class="text-center col-fecha_actualizacion">Última modificación</th>
+                    <th class="text-center col-estado">Estado</th>
+                    <th class="text-center col-puede_inscribirse">¿Puede inscribirse en nuevos cursos?</th>
+                    <th class="text-center col-acciones">Acciones</th>
+                </tr>
+            </thead>
 
             
-                <td class="text-center"> 
+            <tbody>
+                <tr v-if="isLoadingTable">
+                    <td colspan="10" class="text-center">
+                        <span class="loading-message">Cargando datos...</span>
+                    </td>
+                </tr>
+                <tr v-if="studentTypes.length > 0" v-for="student in studentTypes" :key="student.id">
+                    <td>{{ student.codigo_estudiantil }}</td>
+                    <td>{{`${student.entidad.prefijo.letra_prefijo} - ${student.entidad.numero_identificacion}` }}</td>
+                    <td>{{ student.entidad.nombre }}</td>
+                    <td>{{ student.entidad.apellido }}</td>
+                    <td>{{ formatDateTime(student.fechaCreacion) }}</td>
+                    <td>{{ formatDateTime(student.fechaActualizacion) }}</td>
 
-                    <router-link 
-                        :to="{ 
-                            name: 'StudentDetails', 
-                            params: { id: student.id } 
-                        }" 
-                        class="btn btn-sm btn-outline-primary me-1" 
-                        title="Ver detalles del Estudiante"
-                    >
-                        <i class="bi bi-eye-fill"></i> 
-                    </router-link> 
-              
-                </td>
-            </tr>
-        </tbody>
-        
+                    <td>{{ student.estado.nombre  }}</td>
+                    <td>{{ student.estado.puede_inscribirse  }}</td>
 
-        </table>
+                
+                    <td class="text-center"> 
+
+                        <router-link 
+                            :to="{ 
+                                name: 'StudentDetails', 
+                                params: { id: student.id } 
+                            }" 
+                            class="btn btn-sm btn-outline-primary me-1" 
+                            title="Ver detalles del Estudiante"
+                        >
+                            <i class="bi bi-eye-fill"></i> 
+                        </router-link> 
+                
+                    </td>
+                </tr>
+            </tbody>
+            
+
+            </table>
+        </div>
+    </div>
+
+
+    <!-- Mensaje de que no se encontraron resultados -->
+    <div 
+        v-if="!isLoadingTable && studentTypes.length === 0" 
+        class="text-center py-5 mb-5"
+    >
+        <div class="no-results-center-badge">
+            <i class="bi bi-x-circle-fill me-2"></i> No se encontraron estudiantes con los filtros aplicados.
+            <p class="mt-2 mb-0 text-muted">Intenta ajustando o limpiando los filtros para ver la lista completa.</p>
+        </div>
     </div>
 
     <!-- Modal para crear un estudiante -->
@@ -209,7 +226,7 @@
 
     // ----------------------------------- Importaciones ----------------------------------------
      
-        import { ref, watch } from 'vue';
+        import { ref, watch, computed} from 'vue';
 
         // Se importa el hook de las notificaciones toast
         import { useToast } from '../../services/notificacionesService';
@@ -234,13 +251,20 @@
 
             // Crear estudiante
             const rutaCrear = `${rutaBase}CrearEstudiante`
-
-            // Cambiar estado estudiante
-            const rutaCambiarEstado = `${rutaBase}CambiarEstado`
             
 
         // Se inicializa como array vacío. Los datos se cargarán de la API al montar el componente.
         const studentTypes = ref([]);
+
+        // Propiedad computada para saber que mensaje se pondrá en la cantidad de resultados encontrados
+        const resultsText = computed(() => {
+            const count = studentTypes.value.length;
+            if (count === 1) {
+                return `🔍 Se encontró ${count} estudiante con los filtros aplicados.`;
+            } else {
+                return `🔍 Se encontraron ${count} estudiantes con los filtros aplicados.`;
+            }
+        });
 
         // Ésta variable reactiva permitirá controlar la visibilidad del modal
         const isModalVisible = ref(false);
@@ -248,9 +272,11 @@
         // Los datos que se envían al modal (ahora siempre es "null" ya que la edición la maneja la pagina de detalles del estudiante)
         const studentToEdit = null;
 
-        // Indicador de carga para la tabla
-        const isLoadingTable = ref(false);
-
+        /* Indicador de carga para la tabla
+        
+        Nota: Se inicializa en "true" para que no salga el aviso de que no se encontraron cuentas nada mas se abre la pagina, la función de búsqueda será quien la ponga
+        en "false" cuando se ejecute */
+        const isLoadingTable = ref(true);
 
         // Este objeto es la plantilla para el reset (para reiniciar los filtros)
         const initialFilters = {
@@ -598,11 +624,103 @@
 <style scoped>
 
     .account-type-manager {
-    padding: 20px;
+        padding: 20px;
+    }
+
+/* ------------------------- Botón de agregar ------------------------*/
+
+    .btn-outline-pink {
+        /* Color de borde y texto por defecto */
+        color: #e24cd6; /* Un rosa oscuro para el texto */
+        border-color: #e24cd6; /* El borde de color rosa */
+    }
+
+    .btn-outline-pink:hover,
+    .btn-outline-pink:focus,
+    .btn-outline-pink:active {
+        /* Color de fondo y borde al pasar el ratón o hacer clic */
+        background-color: #db5cd1;
+        border-color: #d348c7;
+        color: #ffffff; /* Texto blanco para contraste */
+        box-shadow: 0 0 0 0.25rem rgba(255, 105, 180, 0.5); /* Sombra de enfoque rosa */
     }
 
 
-/* La tabla*/
+/* ------------------------- Mensajes ------------------------*/
+
+
+    /* --- Estilo para el contador de resultados (Discreto y a la izquierda) --- */
+    .results-summary {
+        /* Muestra como un bloque pero que solo ocupa el ancho del contenido */
+        display: inline-block;
+        
+        /* Fondo: Un verde muy claro, sutil */
+        background-color: #f2c4fc; 
+        /* Texto: Un verde más oscuro para legibilidad */
+        color: #7426bd; 
+
+        /* Borde */
+        border: 1px solid #8001c9;
+        border-radius: 4px;
+        
+        /* Relleno interno para que se vea como un "tag" o pastilla */
+        padding: 5px 10px; 
+        
+        font-size: 0.9rem; /* Letra un poco más pequeña */
+        font-weight: 500; /* Hace que el texto resalte ligeramente */
+    }
+
+
+    /* --- Estilo para el mensaje de "Sin Resultados" (Badge Central) --- */
+    .no-results-center-badge {
+        /* Estilos base de una pastilla o badge */
+        display: inline-block;
+        padding: 15px 30px;
+        border-radius: 12px;
+        
+        /* Colores llamativos de advertencia */
+        background-color: #ffedcc; /* Naranja/Amarillo muy claro */
+        color: #cc8400; /* Texto naranja oscuro */
+        border: 1px solid #ffdc9c; 
+        
+        /* Fuente */
+        font-size: 1.15rem; /* Más grande */
+        font-weight: 600; /* Seminegrita */
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Sombra sutil para destacarse */
+    }
+
+    /* Estilo para el texto de sugerencia dentro del badge */
+    .no-results-center-badge p {
+        font-size: 0.9rem;
+        font-weight: 400;
+    }
+
+
+/* ------------------------- La tabla ------------------------*/
+
+    /* --- Estilos para la Tarjeta Contenedora de la Tabla --- */
+    .table-card-wrapper {
+        /* Darle apariencia de tarjeta */
+        border: 1px solid #e9ecef; /* Borde muy claro */
+        border-radius: 8px; /* Bordes redondeados */
+        background-color: #fff; /* Fondo blanco */
+        margin-bottom: 20px; /* Margen debajo */
+        
+        /* Muy importante: el overflow debe estar visible para que el box-shadow no se recorte */
+        overflow: visible;
+    }
+
+    /* El table-responsive puede necesitar un ligero ajuste */
+    .table-card-wrapper .table-responsive {
+        /* El table-responsive ya tiene el overflow-x: auto, pero debe estar dentro del wrapper */
+        border-radius: 8px;
+        overflow-x: auto; 
+    }
+
+
+    .table-custom {
+        margin-bottom: 0; 
+    }
 
     .table-custom td, th {
         vertical-align: middle; /* Centrar el contenido verticalmente de cada celda*/
@@ -701,7 +819,8 @@
 
 
 
-/* Estilos para el contenedor de filtros */
+/* ------------------ El contenedor de filtros ------------------*/
+
     .filters-container {
         /* Define el estado visible final */
         padding: 15px; /* Un padding base que animaremos */
@@ -723,47 +842,48 @@
         margin-bottom: 15px;
     }
 
-/* --- Estilos de Transición para "fade-slide" --- */
 
-    /* Clase activa: define las propiedades y la duración */
-    .fade-slide-enter-active,
-    .fade-slide-leave-active {
-        transition: 
-            opacity 0.3s ease-in-out,
-            max-height 0.5s ease-in-out,
-            padding 0.5s ease-in-out,
-            margin 0.5s ease-in-out; /* ¡IMPORTANTE! Animamos padding y margin */
-    }
+    /* ------------------- Estilos de Transición del contenedor de los filtros ("fade-slide") ------------------ */
 
-    /* Estado de Inicio (Entrada) y de Fin (Salida) */
-    .fade-slide-enter-from,
-    .fade-slide-leave-to {
-        opacity: 0;
-        max-height: 0; /* Colapsa la altura */
-        
-        /* COLAPSA EL ESPACIO QUE OCUPAN PADRE Y MARGEN */
-        padding-top: 0;
-        padding-bottom: 0;
-        margin-bottom: 0;
-        
-        /* Si usaste transform: */
-        transform: translateY(-10px); 
-    }
+        /* Clase activa: define las propiedades y la duración */
+        .fade-slide-enter-active,
+        .fade-slide-leave-active {
+            transition: 
+                opacity 0.3s ease-in-out,
+                max-height 0.5s ease-in-out,
+                padding 0.5s ease-in-out,
+                margin 0.5s ease-in-out; /* ¡IMPORTANTE! Animamos padding y margin */
+        }
 
-    /* Estado de Fin (Entrada) y de Inicio (Salida) */
-    .fade-slide-enter-to,
-    .fade-slide-leave-from {
-        opacity: 1;
-        /* Un valor grande, pero lo suficientemente grande para cubrir todo el contenido */
-        max-height: 500px; 
-        
-        /* RESTAURA EL ESPACIO ORIGINAL */
-        padding-top: 15px; 
-        padding-bottom: 15px;
-        margin-bottom: 20px; 
+        /* Estado de Inicio (Entrada) y de Fin (Salida) */
+        .fade-slide-enter-from,
+        .fade-slide-leave-to {
+            opacity: 0;
+            max-height: 0; /* Colapsa la altura */
+            
+            /* COLAPSA EL ESPACIO QUE OCUPAN PADRE Y MARGEN */
+            padding-top: 0;
+            padding-bottom: 0;
+            margin-bottom: 0;
+            
+            /* Si usaste transform: */
+            transform: translateY(-10px); 
+        }
 
-        /* Si usaste transform: */
-        transform: translateY(0);
-    }
+        /* Estado de Fin (Entrada) y de Inicio (Salida) */
+        .fade-slide-enter-to,
+        .fade-slide-leave-from {
+            opacity: 1;
+            /* Un valor grande, pero lo suficientemente grande para cubrir todo el contenido */
+            max-height: 500px; 
+            
+            /* RESTAURA EL ESPACIO ORIGINAL */
+            padding-top: 15px; 
+            padding-bottom: 15px;
+            margin-bottom: 20px; 
+
+            /* Si usaste transform: */
+            transform: translateY(0);
+        }
 </style>
 

@@ -1,18 +1,18 @@
 <template>
     <div class="details-page container mt-5">
         
-        <router-link :to="{ name: 'GestionEstudiantes' }" class="btn mb-4 back-button btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Volver a la Lista de Estudiantes
+        <router-link :to="{ name: 'GestionEntidades' }" class="btn mb-4 back-button btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver a la Lista de Entidades
         </router-link>
 
         <div v-if="isLoading" class="text-center py-5">
             <div class="spinner-border text-primary-custom" role="status">
                 <span class="visually-hidden">Cargando...</span>
             </div>
-            <p class="mt-3">Cargando datos del estudiante...</p>
+            <p class="mt-3">Cargando datos de la entidad...</p>
         </div>
 
-        <div v-else-if="student">
+        <div v-else-if="entity">
             
             <div class="header-card mb-4 p-4 rounded-3 hover-lift">
                 
@@ -21,14 +21,13 @@
                     <div class="row align-items-center">
                         <div class="col-9"> 
                             <h1 class="display-6 page-title-light"> <i class="bi bi-person-circle me-3"></i> 
-                                Ficha de Estudiante: {{ student.entidad.nombre }} {{ student.entidad.apellido }}
+                                Ficha de Entidad: {{ entity.nombre }} {{ entity.apellido ? entity.apellido : "" }}
                             </h1>
-                            <p class="lead mb-0 text-dark">Código Estudiantil: {{ student.codigo_estudiantil }}</p>
                         </div>
                         
                         <div class="col-3 text-end">
                             <button @click="openEditModal" class="btn btn-edit-student" title="Editar Estado y Datos del Estudiante">
-                                <i class="bi bi-pencil-square me-2"></i> Editar Estudiante
+                                <i class="bi bi-pencil-square me-2"></i> Editar Entidad
                             </button>
                         </div>
                     </div>
@@ -40,154 +39,120 @@
                 <div class="col-lg-6 mb-4">
                     <div class="card h-100 data-card hover-lift">
                         <div class="card-header data-header">
-                            <h3 class="h5 mb-0"><i class="bi bi-info-circle me-2"></i> Datos Generales del Estudiante</h3>
+                            <h3 class="h5 mb-0"><i class="bi bi-info-circle me-2"></i> Datos Generales de la Entidad</h3>
                         </div>
                         <div class="card-body">
                             <dl class="row detail-list">
-                                <dt class="col-sm-5">Identificación:</dt>
-                                <dd class="col-sm-7">{{ student.entidad.prefijo.letra_prefijo }} - {{ student.entidad.numero_identificacion }}</dd>
+                                <dt class="col-sm-5">Número de Identificación:</dt>
+                                <dd class="col-sm-7">{{ entity.prefijo.letra_prefijo }} - {{ entity.numero_identificacion }}</dd>
+
+                                <dt class="col-sm-5">Teléfono:</dt>
+                                <dd class="col-sm-7">{{ entity.telefono || 'No registrado' }}</dd>
+                                
+                                <dt class="col-sm-5">Correo:</dt>
+                                <dd class="col-sm-7">{{ entity.email || 'No registrado' }}</dd>
+
+                                <dt class="col-sm-5">Dirección:</dt>
+                                <dd class="col-sm-7">{{ entity.direccion || 'No registrado' }}</dd>
 
                                 <dt class="col-sm-5">Estado Actual:</dt>
                                 <dd class="col-sm-7">
-                                    <span :class="['badge', getStatusBadge(student.estado.nombre)]">{{ student.estado.nombre }}</span>
+                                    <span :class="['badge', getStatusBadge('activo')]">{{ entity.estado }}</span>
                                 </dd>
-
-                                <dt class="col-sm-5">¿Puede Inscribirse en Nuevos Cursos?:</dt>
-                                <dd class="col-sm-7">{{ student.estado.puede_inscribirse == true ? 'Sí' : 'No' }}</dd>
                                 
-                                <dt class="col-sm-5">Fecha de Registro como Estudiante:</dt>
-                                <dd class="col-sm-7">{{ formatDateTime(student.fechaCreacion) }}</dd>
+                                <dt class="col-sm-5">Fecha de Creación:</dt>
+                                <dd class="col-sm-7">{{ formatDateTime(entity.fechaCreacion) }}</dd>
                                 
                                 <dt class="col-sm-5">Última Modificación:</dt>
-                                <dd class="col-sm-7">{{ formatDateTime(student.fechaActualizacion) }}</dd>
+                                <dd class="col-sm-7">{{ formatDateTime(entity.fechaActualizacion) }}</dd>
 
-                                <dt class="col-sm-5">Teléfono:</dt>
-                                <dd class="col-sm-7">{{ student.entidad.telefono || 'No registrado' }}</dd>
                                 
-                                <dt class="col-sm-5">Correo:</dt>
-                                <dd class="col-sm-7">{{ student.entidad.email || 'No registrado' }}</dd>
                             </dl>
                         </div>
                     </div>
                 </div>
 
+
                 <div class="col-lg-6 mb-4">
-                    <div class="card h-100 data-card hover-lift"> 
-
+                    <div class="card h-100 data-card hover-lift">
                         <div class="card-header data-header d-flex justify-content-between align-items-center">
-
-                           <div class="d-flex align-items-center">
+                            <div class="d-flex align-items-center">
                                 <h3 class="h5 mb-0 me-2">
-                                    <i class="bi bi-bank me-2"></i> Cuentas Bancarias Asociadas
+                                    <i class="bi bi-bank me-2"></i> Cuentas Titulares
                                 </h3>
-
                                 <span class="badge badge-account-count me-2"> 
-                                    {{ studentAccounts.length }} {{ studentAccounts.length === 1 ? 'Cuenta' : 'Cuentas' }}
+                                    {{ entityAccounts.length }} {{ entityAccounts.length === 1 ? 'Cuenta' : 'Cuentas' }}
                                 </span>
                             </div>
-
-                            <button @click="openAssociationModal" class="btn btn-sm btn-outline-primary-custom add-account-btn"> 
-                                <i class="bi bi-plus-circle me-1"></i> Asociar Cuenta
-                            </button>
                         </div>
 
                         <div class="card-body">
                             
-                            <div v-if="studentAccounts.length === 0" class="alert alert-purple-info text-center">
-                                No se han asociado cuentas bancarias.
+                            <div v-if="entityAccounts.length === 0" class="alert alert-purple-info text-center">
+                                La entidad no tiene cuentas bancarias registradas como titular.
                             </div>
 
-                                <ul v-else class="list-group list-group-flush account-list-v2 account-list-container">
-                                    <li v-for="account in studentAccounts" :key="account.id" class="list-group-item account-card-template3 hover-lift">
+                            <ul v-else class="list-group list-group-flush account-list-v2 account-list-container">
+                                <li v-for="account in entityAccounts" :key="account.id" class="list-group-item account-card-template3 hover-lift">
+                                    
+                                    <div class="account-header-3 d-flex w-100 justify-content-between">
+                                        <h5 class="mb-1 account-bank-name-3">
+                                            <i class="bi bi-bank me-2"></i> {{ account.banco.nombre || 'Banco Desconocido' }}
+                                        </h5> 
+                                        <small>{{ account.tipo_cuenta.nombre || 'Tipo N/A' }}</small>
+                                    </div>
+                                    
+                                    <hr class="separator-pink my-2">
+
+                                    <div class="account-details-3">
                                         
-                                        <div class="account-header-3 d-flex w-100 justify-content-between">
-                                            <h5 class="mb-1 account-bank-name-3">
-                                                <i class="bi bi-bank me-2"></i> {{ account.banco.nombre || 'Banco Desconocido' }}
-                                            </h5> 
-                                            <small>{{ account.tipo_cuenta.nombre || 'Tipo N/A' }}</small>
-                                        </div>
+                                        <p class="mb-1 text-primary-custom fw-bold">Nº Cuenta: <span class="text-secondary fw-normal">{{ account.numero_cuenta || 'N/A' }}</span></p>
                                         
-                                        <hr class="separator-pink my-2">
-
-                                        <div class="account-details-3">
-                                            
-                                            <p class="mb-1 text-primary-custom fw-bold">Nº Cuenta: <span class="text-secondary fw-normal">{{ account.numero_cuenta || 'N/A' }}</span></p>
-                                            
-                                            <p class="mb-1 text-primary-custom fw-bold">Propietario: 
-                                                <span class="text-secondary fw-normal"> 
-                                                    {{ account.entidad_titular.nombre }} 
-                                                    {{ account.entidad_titular.apellido ? account.entidad_titular.apellido : ""}}
-                                                    ( {{ account.entidad_titular.prefijo.letra_prefijo }}-
-                                                    {{ account.entidad_titular.numero_identificacion}} )
-
-                                                </span></p>
-                                            
-                                            <p class="mb-1 text-primary-custom fw-bold">
-                                                Estado de la asociación: 
-                                                
-                                                <span 
-                                                    class="status-badge" 
-                                                    :class="{ 
-                                                        'status-active': account.entidades_asociadas[0].asociacion.es_vigente === true, 
-                                                        'status-inactive': account.entidades_asociadas[0].asociacion.es_vigente === false,
-                                                        'status-na': account.entidades_asociadas[0].asociacion.es_vigente === null || account.entidades_asociadas[0].asociacion.es_vigente === undefined
-                                                    }"
-                                                >
-                                                    {{ 
-                                                        account.entidades_asociadas[0].asociacion.es_vigente === true ? 'Activa' : 
-                                                        (account.entidades_asociadas[0].asociacion.es_vigente === false ? 'Inactiva' : 'N/A')
-                                                    }}
-                                                </span>
-                                            </p>
-
-                                            <p class="mb-1 text-primary-custom fw-bold">Estado de la cuenta bancaria: <span class="text-secondary fw-normal">{{ account.estado.nombre || 'N/A' }}</span></p>
-                                                           
-                                             <div class="mt-1 text-end">
-                                                <button 
-                                                    class="btn btn-sm me-2" 
-                                                    @click="toggleAccountAssociation(account)"
-                                                    :class="account.entidades_asociadas[0].asociacion.es_vigente ? 'btn-outline-danger' : 'btn-outline-success'"
-                                                    :title="account.entidades_asociadas[0].asociacion.es_vigente ? 'Desactivar Asociación' : 'Activar Asociación'"
-                                                >
-                                                    <i :class="account.entidades_asociadas[0].asociacion.es_vigente ? 'bi bi-x-circle' : 'bi bi-check-circle'"></i> 
-                                                  {{ account.entidades_asociadas[0].asociacion.es_vigente ? 'Desactivar' : 'Activar' }}
-                                                </button>
-                                            </div>
-
-
+                                        
+                                        <p class="mb-1 text-primary-custom fw-bold">Estado: <span class="text-secondary fw-normal">{{ account.estado.nombre || 'N/A' }}</span></p>
+                                        
+                                        <div class="mt-2 text-end">
+                                            <button 
+                                                @click="openAssociatedEntitiesModal(account)" 
+                                                class="btn btn-sm btn-outline-info-custom" 
+                                                title="Ver Entidades Asociadas"
+                                            >
+                                                <i class="bi bi-people me-1"></i> Entidades Asociadas 
+                                              
+                                            </button>
                                         </div>
-                                    </li>
-                                </ul>
+
+                                    </div>
+                                </li>
+                            </ul>
 
                         </div>
                     </div>
                 </div>
+
+
             </div>
             
         </div> <div v-else class="alert alert-danger text-center py-5">
-            <h2 class="h4">❌ Error 404: Estudiante no encontrado.</h2>
+            <h2 class="h4">❌ Error 404: Entidad no encontrada.</h2>
             <p>Verifica el ID proporcionado o el estado del servidor.</p>
         </div>
 
 
-        <EstudianteModal 
-            v-if="student"
+        <EntidadModal 
+            v-if="entity"
             :isVisible="isModalVisible" 
-            :initialData="student"
+            :initialData="entity"
             @close="closeEditModal"
-            @update-status="updateStudentStatus" 
+            @update-entity="updateEntity" 
         />
 
-        <Teleport to="body">
-            <AsociarCuentaModal
-                v-if="student"
-                :isVisible="isAssociationModalVisible"
-                :entidadId="student.id"
-                entidadRol="estudiante" 
-                @close="closeAssociationModal"
-                @association-success="fetchStudentData()"
-            />
-        </Teleport>
+        <AssociatedEntitiesModal 
+            :isVisible="isAssociatedEntitiesModalVisible" 
+            :cuentaId="accountToDetail ? accountToDetail.id : null"
+            :accountData="accountToDetail"
+            @close="closeAssociatedEntitiesModal"
+        />
 
     </div>
 </template>
@@ -202,21 +167,23 @@
 
     import { useToast } from '../../services/notificacionesService'; 
 
-    import EstudianteModal from './FormularioEstudiantesView.vue'; 
+    import EntidadModal from './FormularioEntidadesView.vue'; 
 
-    import AsociarCuentaModal from '../cuentasBancarias/asociacion/AsociarCuentaModal.vue'; 
+    import AssociatedEntitiesModal from './AssociatedEntitiesModal.vue';
 
 
     // ----------------------------------- Variables ----------------------------------------
 
         // Rutas
-        const rutaBaseEstudiante = "/Estudiante/";
-        const rutaBaseAsociacion = "/EntidadCuentaAsociacion/"
+            const rutaBaseEntidad = "/Entidad/";
+            const rutaBaseCuentasBancarias = "/CuentaBancaria/";
 
-        const rutaCambiarEstado = `${rutaBaseEstudiante}CambiarEstado`;
+            const rutaCambiarEstado = `${rutaBaseEntidad}CambiarEstado`;
 
-        // Ruta para Cambiar el estado de la asociación de cuenta bancaria con el estudiante
-        const rutaCambiarEstadoAsociacion = `${rutaBaseAsociacion}CambiarEstado`;
+            // Modificar entidad
+            const rutaModificar = `${rutaBaseEntidad}Modificar`
+
+            const rutaCuentasAsociadas = `${rutaBaseCuentasBancarias}Buscar/Aprobadas/Titular/`;
 
 
         const { exito, error } = useToast();
@@ -229,11 +196,11 @@
         }
         });
 
-        // El estudiante
-        const student = ref(null);
+        // La entidad
+        const entity = ref(null);
 
-        // Las cuentas bancarias asociadas al estudiante
-        const studentAccounts = ref([]);
+        // Las cuentas bancarias de las que es titular la entidad
+        const entityAccounts = ref([]);
 
         const isLoading = ref(true);
 
@@ -242,26 +209,23 @@
 
         // ----------------------------------- API ----------------------------------------
 
-            // Función para cargar los datos del estudiante y sus cuentas bancarias
-            const fetchStudentData = async () => {
+            // Función para cargar los datos de la entidad y sus cuentas bancarias
+            const fetchEntityData = async () => {
                 isLoading.value = true;
                 try {
                     // Carga los datos principales usando el ID
-                    const Response = await api.get(`${rutaBaseEstudiante}${props.id}`);
+                    const Response = await api.get(`${rutaBaseEntidad}${props.id}`);
                     console.log("id prop:", props.id);
-                    student.value = Response.data.data;
+                    entity.value = Response.data.data;
                     
-                    // Carga las cuentas bancarias asociadas
-                    const accountsResponse = await api.get(`/CuentaBancaria/Buscar/PorRol`, {
-                                                                                                params: { 
-                                                                                                    id: props.id, 
-                                                                                                    rol: "estudiante"
-                                                                                                }
-                                                                                            });
-                    studentAccounts.value = accountsResponse.data.data;
+                    // Carga las cuentas bancarias de las que es titular
+                    const accountsResponse = await api.get(`${rutaCuentasAsociadas}${props.id}`);
+                    entityAccounts.value = accountsResponse.data.data;
+
+                    
 
                 } catch (err) {
-                    console.error('Error al cargar los datos del estudiante:', err);
+                    console.error('Error al cargar los datos de la entidad:', err);
                     // Manejo de error, por ejemplo, redirigir a una página 404
                 } finally {
                     isLoading.value = false;
@@ -269,42 +233,35 @@
             };
 
             onMounted(() => {
-                fetchStudentData();
+                fetchEntityData();
             });
 
 
 
-            /**
-             * Cambia el estado de asociación (activo/inactivo) de una cuenta bancaria con el estudiante.
-             * @param {object} account - El objeto de cuenta asociada a modificar.
-             */
-            const toggleAccountAssociation = async (account) => {
 
-                // 1. Determinar el nuevo estado
-                const newStatus = !account.asociacion.es_vigente;
-                
-                // Mensajes para el usuario
-                const action = newStatus ? 'activada' : 'desactivada';
+            /**
+             * Cambia el estado de una entidad (activo/inactivo) llamando a la API.
+             * @param {object} account - El objeto de cuenta a modificar.
+             */
+            const toggleStatus = async (entity) => {
+
+                const newStatus = !entity.estado;
 
                 try {
-                    // 3. Llamada a la API (Asume que la API acepta un PUT a la ruta con el cuerpo de datos)
 
-                    await api.put(`${rutaCambiarEstadoAsociacion}/${account.asociacion.id}`, { nuevoEstado: newStatus });
+                    await api.put(`${rutaCambiarEstado}/${entity.id}`, { estado: newStatus });
 
-                    // 4. Si es exitoso, actualizar el estado local y mostrar éxito
-                    account.asociacion.es_vigente = newStatus;
-        
-                    exito('Éxito', `Asociación de la cuenta ha sido ${action} correctamente.`);
+                    // Si la llamada es exitosa, actualiza la variable local para que Vue refresque el DOM.
+                    entity.estado = newStatus;
 
-                    // Opcional: Recargar los datos del estudiante si es necesario
-                    // await loadStudentDetails(); 
+                    exito('Éxito', `Estado de la entidad ${entity.numero_identificacion} cambiado a: ${newStatus ? 'Activo' : 'Inactivo'}`);
 
                 } catch (err) {
-                    // Revertir el estado visual si la API falla
-                    // account.isAssociated = !newStatus; 
-                    error('Error al cambiar la asociación', `No se pudo cambiar el estado de la cuenta. ${err.response?.data?.message || 'Error de servidor.'}`);
+                    error('Error al cambiar el estado', `${err.response?.data?.message || 'Error de servidor.'}`);
+
                 }
             };
+
 
 
         // ----------------------------------- Interfaz  ----------------------------------------
@@ -365,17 +322,31 @@
             };
 
 
-        // ----------------------------------- Lógica del Modal de cuentas bancarias ----------------------------------------
+        // ----------------------------- Lógica del Modal de Entidades Asociadas a una Cuenta ---------------------------------
+        
+            const isAssociatedEntitiesModalVisible = ref(false);
+            const accountToDetail = ref(null); // Guardará el objeto completo de la cuenta
 
-            const isAssociationModalVisible = ref(false);
+            /**
+             * Abre el modal de detalle de entidades asociadas.
+             * Envía el objeto de cuenta completo (que incluye el ID necesario para la API).
+             * @param {object} account - El objeto de cuenta (de entityAccounts) que disparó la acción.
+             */
+            const openAssociatedEntitiesModal = (account) => {
+                // 1. Guardar la data de la cuenta para mostrarla en el modal
+                accountToDetail.value = account;
+                // 2. Mostrar el modal
+                isAssociatedEntitiesModalVisible.value = true;
+            };
 
-            function openAssociationModal() {
-                isAssociationModalVisible.value = true;
-            }
+            /**
+             * Cierra el modal de detalle de entidades asociadas.
+             */
+            const closeAssociatedEntitiesModal = () => {
+                isAssociatedEntitiesModalVisible.value = false;
+                accountToDetail.value = null; // Limpiar la data al cerrar
+            };
 
-            function closeAssociationModal() {
-                isAssociationModalVisible.value = false;
-            }
 
         // ----------------------------------- Lógica del Modal de edición ----------------------------------------
 
@@ -383,56 +354,46 @@
             const studentDataToEdit = ref(null);
 
             /**
-             * Abre el modal en modo edición.
-             */
+            * Abre el modal y lo configura en modo Creación o Edición.
+            * @param {object|null} account - El objeto de cuenta para editar, o null para crear.
+            */
             const openEditModal = () => {
-                // 1. Prepara los datos del estudiante para pasarlos al modal
-                if (student.value) {
-                    studentDataToEdit.value = {
-                        id: student.value.id,
-                        estado: student.value.estado, // Pasamos el objeto estado completo
-                        entidadId: student.value.entidadId 
-                    };
-                }
-                // 2. Muestra el modal
+                // En cualquier caso, el modal debe hacerse visible
                 isModalVisible.value = true;
             };
 
+
             /**
-             * Cierra el modal y limpia el estado.
-             */
+            * Cierra el modal y resetea el estado de edición.
+            */
             const closeEditModal = () => {
+                // Modal oculto
                 isModalVisible.value = false;
-                studentDataToEdit.value = null;
             };
 
 
+        
             /**
-             * Función que maneja el evento 'update-status' del modal
-             * y realiza la llamada a la API para actualizar el estado del estudiante.
-             * @param {Object} data - Objeto con { id: studentId, estado: nuevoEstadoId }
+             * Maneja el evento 'update-entity' del modal llamando a la API.
              */
-            async function updateStudentStatus(data) {
+            const updateEntity = async (updatedData) => {
+    
                 try {
-                    
-                    await api.put(`${rutaCambiarEstado}/${data.id}`, data); 
 
-                    exito('Éxito', 'El estado del estudiante ha sido modificado.');
-                    
-                    // 3. Cerrar el modal
-                    isModalVisible.value = false;
-                    
+                    const response = await api.put(`${rutaModificar}/${updatedData.id}`, updatedData);
 
-                    await fetchStudentData(data.id); 
+                    exito('Éxito', 'Entidad modificada correctamente.');
 
-                } catch (err) {
-                    
-                    // 5. Si la llamada falla (ej. error 400/500), se muestra el error.
-                    error('Error al actualizar', 'No se pudo actualizar el estado académico del estudiante. Intente de nuevo.');
-                    console.error('Error de API:', err);
-                    
+                    await fetchEntityData(); 
+
+                    // 4. Cerrar el modal.
+                    closeEditModal();
+
+
+                }catch (err) {
+                    error('Error al modificar la entidad', `${err.response?.data?.message || 'Error de servidor.'}`);
                 }
-            }
+            };
 
 </script>
 

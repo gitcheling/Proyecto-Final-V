@@ -103,11 +103,13 @@
             <p>Los campos con <span class="asterisc">*</span> son obligatorios</p>
 
             <div class="modal-actions">
-            <button type="submit" class="btn-primary" :disabled="!isFormValid" >
-                {{ newBankAccount.id ? 'Guardar Cambios' : 'Crear Cuenta Bancaria' }}
-            </button>
-            
-            <button type="button" @click="$emit('close')" class="btn-secondary">Cancelar</button>
+                <button type="submit" class="btn-primary" :disabled="!isFormValid" >
+                    {{ newBankAccount.id ? 'Guardar Cambios' : 'Crear Cuenta Bancaria' }}
+                </button>
+                
+                <button type="button" @click="$emit('close')" class="btn btn-outline-secondary-custom">
+                     <i class="bi bi-x-circle me-1"></i>Cancelar
+                </button>
             </div>
 
         </form>
@@ -724,12 +726,13 @@ h3 {
   transition: background-color 0.2s;
 }
 .btn-primary {
-  background-color: #007bff;
+    background-color: #d139ff; 
   color: white;
 }
 .btn-primary:hover {
-  background-color: #0056b3;
+ background-color: #6A1B9A; 
 }
+
 .btn-secondary {
   background-color: #6c757d;
   color: white;
@@ -737,6 +740,17 @@ h3 {
 .btn-secondary:hover {
   background-color: #5a6268;
 }
+/* Estilos de Botones */
+.btn-outline-secondary-custom {
+    --bs-btn-color: #6c757d;
+    --bs-btn-border-color: #6c757d;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #6c757d;
+    --bs-btn-hover-border-color: #6c757d;
+}
+
+
+
 .suggestions-list {
     list-style: none;
     padding: 0;

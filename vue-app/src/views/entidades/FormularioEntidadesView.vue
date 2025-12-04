@@ -137,11 +137,14 @@
             <p>Los campos con <span class="asterisc">*</span> son obligatorios</p>
 
             <div class="modal-actions">
-            <button type="submit" class="btn-primary" :disabled="!isFormValid" >
-                {{ newEntity.id ? 'Guardar Cambios' : 'Crear Entidad' }}
-            </button>
-            
-            <button type="button" @click="$emit('close')" class="btn-secondary">Cancelar</button>
+                <button type="submit" class="btn-primary" :disabled="!isFormValid" >
+                    {{ newEntity.id ? 'Guardar Cambios' : 'Crear Entidad' }}
+                </button>
+                
+                <button type="button" @click="$emit('close')" class="btn btn-outline-secondary-custom">
+                    <i class="bi bi-x-circle me-1"></i>Cancelar
+                
+                </button>
             </div>
 
         </form>
@@ -817,7 +820,7 @@
                         // No enviamos código, naturaleza, ni padreId
                     };
 
-                    emit('update-account', dataToSend);
+                    emit('update-entity', dataToSend);
                 } else {
 
                     // MODO CREACIÓN: Enviamos todos los campos requeridos
@@ -885,11 +888,11 @@ h3 {
   transition: background-color 0.2s;
 }
 .btn-primary {
-  background-color: #007bff;
+    background-color: #d139ff; 
   color: white;
 }
 .btn-primary:hover {
-  background-color: #0056b3;
+ background-color: #6A1B9A; 
 }
 .btn-secondary {
   background-color: #6c757d;
@@ -939,7 +942,6 @@ h3 {
 }
 
 
-
 /* Estilos para que el modal flote y se vea bien */
 .modal-overlay {
   position: fixed;
@@ -978,6 +980,15 @@ h3 {
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
   transform: translateY(0);
   opacity: 1;
+}
+
+/* Estilos de Botones */
+.btn-outline-secondary-custom {
+    --bs-btn-color: #6c757d;
+    --bs-btn-border-color: #6c757d;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #6c757d;
+    --bs-btn-hover-border-color: #6c757d;
 }
 
 

@@ -223,11 +223,10 @@
                         </div>
 
                         <!-- Botón de CERRAR -->
-                        <button type="button" class="btn btn-secondary" @click="emit('close')">
-                            Cerrar
+                        <button type="button" class="btn btn-outline-secondary-custom" @click="emit('close')">
+                             <i class="bi bi-x-circle me-1"></i>Cerrar
                         </button>
                     </div>
-
                  
                     <!-- MODAL DE CONFIRMACIÓN (Se muestra sobre el contenido principal) -->
                     <Transition name="confirm-pop">
@@ -256,10 +255,10 @@
                                     <!-- Botón de Cancelar -->
                                     <button 
                                         type="button" 
-                                        class="btn btn-secondary" 
+                                        class="btn btn-outline-secondary-custom"
                                         @click="cancelAction"
                                     >
-                                        Cancelar
+                                        <i class="bi bi-x-circle me-1"></i>Cancelar
                                     </button>
                                 </div>
                             </div>
@@ -277,6 +276,15 @@
 </template>
 
 <style scoped>
+
+/* Estilos de Botones */
+.btn-outline-secondary-custom {
+    --bs-btn-color: #6c757d;
+    --bs-btn-border-color: #6c757d;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #6c757d;
+    --bs-btn-hover-border-color: #6c757d;
+}
 
 /* --- ESTILOS BASE DEL MODAL (Igual que el de edición) --- */
 .modal-overlay {

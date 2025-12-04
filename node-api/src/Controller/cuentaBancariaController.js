@@ -15,7 +15,7 @@ const cuentaBancariaService = new CuentaBancariaService();
 
         // Se responde con éxito (201 Created)
             res.status(201).json({
-                message: "Cuenta creada exitosamente y jerarquía establecida.",
+                message: "Cuenta creada exitosamente",
                 data: nuevaCuenta
             });
 
@@ -31,38 +31,41 @@ const cuentaBancariaService = new CuentaBancariaService();
         }
     };
 
+
+
 // Modificación
-exports.cambiarEstadoCuentaBancaria = async (req, res) => {
 
-    const { id } = req.params || {}; 
+    exports.cambiarEstadoCuentaBancaria = async (req, res) => {
 
-    const { estado } = req.body || {}; 
+        const { id } = req.params || {}; 
 
-    try {
-        const completado = await cuentaBancariaService.cambiarEstadoCuentaBancaria(id, estado);
+        const { estado } = req.body || {}; 
 
-        if (!completado) {
-            return res.status(404).json({
+        try {
+            const completado = await cuentaBancariaService.cambiarEstadoCuentaBancaria(id, estado);
+
+            if (!completado) {
+                return res.status(404).json({
+                    error: true,
+                    message: `Cuenta bancaria con ID ${id} no encontrada.`
+                });
+            }
+
+            res.status(200).json({
+                message: `Estado de la cuenta bancaria cambiado a '${completado.nombre}' exitosamente.`,
+                data: "Estado modificado"
+            });
+
+        } catch (error) {
+            // Manejo de errores de validación (400) o servidor (500)
+            const statusCode = error.message.includes('inválido') || error.message.includes('verdadero') ? 400 : 500;
+            
+            res.status(statusCode).json({
                 error: true,
-                message: `Cuenta bancaria con ID ${id} no encontrada.`
+                message: error.message
             });
         }
-
-        res.status(200).json({
-            message: `Estado de la cuenta bancaria cambiado a '${completado.nombre}' exitosamente.`,
-            data: "Estado modificado"
-        });
-
-    } catch (error) {
-        // Manejo de errores de validación (400) o servidor (500)
-        const statusCode = error.message.includes('inválido') || error.message.includes('verdadero') ? 400 : 500;
-        
-        res.status(statusCode).json({
-            error: true,
-            message: error.message
-        });
-    }
-};
+    };
 
     // Aprobar y eliminar cuenta
         exports.aprobarCuentaBancaria = async (req, res) => {
@@ -164,6 +167,81 @@ exports.cambiarEstadoCuentaBancaria = async (req, res) => {
     };
 
 
+
+    exports.obtenerCuentasBancariasPorRol = async (req, res) => {
+        
+        const { id, rol } = req.query || {}; 
+
+        try {
+
+            const cuentas = await cuentaBancariaService.obtenerCuentasBancariasPorRol(id, rol);
+
+            // 200 OK y devuelve el objeto
+            res.status(200).json({
+                message: "Cuentas bancarias obtenidas exitosamente.",
+                data: cuentas
+            });
+            
+        } catch (error) {
+            // Manejo de errores (ej. ID inválido, error de base de datos)
+            res.status(500).json({
+                error: true,
+                message: "Error al obtener las cuentas bancarias: " + error.message
+            });
+        }
+    };
+
+
+     
+    exports.obtenerIdsCuentasBancariasPorRol = async (req, res) => {
+        
+        const { id, rol } = req.query || {}; 
+
+        try {
+
+            const cuentas = await cuentaBancariaService.obtenerIdsCuentasBancariasPorRol(id, rol);
+
+            // 200 OK y devuelve el objeto
+            res.status(200).json({
+                message: "IDs de cuentas bancarias obtenidas exitosamente.",
+                data: cuentas
+            });
+            
+        } catch (error) {
+            // Manejo de errores (ej. ID inválido, error de base de datos)
+            res.status(500).json({
+                error: true,
+                message: "Error al obtener las cuentas bancarias: " + error.message
+            });
+        }
+    };
+
+
+    exports.obtenerCuentasBancariasDeTitular = async (req, res) => {
+        
+        const { id} = req.params || {}; 
+
+        try {
+
+            const cuentas = await cuentaBancariaService.obtenerCuentasBancariasDeTitular(id);
+
+            // 200 OK y devuelve el objeto
+            res.status(200).json({
+                message: "Cuentas bancarias obtenidas exitosamente.",
+                data: cuentas
+            });
+            
+        } catch (error) {
+            // Manejo de errores (ej. ID inválido, error de base de datos)
+            res.status(500).json({
+                error: true,
+                message: "Error al obtener las cuentas bancarias: " + error.message
+            });
+        }
+    };
+
+
+
     exports.buscarCuentasAprobadas = async (req, res) => {
 
         const criteriosBusqueda = req.query || {};
@@ -204,6 +282,7 @@ exports.cambiarEstadoCuentaBancaria = async (req, res) => {
             });
         }
     }
+
 
 
     exports.buscarCuentasPorAprobar = async (req, res) => {
@@ -248,6 +327,7 @@ exports.cambiarEstadoCuentaBancaria = async (req, res) => {
     }
 
 
+
 // Comprobación
     exports.comprobarCuentaBancariaExistente = async (req, res) => {
 
@@ -281,37 +361,6 @@ exports.cambiarEstadoCuentaBancaria = async (req, res) => {
         }
     };
 
-
-    exports.ContarPorEntidad = async (req, res) => {
-
-        const { id, rol} = req.query || {}; 
-
-        try {
-            // Convertir y limpiar datos
-            const id_cadena = id ? String(id) : null;
-            const rol_cadena = rol ? String(rol) : null;
-            
-            const cantidad = await cuentaBancariaService.ContarPorEntidad(id_cadena, rol_cadena);
-
-            // El backend retorna el objeto final
-            return res.status(200).json({ 
-                message: 'Cantidad de cuentas bancarias obtenida.', 
-                cantidad: cantidad  
-            });
-
-
-        } catch (error) {
-            
-            // La mayoría de los errores son de "Bad Request" (400) debido a la validación
-            // (código no numérico, prefijo incorrecto, padre inexistente, etc.)
-            const statusCode = error.message.includes('existe') || error.message.includes('válido') || error.message.includes('obligatorio') ? 400 : 500;
-            
-            res.status(statusCode).json({
-                error: true,
-                message: error.message
-            });
-        }
-    };
 
 
 

@@ -32,7 +32,7 @@ app.provide('addToast', addToast);
 // 4. Agregar Plugins
 app.use(router) // Usa Vue Router
 
-// Se registra Element Plus como plugin
+// Snpe registra Element Plus como plugin
 app.use(ElementPlus);
 
 // 5. Configurar Axios (Cliente HTTP)

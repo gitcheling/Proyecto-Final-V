@@ -4,31 +4,40 @@
         <Transition name="modal-drop">
             <div v-if="isVisible" class="modal-content">
                 
-                <h3 class="mb-4">Asociar Cuentas Bancarias - ({{ props.entidadRol.toUpperCase() }})</h3>
+                <h3 class="mb-4">Asociar Cuentas Bancarias</h3>
                 
                 <div class="alert alert-info" v-if="cuentasAsociadasCount > 0 && puedeAsociar">
-                    Esta entidad ya tiene **{{ cuentasAsociadasCount }}** cuenta(s) asociada(s). 
-                    Puede asociar hasta **{{ MAX_CUENTAS_PERMITIDAS }}** en total.
+                    Este {{ entidadRol ? entidadRol : "cliente"}} ya tiene <span class="cantidad_cuentas">{{ cuentasAsociadasCount }}</span> cuenta(s) asociada(s). 
+                    Puede asociar hasta <span class="cantidad_cuentas">{{ MAX_CUENTAS_PERMITIDAS }}</span> en total.
                 </div>
                 
                 <div class="alert alert-danger" v-if="!puedeAsociar">
-                    LÍMITE ALCANZADO: No se pueden asociar más de {{ MAX_CUENTAS_PERMITIDAS }} cuentas.
+                    LÍMITE ALCANZADO: No se pueden asociar más de <span class="cantidad_cuentas">{{ MAX_CUENTAS_PERMITIDAS }}</span> cuentas.
                 </div>
 
                 <form @submit.prevent="submitAssociation">
                     
                     <div class="form-group mb-3" v-if="puedeAsociar">
                         
-                        <label for="searchCuenta">Buscar Cuenta Bancaria (Número o Nombre)</label>
+                        <label for="searchCuenta">Buscar Cuenta Bancaria (Número de cuenta o Nombre del Títular)</label>
                         <input 
                             type="text" 
                             id="searchCuenta" 
                             class="form-control"
                             v-model="searchTerm" 
                             @input="searchCuentas" 
-                            placeholder="Ej: 1234567890 o Banco Mercantil"
+                            :disabled="!puedeAsociar || limiteTemporalAlcanzado"
+                            placeholder="Ej: '01024567890' o 'Corpoelec'"
                         />
-                        <small class="form-text text-muted">Escriba al menos 3 caracteres para buscar.</small>
+                        <small class="form-text mt-1 text-muted" >
+                            <span v-if="limiteTemporalAlcanzado">
+                                Se ha alcanzado el límite máximo de cuentas ({{ MAX_CUENTAS_PERMITIDAS }}).
+                            </span>
+                            <span v-else>
+                                Escriba al menos 3 caracteres para buscar.
+                            </span>
+
+                        </small>
                         
                         <div v-if="isLoading" class="text-center mt-2">Cargando sugerencias...</div>
 
@@ -39,7 +48,7 @@
                             <li v-for="cuenta in suggestions"
                                 :key="cuenta.id"
                                 class="suggestion-item"> <span class="suggestion-text">
-                                    {{ cuenta.numero_cuenta }} - **{{ cuenta.banco.nombre }}** ({{ cuenta.tipo_cuenta.nombre }})
+                                    {{ cuenta.numero_cuenta }} - {{ cuenta.banco.nombre }} ({{ cuenta.tipo_cuenta.nombre }})
                                 </span>
                                 
                                 <button 
@@ -69,7 +78,10 @@
                         <button type="submit" class="btn-primary" :disabled="cuentasAsociar.length === 0"> 
                             Asociar Cuentas ({{ cuentasAsociar.length }})
                         </button>
-                        <button type="button" @click="$emit('close')" class="btn-secondary">Cancelar</button>
+                        <button type="button" @click="$emit('close')" class="btn btn-outline-secondary-custom">
+                             <i class="bi bi-x-circle me-1"></i>Cancelar
+                        </button>
+
                     </div>
                 </form>
 
@@ -91,12 +103,14 @@
                     </div>
                     
                     <div class="modal-actions-details">
-                        <button type="button" @click="handleSelectFromDetalles" class="btn-primary-small"> 
+                        <button type="button" @click="handleSelectFromDetalles" class="btn-primary"> 
                             <i class="fa fa-plus"></i> Agregar
                         </button>
-                        <button type="button" @click="closeDetallesModal" class="btn-secondary">
-                            Cancelar
+
+                        <button type="button" @click="closeDetallesModal" class="btn btn-outline-secondary-custom">
+                             <i class="bi bi-x-circle me-1"></i>Cancelar
                         </button>
+
                     </div>
                 </div>
             </div>
@@ -114,17 +128,23 @@ const { exito, error, warning, info } = useToast();
 
 // ----------------------------------- CONSTANTES Y RUTAS ----------------------------------------
 const MAX_CUENTAS_PERMITIDAS = 5; // Limite máximo
+
 const rutaBaseCuentaBancaria = "/CuentaBancaria/";
-const rutaContarCuentas = `${rutaBaseCuentaBancaria}ContarPorEntidad`;
-const rutaBuscarCuentas = `${rutaBaseCuentaBancaria}Buscar/Aprobadas`; // Nueva ruta para buscar
-const rutaAsociarCuenta = `${rutaBaseCuentaBancaria}AsociarCuenta`;
+const rutaBaseAsociacion = "/EntidadCuentaAsociacion/"
+
+const rutaIDsAsociados = `${rutaBaseCuentaBancaria}Buscar/IdsPorRoL`;
+const rutaBuscarCuentas = `${rutaBaseCuentaBancaria}Buscar/Aprobadas`;
+
+const rutaAsociarCuenta = `${rutaBaseAsociacion}AsociarCuenta`;
+const rutaContarCuentas = `${rutaBaseAsociacion}ContarPorEntidad`;
+
+
 
 // ----------------------------------- PROPS Y EMITS ----------------------------------------
 const props = defineProps({
     isVisible: { type: Boolean, required: true },
     entidadId: { type: Number, default: null },
-    entidadRol: { type: String, default: '' }, // 'estudiante', 'docente', 'proveedor'
-    entidadConcepto: { type: String, default: 'ROL_NO_DEFINIDO' } 
+    entidadRol: { type: String, default: '' } // 'estudiante', 'docente', 'proveedor'
 });
 
 const emit = defineEmits(['close', 'association-success']);
@@ -140,16 +160,25 @@ const cuentasAsociar = ref([]);
 const isLoading = ref(false);
 let searchTimeout = null;
 
+const cuentasYaAsociadasIds = ref(new Set());
+
 
 // NUEVO ESTADO PARA EL MODAL DE DETALLES ANIDADO
 const isDetallesModalVisible = ref(false); 
 const cuentaParaDetalles = ref(null);
 
+// Para saber si alcanzó el límite de cuentas y desactive el input de búsqueda
+const limiteTemporalAlcanzado = computed(() => {
+    // Si la suma de las cuentas ya asociadas + las cuentas que el usuario ha seleccionado temporalmente
+    // es igual o mayor al límite, se deshabilita la búsqueda.
+    return (cuentasAsociadasCount.value + cuentasAsociar.value.length) >= MAX_CUENTAS_PERMITIDAS;
+});
+
 
 // ----------------------------------- FUNCIONES DE LÓGICA ----------------------------------------
 
 /**
- * Función para contar cuentas (sin cambios).
+ * Función para contar cuentas 
  */
 async function fetchCuentasCount() {
     // ... (Tu código actual para fetchCuentasCount)
@@ -171,7 +200,30 @@ async function fetchCuentasCount() {
 }
 
 /**
- * Función para buscar cuentas (sin cambios).
+ * Función para obtener los IDs de cuentas ya asociadas a esta entidad.
+ */
+async function fetchIdsCuentasAsociadas() {
+    if (!props.entidadId || !props.entidadRol) return;
+
+    try {
+        const params = {
+            id: props.entidadId,
+            rol: props.entidadRol
+        };
+
+        const response = await api.get(rutaIDsAsociados, { params });
+
+        // Crea un Set directamente a partir del array de IDs para un filtrado eficiente.
+        cuentasYaAsociadasIds.value = new Set(response.data.data);
+
+    } catch (err) {
+        error('Error IDs', 'No se pudo obtener la lista de cuentas ya asociadas.');
+        cuentasYaAsociadasIds.value = new Set(); // Asegura que sea un Set vacío
+    }
+}
+
+/**
+ * Función para buscar cuentas 
  */
 function searchCuentas() {
     clearTimeout(searchTimeout);
@@ -180,7 +232,7 @@ function searchCuentas() {
     
     const query = searchTerm.value.trim();
 
-    if (query.length < 3 || !puedeAsociar.value) {
+    if (query.length < 3 || limiteTemporalAlcanzado.value) { // Usamos la nueva propiedad
         if (query.length === 0) {
             suggestions.value = [];
         }
@@ -198,10 +250,10 @@ function searchCuentas() {
         
         if (isNumeric) {
             params.numero_cuenta = query;
-        
+            params.estado = 1;
         } else if (isText) {
             params.nombre = query;
-    
+            params.estado = 1;
         } else {
             suggestions.value = [];
             isLoading.value = false;
@@ -213,7 +265,10 @@ function searchCuentas() {
             const response = await api.get(rutaBuscarCuentas, { params });
             
             const selectedIds = new Set(cuentasAsociar.value.map(c => c.id));
-            suggestions.value = response.data.data.filter(c => !selectedIds.has(c.id));
+           suggestions.value = response.data.data.filter(c => 
+                !selectedIds.has(c.id) && // Que la cuenta de sugerencia no la haya seleccionado ya el usuario para agregar
+                !cuentasYaAsociadasIds.value.has(c.id) // Que la cuenta de sugerencia no la tenga ya la entidad asociada
+            );
             
         } catch (err) {
             error('Error de búsqueda', 'Ocurrió un error al buscar cuentas bancarias.');
@@ -224,8 +279,10 @@ function searchCuentas() {
     }, 300);
 }
 
+
+
 /**
- * 3. Selecciona una cuenta y la agrega al listado temporal. (sin cambios)
+ * 3. Selecciona una cuenta y la agrega al listado temporal. 
  */
 function selectCuenta(cuenta) {
     if (cuentasAsociar.value.length < (MAX_CUENTAS_PERMITIDAS - cuentasAsociadasCount.value)) {
@@ -246,7 +303,7 @@ function selectCuenta(cuenta) {
 }
 
 /**
- * 4. Envía las cuentas seleccionadas (sin cambios).
+ * 4. Envía las cuentas seleccionadas 
  */
 async function submitAssociation() {
     
@@ -259,7 +316,7 @@ async function submitAssociation() {
         const cuentasIds = cuentasAsociar.value.map(c => c.id);
         const dataToSend = {
             entidad: props.entidadId,
-            concepto: props.entidadConcepto,
+            concepto: props.entidadRol,
             cuentasIds: cuentasIds
         };
         
@@ -278,7 +335,7 @@ async function submitAssociation() {
 }
 
 /**
- * 5. Limpieza y reinicio del estado. (sin cambios)
+ * 5. Limpieza y reinicio del estado. 
  */
 function resetForm() {
     cuentasAsociadasCount.value = 0;
@@ -292,11 +349,12 @@ function resetForm() {
 }
 
 
-// ----------------------------------- WATCHER DE VISIBILIDAD----------------------------------------
+// ----------------------------------- WATCHER DE VISIBILIDAD Y LLAMADA DE DATOS ----------------------------------------
 watch(() => props.isVisible, (newVal) => {
     if (newVal) {
         resetForm(); 
         fetchCuentasCount(); 
+        fetchIdsCuentasAsociadas();
     } else {
         resetForm();
     }
@@ -352,6 +410,7 @@ h3 {
     display: block;
     margin-bottom: 5px;
     font-weight: bold;
+    color: #494949;
 }
 .form-group input, .form-group select {
     width: 100%;
@@ -369,8 +428,8 @@ h3 {
     border: 1px solid transparent;
 }
 .alert-info {
-    color: #0c5460;
-    background-color: #d1ecf1;
+    color: #5e0f72;
+    background-color: #f6d4ff;
     border-color: #bee5eb;
 }
 .alert-danger {
@@ -378,6 +437,14 @@ h3 {
     background-color: #f8d7da;
     border-color: #f5c6cb;
 }
+
+
+/* Estilos para la cantidad de cuentas del usuario y la cantidad máxima que puede tener (al dar click a "asociar cuenta")  */
+.cantidad_cuentas {
+    color: #cc1058;
+}
+
+
 
 
 /* Sugerencias de Búsqueda */
@@ -418,10 +485,11 @@ h3 {
 .suggestion-text {
     flex-grow: 1;
     font-size: 0.9em;
+    color: #212529;
 }
 
 .btn-info-details {
-    background-color: #6c757d;
+    background-color: #e936e0;
     color: white;
     border: none;
     padding: 5px 10px;
@@ -441,6 +509,13 @@ h3 {
     border: 1px solid #ddd;
     margin-bottom: -1px;
 }
+
+/* Color para el texto de las cuentas seleccionadas */
+.list-group-item span {
+    color: #5c2e8a; /* Violeta oscuro/Morado Profundo */
+    font-weight: 500; /* Hace que el texto resalte un poco más */
+}
+
 .d-flex {
     display: flex;
 }
@@ -451,19 +526,24 @@ h3 {
     align-items: center;
 }
 
+.btn-primary, .btn-secondary {
+  border: none;
+  padding: 10px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
 .btn-primary { 
-    background-color: #8A2BE2; 
+    background-color: #d139ff; 
     color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s;
     margin-right: 10px;
 }
+
 .btn-primary:hover:not(:disabled) {
     background-color: #6A1B9A; 
 }
+
 .btn-primary:disabled {
     background-color: #aaa;
     cursor: not-allowed;
@@ -472,12 +552,8 @@ h3 {
 .btn-secondary {
     background-color: #6c757d;
     color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s;
 }
+
 .btn-secondary:hover {
     background-color: #5a6268;
 }
@@ -552,7 +628,7 @@ h3 {
     padding: 20px;
     border-radius: 12px; 
     width: 90%;
-    max-width: 420px; /* Tamaño pequeño */
+    max-width: 400px; /* Tamaño pequeño */
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
     text-align: center;
     position: relative;
@@ -572,9 +648,9 @@ h3 {
     font-size: 0.95rem;
 }
 
-/* AJUSTE CLAVE: Resaltar el número de cuenta */
+/* Resaltar el número de cuenta */
 .account-details-card code {
-    font-size: 1.15rem; /* <--- MODIFICADO: Letra más grande */
+    font-size: 1.15rem; 
     font-weight: bold;
     color: #f339fa; /* Color azul para destacar */
     background-color: #e9ecef00; 
@@ -592,7 +668,7 @@ h3 {
 }
 
 .btn-primary-small {
-    background-color: #28a745; 
+    background-color: #00a6e7; 
     color: white;
     border: none;
     padding: 8px 12px;
@@ -602,7 +678,7 @@ h3 {
     font-size: 0.9em;
 }
 .btn-primary-small:hover {
-    background-color: #1e7e34;
+    background-color: #007ab3;
 }
 
 .btn-secondary-small {
@@ -617,6 +693,15 @@ h3 {
 }
 .btn-secondary-small:hover {
     background-color: #c82333;
+}
+
+/* Estilos de Botones */
+.btn-outline-secondary-custom {
+    --bs-btn-color: #6c757d;
+    --bs-btn-border-color: #6c757d;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #6c757d;
+    --bs-btn-hover-border-color: #6c757d;
 }
 
 /* ------------------------------------------------ */

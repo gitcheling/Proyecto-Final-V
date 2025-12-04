@@ -78,3 +78,29 @@ html, body {
 .el-popper {
     z-index: 10001 !important; 
 }
+
+
+/* --- CLASE DE UTILIDAD: EFECTO ELEVACIÓN HOVER --- */
+
+    /*
+    * Clase base para aplicar la sombra inicial y transiciones suaves.
+    */
+    .hover-lift {
+        /* Sombra inicial: Fuerte y definida */
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.20); 
+        
+        /* Aseguramos la transición para un movimiento suave */
+        transition: all 0.3s ease-in-out; 
+    }
+
+    /*
+    * Efecto al pasar el mouse: Se eleva y la sombra cambia (se hace más difusa y/o menos densa).
+    */
+    .hover-lift:hover {
+        transform: translateY(-3px); /* Sube 3 píxeles hacia arriba */
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+        -webkit-transform: translateY(-4px);
+        -moz-transform: translateY(-4px);
+        -ms-transform: translateY(-4px);
+        -o-transform: translateY(-4px);
+}

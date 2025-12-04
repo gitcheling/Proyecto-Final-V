@@ -5,7 +5,7 @@
     <h2>Gestión de Entidades</h2>
     <div class="mb-3">
         <!-- Botón para crear una nueva entidad -->
-        <button @click="openModal" class="btn btn-outline-primary flex-fill py-2 shadow-sm ms-2 mb-2">
+        <button @click="openModal" class="btn btn-outline-pink flex-fill py-2 shadow-sm ms-2 mb-2">
         + Agregar Nueva Entidad
         </button>
 
@@ -26,7 +26,7 @@
     </div>
 
     <Transition name="fade-slide">
-        <div class="filters-container" v-if="areFiltersVisible">
+        <div class="filters-container hover-lift" v-if="areFiltersVisible">
             <h3>Filtros</h3>
 
             <div class="row">
@@ -137,100 +137,96 @@
 
     </Transition>
 
-    <!-- Tabla de las cuentas -->
-    <div class="table-responsive">
-        <table class="table table-striped table-hover table-bordered table-custom">
-
-        <thead class="header-personalizado">
-            <tr>
-                <th class="text-center col-tipo_entidad">Tipo de entidad</th>
-                <th class="text-center col-tipo_identificacion">Tipo de identificación</th>
-                <th class="text-center col-numero_identificacion">Número de identificación</th>
-                <th class="text-center col-nombre">Nombre</th>
-                <th class="text-center col-apellido">Apellido</th>
-                <th class="text-center col-fecha_creacion">Fecha de creación</th>
-                <th class="text-center col-fecha_actualizacion">Última modificación</th>
-                <th class="text-center col-estado">Estado</th>
-                <th class="text-center col-acciones">Acciones</th>
-            </tr>
-        </thead>
-
-        
-        <tbody>
-            <tr v-if="isLoadingTable">
-                <td colspan="13" class="text-center">
-                    <span class="loading-message">Cargando datos...</span>
-                </td>
-            </tr>
-            <tr v-else-if="entitiesTypes.length === 0">
-                <td colspan="10" class="text-center">
-                    <span class="no-results-message">No se encontraron entidades. Intenta ajustar los filtros.</span>
-                </td>
-            </tr>
-            <tr v-else v-for="entity in entitiesTypes" :key="entity.id">
-                <td class="">{{ entity.tipo_entidad.nombre }}</td>
-                <td class="">{{ entity.tipo_identificacion.nombre }}</td>
-                <td class="">{{`${entity.prefijo.letra_prefijo} - ${entity.numero_identificacion}`}}</td>
-                <td class="">{{ entity.nombre }}</td>
-                <td class="">{{ entity.apellido }}</td>
-                <td class="">{{ formatDateTime(entity.fechaCreacion) }}</td>
-                <td class="">{{ formatDateTime(entity.fechaActualizacion) }}</td>
-
-
-                <td class="">
-                    {{ entity.estado ? 'Activo' : 'Inactivo' }}
-                </td>
-
-                <td class=" text-center">
-                    <div class="d-flex flex-row flex-nowrap justify-content-center">
-                        <button 
-                            class="btn btn-sm btn-outline-info me-1" 
-                            @click="showDetailsModal(entity)" 
-                            title="Ver detalles de la Entidad"
-                        >
-                            <i class="bi bi-eye-fill"></i> 
-                        </button>
-
-                        <button 
-                        class="btn btn-sm btn-outline-primary me-1" 
-                        @click="toggleStatus(entity)"
-                        :disabled="entity.id === 1" 
-                        :title="entity.id === 1 ? 'La cuenta interna de la academia no se puede desactivar' : ''"
-                        >
-                        <i :class="entity.estado ? 'bi bi-toggle-on' : 'bi bi-toggle-off'"></i> 
-                        </button>
-
-                        <button 
-                        class="btn btn-sm btn-outline-info"
-                        @click="openModal(entity)"
-                        :disabled="entity.id === 1" 
-                        :title="entity.id === 1 ? 'La cuenta interna de la academia no se puede modificar' : ''"
-                        >
-                        <i class="bi bi-pencil"></i>
-                        </button>    
-                    </div>           
-                </td>
-            </tr>
-        </tbody>
-        
-
-        </table>
+    <!-- Mensaje de la cantidad de resultados encontrados -->
+    <div 
+    v-if="entitiesTypes.length > 0 && !isLoadingTable" 
+    class="mb-3 text-start"
+    >
+        <span class="results-summary" v-html="resultsText"></span>
     </div>
 
-    <!-- Modal para crear o editar una entidad -->
+    <!-- Tabla de las entidades -->
+    <div class="table-card-wrapper hover-lift">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover table-bordered table-custom">
+
+            <thead class="header-personalizado">
+                <tr>
+                    <th class="text-center col-tipo_entidad">Tipo de entidad</th>
+                    <th class="text-center col-tipo_identificacion">Tipo de identificación</th>
+                    <th class="text-center col-numero_identificacion">Número de identificación</th>
+                    <th class="text-center col-nombre">Nombre</th>
+                    <th class="text-center col-apellido">Apellido</th>
+                    <th class="text-center col-fecha_creacion">Fecha de creación</th>
+                    <th class="text-center col-fecha_actualizacion">Última modificación</th>
+                    <th class="text-center col-estado">Estado</th>
+                    <th class="text-center col-acciones">Acciones</th>
+                </tr>
+            </thead>
+
+            
+            <tbody>
+                <tr v-if="isLoadingTable">
+                    <td colspan="13" class="text-center">
+                        <span class="loading-message">Cargando datos...</span>
+                    </td>
+                </tr>
+
+                <tr v-if="entitiesTypes.length > 0" v-for="entity in entitiesTypes" :key="entity.id">
+                    <td class="">{{ entity.tipo_entidad.nombre }}</td>
+                    <td class="">{{ entity.tipo_identificacion.nombre }}</td>
+                    <td class="">{{`${entity.prefijo.letra_prefijo} - ${entity.numero_identificacion}`}}</td>
+                    <td class="">{{ entity.nombre }}</td>
+                    <td class="">{{ entity.apellido }}</td>
+                    <td class="">{{ formatDateTime(entity.fechaCreacion) }}</td>
+                    <td class="">{{ formatDateTime(entity.fechaActualizacion) }}</td>
+
+
+                    <td class="">
+                        {{ entity.estado ? 'Activo' : 'Inactivo' }}
+                    </td>
+
+                    <td class=" text-center">
+                        <div class="d-flex flex-row flex-nowrap justify-content-center">
+
+                            <router-link 
+                                :to="{ 
+                                    name: 'EntidadDetails', 
+                                    params: { id: entity.id } 
+                                }" 
+                                class="btn btn-sm btn-outline-primary me-1" 
+                                title="Ver detalles del Estudiante"
+                            >
+                                <i class="bi bi-eye-fill"></i> 
+                            </router-link> 
+
+                        </div>           
+                    </td>
+                </tr>
+            </tbody>
+            
+
+            </table>
+        </div>
+    </div>
+
+    <!-- Mensaje de que no se encontraron resultados -->
+    <div 
+        v-if="!isLoadingTable && entitiesTypes.length === 0" 
+        class="text-center py-5 mb-5"
+    >
+        <div class="no-results-center-badge">
+            <i class="bi bi-x-circle-fill me-2"></i> No se encontraron entidades con los filtros aplicados.
+            <p class="mt-2 mb-0 text-muted">Intenta ajustando o limpiando los filtros para ver la lista completa.</p>
+        </div>
+    </div>
+
+    <!-- Modal para crear una entidad -->
     <AccountFormModal
       :isVisible="isModalVisible"
       :initialData="entityToEdit" 
       @close="closeModal"
       @add-account="addEntity"
-      @update-account="updateEntity" 
-    />
-
-    <!-- Modal para ver los datos de una entidad -->
-    <EntityDetailsModal
-        :isVisible="isDetailsModalVisible"
-        :entityData="entityToView"
-        @close="closeDetailsModal"
     />
 
   </div>
@@ -243,7 +239,7 @@
 
     // ----------------------------------- Importaciones ----------------------------------------
        
-        import { ref, watch, } from 'vue';
+        import { ref, watch, computed} from 'vue';
 
         // Se importa el hook de las notificaciones toast
         import { useToast } from '../../services/notificacionesService';
@@ -252,8 +248,6 @@
         const { exito, error, info, warning } = useToast();
 
         import AccountFormModal from './FormularioEntidadesView.vue';
-
-        import EntityDetailsModal from './EntityDetailsModal.vue';
 
         // Se importa el objeto axios que permitirá la conexión con la api
         import api from '../../services/api'; 
@@ -280,6 +274,16 @@
         // Se inicializa como array vacío. Los datos se cargarán de la API al montar el componente.
         const entitiesTypes = ref([]);
 
+        // Propiedad computada para saber que mensaje se pondrá en la cantidad de resultados encontrados
+        const resultsText = computed(() => {
+            const count = entitiesTypes.value.length;
+            if (count === 1) {
+                return `🔍 Se encontró ${count} entidad con los filtros aplicados.`;
+            } else {
+                return `🔍 Se encontraron ${count} entidades con los filtros aplicados.`;
+            }
+        });
+
         // Ésta variable reactiva permitirá controlar la visibilidad del modal
         const isModalVisible = ref(false);
 
@@ -293,8 +297,11 @@
         // para que el modal se muestre en ése modo.
         const entityToEdit = ref(null); 
 
-        // Indicador de carga para la tabla
-        const isLoadingTable = ref(false);
+        /* Indicador de carga para la tabla
+
+        Nota: Se inicializa en "true" para que no salga el aviso de que no se encontraron cuentas nada mas se abre la pagina, la función de búsqueda será quien la ponga
+        en "false" cuando se ejecute */
+        const isLoadingTable = ref(true);
 
         // Este objeto es la plantilla para el reset (para reiniciar los filtros)
         const initialFilters = {
@@ -697,16 +704,110 @@
 
 
 <style scoped>
-.account-type-manager {
-  padding: 20px;
-}
+
+    .account-type-manager {
+    padding: 20px;
+    }
+    
+
+/* ------------------------- Botón de agregar ------------------------*/
+
+    .btn-outline-pink {
+        /* Color de borde y texto por defecto */
+        color: #e24cd6; /* Un rosa oscuro para el texto */
+        border-color: #e24cd6; /* El borde de color rosa */
+    }
+
+    .btn-outline-pink:hover,
+    .btn-outline-pink:focus,
+    .btn-outline-pink:active {
+        /* Color de fondo y borde al pasar el ratón o hacer clic */
+        background-color: #db5cd1;
+        border-color: #d348c7;
+        color: #ffffff; /* Texto blanco para contraste */
+        box-shadow: 0 0 0 0.25rem rgba(255, 105, 180, 0.5); /* Sombra de enfoque rosa */
+    }
 
 
 
+/* ------------------------- Mensajes ------------------------*/
 
-/* La tabla*/
 
-    .table-custom td {
+    /* --- Estilo para el contador de resultados (Discreto y a la izquierda) --- */
+    .results-summary {
+        /* Muestra como un bloque pero que solo ocupa el ancho del contenido */
+        display: inline-block;
+        
+        /* Fondo: Un verde muy claro, sutil */
+        background-color: #f2c4fc; 
+        /* Texto: Un verde más oscuro para legibilidad */
+        color: #7426bd; 
+
+        /* Borde */
+        border: 1px solid #8001c9;
+        border-radius: 4px;
+        
+        /* Relleno interno para que se vea como un "tag" o pastilla */
+        padding: 5px 10px; 
+        
+        font-size: 0.9rem; /* Letra un poco más pequeña */
+        font-weight: 500; /* Hace que el texto resalte ligeramente */
+    }
+
+
+    /* --- Estilo para el mensaje de "Sin Resultados" (Badge Central) --- */
+    .no-results-center-badge {
+        /* Estilos base de una pastilla o badge */
+        display: inline-block;
+        padding: 15px 30px;
+        border-radius: 12px;
+        
+        /* Colores llamativos de advertencia */
+        background-color: #ffedcc; /* Naranja/Amarillo muy claro */
+        color: #cc8400; /* Texto naranja oscuro */
+        border: 1px solid #ffdc9c; 
+        
+        /* Fuente */
+        font-size: 1.15rem; /* Más grande */
+        font-weight: 600; /* Seminegrita */
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Sombra sutil para destacarse */
+    }
+
+    /* Estilo para el texto de sugerencia dentro del badge */
+    .no-results-center-badge p {
+        font-size: 0.9rem;
+        font-weight: 400;
+    }
+
+
+
+/* ------------------------- La tabla ------------------------*/
+
+    /* --- Estilos para la Tarjeta Contenedora de la Tabla --- */
+    .table-card-wrapper {
+        /* Darle apariencia de tarjeta */
+        border: 1px solid #e9ecef; /* Borde muy claro */
+        border-radius: 8px; /* Bordes redondeados */
+        background-color: #fff; /* Fondo blanco */
+        margin-bottom: 20px; /* Margen debajo */
+        
+        /* Muy importante: el overflow debe estar visible para que el box-shadow no se recorte */
+        overflow: visible;
+    }
+
+    /* El table-responsive puede necesitar un ligero ajuste */
+    .table-card-wrapper .table-responsive {
+        /* El table-responsive ya tiene el overflow-x: auto, pero debe estar dentro del wrapper */
+        border-radius: 8px;
+        overflow-x: auto; 
+    }
+
+
+    .table-custom {
+        margin-bottom: 0; 
+    }
+
+    .table-custom td, th  {
         vertical-align: middle; /* Centrar el contenido verticalmente de cada celda*/
     }
 

@@ -124,9 +124,13 @@
                         </div>
                     </div>
 
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary mt-3" @click="emit('close')">Cerrar</button>
+                    <div class="modal-footer mt-2">
+                        <button type="button" class="btn btn-outline-secondary-custom" @click="emit('close')">
+                            <i class="bi bi-x-circle me-1"></i>Cancelar
+                        </button>
                     </div>
+
+                    
                 </div>
             </div>
 
@@ -139,6 +143,15 @@
 </template>
 
 <style scoped>
+
+/* Estilos de Botones */
+.btn-outline-secondary-custom {
+    --bs-btn-color: #6c757d;
+    --bs-btn-border-color: #6c757d;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #6c757d;
+    --bs-btn-hover-border-color: #6c757d;
+}
 
 /* --- ESTILOS BASE DEL MODAL (Igual que el de edición) --- */
 .modal-overlay {

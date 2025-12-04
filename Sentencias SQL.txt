@@ -823,6 +823,7 @@ INSERT INTO cuenta_bancaria (
 INSERT INTO tipo_rol_asociado ("nombre", "descripcion") VALUES
 ('docente', 'Contexto para pagos de nómina o viáticos dirigidos al Docente.'),
 ('proveedor', 'Contexto para pagos de facturas dirigidos al Proveedor.'),
-('estudiante', 'Contexto para cuentas de donde el Estudiante realiza los pagos (Matrículas/Aranceles).');
+('estudiante', 'Contexto para cuentas de donde el Estudiante realiza los pagos (Matrículas/Aranceles).'),
+('institución propia', 'Contexto para cuentas de la Academia usadas para emitir o recibir pagos.'); -- SI la cuenta bancaria a asociar es para la cuenta de la propia academia, se necesita un cuarto rol
 
 
