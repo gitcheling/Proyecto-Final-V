@@ -1,22 +1,23 @@
 // Se importan la clase que hará las validaciones y las llamadas a la base de datos
-const DocenteService = require('../Services/docenteService');
+const ProveedorService = require('../Services/proveedorService');
 
-const docenteService = new DocenteService();
+const proveedorService = new ProveedorService();
 
-
-exports.crearDocente = async (req, res) => {
-
+exports.crearProveedor = async (req, res) => {
     try {
 
-        const {id} = req.body || {};
+        const {id, tipo} = req.body || {};
 
-        // Se llama a la función del servicio que se encarga de validar y mandar a crear el docente
-        const nuevoDocente= await docenteService.crearDocente({id});
+        console.log("id: ", id)
+        console.log("tipo: ", tipo)
+
+        // Se llama a la función del servicio que se encarga de validar y mandar a crear la entidad
+        const nuevoProveedor = await proveedorService.crearProveedor({id, tipo});
 
        // Se responde con éxito (201 Created)
         res.status(201).json({
-            message: "Docente registrado exitosamente.",
-            data: nuevoDocente
+            message: "Proveedor registrado exitosamente.",
+            data: nuevoProveedor
         });
 
     } catch (error) {
@@ -32,29 +33,25 @@ exports.crearDocente = async (req, res) => {
 
 
 
-/**
- * Cambiar el estado de un docente
- */
-exports.cambiarEstadoDocente = async (req, res) => {
+exports.modificarProveedor = async (req, res) => {
 
     const { id } = req.params || {}; 
 
-    // Se captura el nuevo estado del cuerpo (ej: { "estado": false })
-    const { estado } = req.body || {}; 
+    const { estado, tipo } = req.body || {}; 
 
     try {
-        const nuevoEstado = await docenteService.cambiarEstadoDocente(id, estado);
+        const completado = await proveedorService.modificarProveedor(id, estado, tipo);
 
-        if (!nuevoEstado) {
+        if (!completado) {
             return res.status(404).json({
                 error: true,
-                message: `Docente con ID ${id} no encontrado.`
+                message: `Proveedor con ID ${id} no encontrado.`
             });
         }
 
         res.status(200).json({
-            message: `Estado del docente ${id} cambiado a '${nuevoEstado.nombre}' exitosamente.`,
-            data: "Estado modificado"
+            message: `Proveedor modificado exitosamente.`,
+            data: "Datos modificados"
         });
 
     } catch (error) {
@@ -69,49 +66,46 @@ exports.cambiarEstadoDocente = async (req, res) => {
 };
 
 
-
-
 /**
- * Obtener un docente por su ID (id_estudiante).
+ * Obtener un proveedor por su ID (id_estudiante).
  */
-exports.obtenerDocentePorId = async (req, res) => {
+exports.obtenerProveedorPorId = async (req, res) => {
 
     const { id } = req.params || {}; 
 
     try {
         // Llama al servicio para buscar la cuenta
-        const docente = await docenteService.obtenerDocentePorId(id);
+        const proveedor = await proveedorService.obtenerProveedorPorId(id);
 
-        if (!docente) {
+        if (!proveedor) {
             // 404 Not Found si la cuenta no existe
             return res.status(404).json({
                 error: true,
-                message: `Docente con ID ${id} no encontrada.`
+                message: `Proveedor con ID ${id} no encontrada.`
             });
         }
 
         // 200 OK y devuelve el objeto
         res.status(200).json({
-            message: "Docente obtenido exitosamente.",
-            data: docente
+            message: "Proveedor obtenido exitosamente.",
+            data: proveedor
         });
         
     } catch (error) {
         // Manejo de errores (ej. ID inválido, error de base de datos)
         res.status(500).json({
             error: true,
-            message: "Error al obtener al docente: " + error.message
+            message: "Error al obtener al proveedor: " + error.message
         });
     }
 };
 
 
 
-
 /**
- * Obtener docentes por filtros
+ * Obtener proveedores por filtros
  */
-exports.buscarDocentes = async (req, res) => {
+exports.buscarProveedores = async (req, res) => {
 
     /* Se obtiene los criterios de búsqueda de la URL (req.query). Express automáticamente los coloca en este objeto.
     Nota: Al enviar datos a través de los parámetros de consulta de una URL (usando el método GET con req.query en Express), 
@@ -119,19 +113,19 @@ exports.buscarDocentes = async (req, res) => {
     const criteriosBusqueda = req.query || {};
 
     try {
-        const docentesEncontrados = await docenteService.buscarDocentes(criteriosBusqueda);
+        const proveedoresEncontrados = await proveedorService.buscarProveedores(criteriosBusqueda);
 
         // Se devuelve la respuesta
-        if (docentesEncontrados.length === 0) {
+        if (proveedoresEncontrados.length === 0) {
             return res.status(200).json({ 
-                message: "No se encontraron docentes que coincidan con los filtros.", 
+                message: "No se encontraron proveedores que coincidan con los filtros.", 
                 data: [] 
             });
         }
 
         return res.status(200).json({ 
-            message: "Búsqueda de docentes completada exitosamente.", 
-            data: docentesEncontrados 
+            message: "Búsqueda de proveedores completada exitosamente.", 
+            data: proveedoresEncontrados 
         });
 
     } catch (error) {
@@ -152,5 +146,6 @@ exports.buscarDocentes = async (req, res) => {
         });
     }
 }
+
 
 

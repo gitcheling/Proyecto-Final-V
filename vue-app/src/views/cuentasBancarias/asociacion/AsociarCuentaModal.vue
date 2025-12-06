@@ -177,219 +177,223 @@ const limiteTemporalAlcanzado = computed(() => {
 
 // ----------------------------------- FUNCIONES DE LÓGICA ----------------------------------------
 
-/**
- * Función para contar cuentas 
- */
-async function fetchCuentasCount() {
-    // ... (Tu código actual para fetchCuentasCount)
-    if (!props.entidadId || !props.entidadRol) return;
+    /**
+     * Función para contar cuentas 
+     */
+    async function fetchCuentasCount() {
+        // ... (Tu código actual para fetchCuentasCount)
+        if (!props.entidadId || !props.entidadRol) return;
 
-    try {
-        const params = {
-            id: props.entidadId,
-            rol: props.entidadRol
-        };
+        try {
+            const params = {
+                id: props.entidadId,
+                rol: props.entidadRol
+            };
 
-        const response = await api.get(rutaContarCuentas, { params });
-        cuentasAsociadasCount.value = response.data.cantidad || 0;
+            const response = await api.get(rutaContarCuentas, { params });
+            cuentasAsociadasCount.value = response.data.cantidad || 0;
 
-    } catch (err) {
-        error('Error al verificar', 'No se pudo contar las cuentas asociadas. Asumiendo límite.');
-        cuentasAsociadasCount.value = MAX_CUENTAS_PERMITIDAS;
-    }
-}
-
-/**
- * Función para obtener los IDs de cuentas ya asociadas a esta entidad.
- */
-async function fetchIdsCuentasAsociadas() {
-    if (!props.entidadId || !props.entidadRol) return;
-
-    try {
-        const params = {
-            id: props.entidadId,
-            rol: props.entidadRol
-        };
-
-        const response = await api.get(rutaIDsAsociados, { params });
-
-        // Crea un Set directamente a partir del array de IDs para un filtrado eficiente.
-        cuentasYaAsociadasIds.value = new Set(response.data.data);
-
-    } catch (err) {
-        error('Error IDs', 'No se pudo obtener la lista de cuentas ya asociadas.');
-        cuentasYaAsociadasIds.value = new Set(); // Asegura que sea un Set vacío
-    }
-}
-
-/**
- * Función para buscar cuentas 
- */
-function searchCuentas() {
-    clearTimeout(searchTimeout);
-    suggestions.value = [];
-    isLoading.value = false;
-    
-    const query = searchTerm.value.trim();
-
-    if (query.length < 3 || limiteTemporalAlcanzado.value) { // Usamos la nueva propiedad
-        if (query.length === 0) {
-            suggestions.value = [];
+        } catch (err) {
+            error('Error al verificar', 'No se pudo contar las cuentas asociadas. Asumiendo límite.');
+            cuentasAsociadasCount.value = MAX_CUENTAS_PERMITIDAS;
         }
-        return;
     }
 
-    isLoading.value = true;
 
-    searchTimeout = setTimeout(async () => {
+    /**
+     * Función para obtener los IDs de cuentas ya asociadas a esta entidad.
+     */
+    async function fetchIdsCuentasAsociadas() {
+        if (!props.entidadId || !props.entidadRol) return;
+
+        try {
+            const params = {
+                id: props.entidadId,
+                rol: props.entidadRol
+            };
+
+            const response = await api.get(rutaIDsAsociados, { params });
+
+            // Crea un Set directamente a partir del array de IDs para un filtrado eficiente.
+            cuentasYaAsociadasIds.value = new Set(response.data.data);
+
+        } catch (err) {
+            error('Error IDs', 'No se pudo obtener la lista de cuentas ya asociadas.');
+            cuentasYaAsociadasIds.value = new Set(); // Asegura que sea un Set vacío
+        }
+    }
+
+
+    /**
+     * Función para buscar cuentas 
+     */
+    function searchCuentas() {
+        clearTimeout(searchTimeout);
+        suggestions.value = [];
+        isLoading.value = false;
         
-        let params = {};
-        
-        const isNumeric = /^\d+$/.test(query); 
-        const isText = /^[a-zA-Z\sñÑáéíóúÁÉÍÓÚ]+$/.test(query); 
-        
-        if (isNumeric) {
-            params.numero_cuenta = query;
-            params.estado = 1;
-        } else if (isText) {
-            params.nombre = query;
-            params.estado = 1;
+        const query = searchTerm.value.trim();
+
+        if (query.length < 3 || limiteTemporalAlcanzado.value) { // Usamos la nueva propiedad
+            if (query.length === 0) {
+                suggestions.value = [];
+            }
+            return;
+        }
+
+        isLoading.value = true;
+
+        searchTimeout = setTimeout(async () => {
+            
+            let params = {};
+            
+            const isNumeric = /^\d+$/.test(query); 
+            const isText = /^[a-zA-Z\sñÑáéíóúÁÉÍÓÚ]+$/.test(query); 
+            
+            if (isNumeric) {
+                params.numero_cuenta = query;
+                params.estado = 1;
+            } else if (isText) {
+                params.nombre = query;
+                params.estado = 1;
+            } else {
+                suggestions.value = [];
+                isLoading.value = false;
+                return; 
+            }
+
+            try {
+
+                const response = await api.get(rutaBuscarCuentas, { params });
+                
+                const selectedIds = new Set(cuentasAsociar.value.map(c => c.id));
+            suggestions.value = response.data.data.filter(c => 
+                    !selectedIds.has(c.id) && // Que la cuenta de sugerencia no la haya seleccionado ya el usuario para agregar
+                    !cuentasYaAsociadasIds.value.has(c.id) // Que la cuenta de sugerencia no la tenga ya la entidad asociada
+                );
+                
+            } catch (err) {
+                error('Error de búsqueda', 'Ocurrió un error al buscar cuentas bancarias.');
+                suggestions.value = [];
+            } finally {
+                isLoading.value = false;
+            }
+        }, 300);
+    }
+
+
+
+    /**
+     * 3. Selecciona una cuenta y la agrega al listado temporal. 
+     */
+    function selectCuenta(cuenta) {
+        if (cuentasAsociar.value.length < (MAX_CUENTAS_PERMITIDAS - cuentasAsociadasCount.value)) {
+            
+            const isAlreadySelected = cuentasAsociar.value.some(c => c.id === cuenta.id);
+            
+            if (!isAlreadySelected) {
+                cuentasAsociar.value.push(cuenta);
+                searchTerm.value = ''; 
+                suggestions.value = []; 
+            } else {
+                warning('Cuenta Duplicada', `Esta cuenta ya está en la lista de cuentas a asociar.`);
+            }
+
         } else {
-            suggestions.value = [];
-            isLoading.value = false;
-            return; 
+            warning('Límite Alcanzado', `Solo puedes asociar hasta ${MAX_CUENTAS_PERMITIDAS} cuentas en total.`);
+        }
+    }
+
+
+    /**
+     * 4. Envía las cuentas seleccionadas 
+     */
+    async function submitAssociation() {
+        
+        if (cuentasAsociar.value.length === 0) {
+            info('Sin cuentas', 'No ha seleccionado ninguna cuenta para asociar.');
+            return;
         }
 
         try {
-
-            const response = await api.get(rutaBuscarCuentas, { params });
+            const cuentasIds = cuentasAsociar.value.map(c => c.id);
+            const dataToSend = {
+                entidad: props.entidadId,
+                concepto: props.entidadRol,
+                cuentasIds: cuentasIds
+            };
             
-            const selectedIds = new Set(cuentasAsociar.value.map(c => c.id));
-           suggestions.value = response.data.data.filter(c => 
-                !selectedIds.has(c.id) && // Que la cuenta de sugerencia no la haya seleccionado ya el usuario para agregar
-                !cuentasYaAsociadasIds.value.has(c.id) // Que la cuenta de sugerencia no la tenga ya la entidad asociada
-            );
+            // Llamada a la API para asociar las cuentas
+            await api.post(rutaAsociarCuenta, dataToSend);
+            
+            // Notificación de éxito y cierre del modal
+            exito('Asociación Exitosa', `Se han asociado ${cuentasIds.length} cuentas bancarias.`);
+            emit('association-success'); // Notifica al componente padre
+            emit('close'); // Cierra el modal actual
             
         } catch (err) {
-            error('Error de búsqueda', 'Ocurrió un error al buscar cuentas bancarias.');
-            suggestions.value = [];
-        } finally {
-            isLoading.value = false;
+            error('Error de Asociación', 'Falló la asociación de cuentas. Intente nuevamente.');
+            console.error('API Error:', err);
         }
-    }, 300);
-}
-
-
-
-/**
- * 3. Selecciona una cuenta y la agrega al listado temporal. 
- */
-function selectCuenta(cuenta) {
-    if (cuentasAsociar.value.length < (MAX_CUENTAS_PERMITIDAS - cuentasAsociadasCount.value)) {
-        
-        const isAlreadySelected = cuentasAsociar.value.some(c => c.id === cuenta.id);
-        
-        if (!isAlreadySelected) {
-            cuentasAsociar.value.push(cuenta);
-            searchTerm.value = ''; 
-            suggestions.value = []; 
-        } else {
-             warning('Cuenta Duplicada', `Esta cuenta ya está en la lista de cuentas a asociar.`);
-        }
-
-    } else {
-        warning('Límite Alcanzado', `Solo puedes asociar hasta ${MAX_CUENTAS_PERMITIDAS} cuentas en total.`);
-    }
-}
-
-/**
- * 4. Envía las cuentas seleccionadas 
- */
-async function submitAssociation() {
-    
-    if (cuentasAsociar.value.length === 0) {
-        info('Sin cuentas', 'No ha seleccionado ninguna cuenta para asociar.');
-        return;
     }
 
-    try {
-        const cuentasIds = cuentasAsociar.value.map(c => c.id);
-        const dataToSend = {
-            entidad: props.entidadId,
-            concepto: props.entidadRol,
-            cuentasIds: cuentasIds
-        };
-        
-        // Llamada a la API para asociar las cuentas
-        await api.post(rutaAsociarCuenta, dataToSend);
-        
-        // Notificación de éxito y cierre del modal
-        exito('Asociación Exitosa', `Se han asociado ${cuentasIds.length} cuentas bancarias.`);
-        emit('association-success'); // Notifica al componente padre
-        emit('close'); // Cierra el modal actual
-        
-    } catch (err) {
-        error('Error de Asociación', 'Falló la asociación de cuentas. Intente nuevamente.');
-        console.error('API Error:', err);
-    }
-}
 
-/**
- * 5. Limpieza y reinicio del estado. 
- */
-function resetForm() {
-    cuentasAsociadasCount.value = 0;
-    searchTerm.value = '';
-    suggestions.value = [];
-    cuentasAsociar.value = [];
-    isLoading.value = false;
-    clearTimeout(searchTimeout);
-    isDetallesModalVisible.value = false;
-    cuentaParaDetalles.value = null;
-}
+    /**
+     * 5. Limpieza y reinicio del estado. 
+     */
+    function resetForm() {
+        cuentasAsociadasCount.value = 0;
+        searchTerm.value = '';
+        suggestions.value = [];
+        cuentasAsociar.value = [];
+        isLoading.value = false;
+        clearTimeout(searchTimeout);
+        isDetallesModalVisible.value = false;
+        cuentaParaDetalles.value = null;
+    }
 
 
 // ----------------------------------- WATCHER DE VISIBILIDAD Y LLAMADA DE DATOS ----------------------------------------
-watch(() => props.isVisible, (newVal) => {
-    if (newVal) {
-        resetForm(); 
-        fetchCuentasCount(); 
-        fetchIdsCuentasAsociadas();
-    } else {
-        resetForm();
-    }
-}, { immediate: true });
+    watch(() => props.isVisible, (newVal) => {
+        if (newVal) {
+            resetForm(); 
+            fetchCuentasCount(); 
+            fetchIdsCuentasAsociadas();
+        } else {
+            resetForm();
+        }
+    }, { immediate: true });
 
 
 // ----------------------------------- Lógica del Modal Anidado (Detalles) ----------------------------------------
-/**
- * Abre el modal de detalles y guarda la cuenta.
- */
-function openDetallesModal(cuenta) {
-    cuentaParaDetalles.value = cuenta;
-    isDetallesModalVisible.value = true;
-}
-
-/**
- * Cierra el modal de detalles.
- */
-function closeDetallesModal() {
-    isDetallesModalVisible.value = false;
-    // Opcional: limpiar la cuenta para detalles después del cierre (ejecutado después de la transición)
-    setTimeout(() => {
-        cuentaParaDetalles.value = null;
-    }, 400); // 400ms para permitir que la transición termine
-}
-
-/**
- * Maneja la selección de la cuenta desde el modal de detalles (botón "Agregar Cuenta").
- */
-function handleSelectFromDetalles() {
-    if (cuentaParaDetalles.value) {
-        selectCuenta(cuentaParaDetalles.value); // Lógica principal de asociación temporal
+    /**
+     * Abre el modal de detalles y guarda la cuenta.
+     */
+    function openDetallesModal(cuenta) {
+        cuentaParaDetalles.value = cuenta;
+        isDetallesModalVisible.value = true;
     }
-    closeDetallesModal(); // Cerrar el modal de detalles
-}
+
+    /**
+     * Cierra el modal de detalles.
+     */
+    function closeDetallesModal() {
+        isDetallesModalVisible.value = false;
+        // Opcional: limpiar la cuenta para detalles después del cierre (ejecutado después de la transición)
+        setTimeout(() => {
+            cuentaParaDetalles.value = null;
+        }, 400); // 400ms para permitir que la transición termine
+    }
+
+    /**
+     * Maneja la selección de la cuenta desde el modal de detalles (botón "Agregar Cuenta").
+     */
+    function handleSelectFromDetalles() {
+        if (cuentaParaDetalles.value) {
+            selectCuenta(cuentaParaDetalles.value); // Lógica principal de asociación temporal
+        }
+        closeDetallesModal(); // Cerrar el modal de detalles
+    }
 
 
 </script>

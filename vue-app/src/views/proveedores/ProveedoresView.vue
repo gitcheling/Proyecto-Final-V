@@ -2,11 +2,11 @@
 
   <div class="account-type-manager">
 
-    <h2>Gestión de Docentes</h2>
+    <h2>Gestión de Proveedores</h2>
     <div class="mb-3">
         <!-- Botón para crear una nueva cuenta -->
         <button @click="openModal" class="btn btn-outline-pink flex-fill py-2 shadow-sm ms-2 mb-2">
-        + Agregar Nuevo Docente
+        + Agregar Nuevo Proveedor
         </button>
 
         <button @click="toggleFiltersVisibility" class="btn btn-outline-info flex-fill py-2 shadow-sm ms-2 mb-2">
@@ -38,6 +38,8 @@
                         <option value="1">V (Venezolano)</option>
                         <option value="2">E (Extranjero)</option>
                         <option value="3">P (Pasaporte)</option>
+                        <option value="4">J (Persona Jurídica)</option>
+                        <option value="5">G (Gubernamental)</option>
                     </select>
                 </div>
 
@@ -84,8 +86,8 @@
                         <option value="">Todos</option>
                         <option value="1">Activos</option>
                         <option value="2">Inactivos</option>
-                        <option value="3">Ausencia Autorizada</option>
-                        <option value="4">Suspendidos</option>
+                        <option value="3">Contratos Vencidos</option>
+                        <option value="4">Bloqueados</option>
                     </select>
                 </div>
 
@@ -119,13 +121,13 @@
 
     <!-- Mensaje de la cantidad de resultados encontrados -->
     <div 
-    v-if="teacherTypes.length > 0 && !isLoadingTable" 
+    v-if="supplierTypes.length > 0 && !isLoadingTable" 
     class="mb-3 text-start"
     >
         <span class="results-summary" v-html="resultsText"></span>
     </div>
 
-    <!-- Tabla de los estudiantes -->
+    <!-- Tabla de los proveedores -->
     <div class="table-card-wrapper hover-lift">
         <div class="table-responsive ">
             <table class="table table-striped table-hover table-bordered table-custom">
@@ -135,10 +137,10 @@
                     <th class="text-center col-numero_identificacion">Número de identificación</th>
                     <th class="text-center col-nombre">Nombre</th>
                     <th class="text-center col-apellido">Apellido</th>
+                    <th class="text-center col-tipo">Tipo de proveedor</th>
                     <th class="text-center col-estado">Estado</th>
-                    <th class="text-center col-permite_asignacion">¿Puede asignársele nuevos cursos?</th>
                     <th class="text-center col-aplica_pago">¿Aplica para recibir pagos?</th>
-                    <th class="text-center col-fecha_creacion">Fecha de registro como docente</th>
+                    <th class="text-center col-fecha_creacion">Fecha de registro como proveedor</th>
                     <th class="text-center col-fecha_actualizacion">Última modificación</th>
                     
                     
@@ -153,25 +155,25 @@
                         <span class="loading-message">Cargando datos...</span>
                     </td>
                 </tr>
-                <tr v-if="teacherTypes.length > 0" v-for="teacher in teacherTypes" :key="teacher.id">
+                <tr v-if="supplierTypes.length > 0" v-for="supplier in supplierTypes" :key="supplier.id">
 
-                    <td>{{`${teacher.entidad.prefijo.letra_prefijo} - ${teacher.entidad.numero_identificacion}` }}</td>
-                    <td>{{ teacher.entidad.nombre }}</td>
-                    <td>{{ teacher.entidad.apellido }}</td>
-                    <td>{{ teacher.estado.nombre  }}</td>
-                    <td>{{ teacher.estado.permite_asignacion  }}</td>
-                    <td>{{ teacher.estado.aplica_pago  }}</td>
+                    <td>{{`${supplier.entidad.prefijo.letra_prefijo} - ${supplier.entidad.numero_identificacion}` }}</td>
+                    <td>{{ supplier.entidad.nombre }}</td>
+                    <td>{{ supplier.entidad.apellido }}</td>
+                    <td>{{ supplier.tipo_proveedor.nombre  }}</td>
+                    <td>{{ supplier.estado.nombre  }}</td>
+                    <td>{{ supplier.estado.permite_pago  }}</td>
 
-                    <td>{{ formatDateTime(teacher.fechaCreacion) }}</td>
-                    <td>{{ formatDateTime(teacher.fechaActualizacion) }}</td>
+                    <td>{{ formatDateTime(supplier.fechaCreacion) }}</td>
+                    <td>{{ formatDateTime(supplier.fechaActualizacion) }}</td>
 
                 
                     <td class="text-center"> 
 
                         <router-link 
                             :to="{ 
-                                name: 'DocenteDetails', 
-                                params: { id: teacher.id } 
+                                name: 'SupplierDetails', 
+                                params: { id: supplier.id } 
                             }" 
                             class="btn btn-sm btn-outline-primary me-1" 
                             title="Ver detalles del Docente"
@@ -191,21 +193,21 @@
 
     <!-- Mensaje de que no se encontraron resultados -->
     <div 
-        v-if="!isLoadingTable && teacherTypes.length === 0" 
+        v-if="!isLoadingTable && supplierTypes.length === 0" 
         class="text-center py-5 mb-5"
     >
         <div class="no-results-center-badge">
-            <i class="bi bi-x-circle-fill me-2"></i> No se encontraron docentes con los filtros aplicados.
+            <i class="bi bi-x-circle-fill me-2"></i> No se encontraron proveedores con los filtros aplicados.
             <p class="mt-2 mb-0 text-muted">Intenta ajustando o limpiando los filtros para ver la lista completa.</p>
         </div>
     </div>
 
-    <!-- Modal para crear un docente -->
-    <TeacherFormModal
+    <!-- Modal para crear un proveedor -->
+    <SupplierFormModal
       :isVisible="isModalVisible"
-      :initialData="teacherToEdit" 
+      :initialData="proveedorToEdit" 
       @close="closeModal"
-      @add-teacher="addTeacher"
+      @add-supplier="addSupplier"
     />
   </div>
   
@@ -225,7 +227,7 @@
         // Se llama a la función "useToast()" y desestructura los métodos que se necesitan (exito, error, etc.):
         const { exito, error, info, warning } = useToast();
 
-        import TeacherFormModal from './FormularioDocentesView.vue';
+        import SupplierFormModal from './FormularioProveedoresView.vue';
 
         // Se importa el objeto axios que permitirá la conexión con la api
         import api from '../../services/api'; 
@@ -235,33 +237,33 @@
 
         // Rutas
             // Ruta base
-            const rutaBase = "/Docente/"
+            const rutaBase = "/Proveedor/"
 
-            // Buscar docentes
+            // Buscar proveedores
             const rutaBuscar = `${rutaBase}Buscar`
 
-            // Crear docente
-            const rutaCrear = `${rutaBase}CrearDocente`
+            // Crear proveedor
+            const rutaCrear = `${rutaBase}CrearProveedor`
             
 
         // Se inicializa como array vacío. Los datos se cargarán de la API al montar el componente.
-        const teacherTypes = ref([]);
+        const supplierTypes = ref([]);
 
         // Propiedad computada para saber que mensaje se pondrá en la cantidad de resultados encontrados
         const resultsText = computed(() => {
-            const count = teacherTypes.value.length;
+            const count = supplierTypes.value.length;
             if (count === 1) {
-                return `🔍 Se encontró ${count} docente con los filtros aplicados.`;
+                return `🔍 Se encontró ${count} proveedor con los filtros aplicados.`;
             } else {
-                return `🔍 Se encontraron ${count} docentes con los filtros aplicados.`;
+                return `🔍 Se encontraron ${count} proveedores con los filtros aplicados.`;
             }
         });
 
         // Ésta variable reactiva permitirá controlar la visibilidad del modal
         const isModalVisible = ref(false);
 
-        // Los datos que se envían al modal (ahora siempre es "null" ya que la edición la maneja la pagina de detalles del estudiante)
-        const teacherToEdit = null;
+        // Los datos que se envían al modal (ahora siempre es "null" ya que la edición la maneja la pagina de detalles del proveedores)
+        const proveedorToEdit = null;
 
         /* Indicador de carga para la tabla
         
@@ -289,7 +291,6 @@
         // Variable reactiva para controlar la visibilidad del contenedor de filtros
         const areFiltersVisible = ref(false);
 
-    
 
         // Variables que almacenan el último valor de filtro que fue válido (para nombre y código)
         const lastValidNumeroIdentificacion = ref('');
@@ -308,7 +309,7 @@
              * Carga los datos desde la API, AHORA aceptando filtros.
              * @param {object} currentFilters - Objeto con los filtros a aplicar.
              */
-            const loadTeachers = async (currentFilters = {}) => {
+            const loadSuppliers = async (currentFilters = {}) => {
                 isLoadingTable.value = true;
                 try {
                     // Eliminar filtros con valores vacíos para que la URL sea más limpia
@@ -321,11 +322,11 @@
                         params: validFilters 
                     }); 
 
-                    teacherTypes.value = response.data.data; 
+                    supplierTypes.value = response.data.data; 
 
                 } catch (err) {
                     
-                    error('Error de Servidor', 'No se pudieron obtener los datos de los docentes. Intente de nuevo.');
+                    error('Error de Servidor', 'No se pudieron obtener los datos de los proveedores. Intente de nuevo.');
                 } finally {
                     isLoadingTable.value = false;
                 }
@@ -356,7 +357,7 @@
 
                     searchTimeout = setTimeout(() => {
                         // Llama a la función de carga de cuentas con el valor (el objeto) de los filtros si todo está correcto
-                        loadTeachers(newFilters);
+                        loadSuppliers(newFilters);
                     }, 300); // 300ms de espera para estabilizar los inputs de texto
                     
                 }, 
@@ -368,17 +369,17 @@
 
 
             /**
-            * Maneja el evento 'add-teacher' del modal llamando a la API.
+            * Maneja el evento 'add-supplier' del modal llamando a la API.
             */   
-            const addTeacher = async (newTeacherData) => {
+            const addSupplier = async (newSupplierData) => {
                 try {
                     
-                    const response = await api.post(rutaCrear, newTeacherData);
+                    const response = await api.post(rutaCrear, newSupplierData);
 
                     // Mostrar alerta de éxito al usuario
-                    exito('Éxito', 'Docente registrado correctamente.');
+                    exito('Éxito', 'Proveedor registrado correctamente.');
 
-                    await loadTeachers(); 
+                    await loadSuppliers(); 
 
                     // 4. Cerrar el modal.
                     closeModal();
@@ -399,7 +400,7 @@
                         mensajeError = err.message;
                     }
 
-                    error('Error al registrar al docente', mensajeError);
+                    error('Error al registrar al proveedor', mensajeError);
                 }
             };
 
@@ -554,7 +555,7 @@
                 filters.value = { ...initialFilters }; 
 
                 // RECARGAR TABLA
-                loadTeachers();
+                loadSuppliers();
             };
 
 
@@ -722,45 +723,46 @@
     /* Estilos para el control de ancho de las columnas */
     /* Nota: Asegurarse de que el total de anchos sea 100% o la suma de min-width no exceda el ancho de la pantalla */
 
-        /* 1. Columna Tipo de entidad */
-        .col-codigo_estudiantil {
+
+        /* Columna Número de identificación */
+        .col-numero_identificacion {
+            width: 10%;
+            min-width: 80px; /* Asegura que el nombre sea legible */
+            max-width: 100px; /* Evita que ocupe todo el ancho en pantallas gigantes */
+        }
+
+        /* Columna Nombre */
+        .col-nombre {
+            width: 10%;
+            min-width: 100px;
+            max-width: 250px; /* Evita que ocupe todo el ancho en pantallas gigantes */
+        }
+
+        /* Columna Apellido */
+        .col-apellido {
+            width: 10%;
+            min-width: 130px; /* Asegura que el nombre sea legible */
+            max-width: 250px; /* Evita que ocupe todo el ancho en pantallas gigantes */
+        }
+
+        /* Columna Tipo*/
+        .col-tipo {
             width: 9%;
             min-width: 80px; 
             max-width: 150px;
         }
 
-        /* Columna Tipo de identificación */
-        .col-numero_identificacion {
-            width: 11%;
-            min-width: 80px; /* Asegura que el nombre sea legible */
-            max-width: 100px; /* Evita que ocupe todo el ancho en pantallas gigantes */
-        }
-
-        /* Columna Número de identificación */
-        .col-nombre {
-            width: 11%;
-            min-width: 100px;
-            max-width: 250px; /* Evita que ocupe todo el ancho en pantallas gigantes */
-        }
-
-        /* Columna Nombre */
-        .col-apellido {
-            width: 11%;
-            min-width: 130px; /* Asegura que el nombre sea legible */
-            max-width: 250px; /* Evita que ocupe todo el ancho en pantallas gigantes */
-        }
-
     
         /* Columna Fecha creación*/
         .col-fecha_creacion {
-            width: 15%;
+            width: 14%;
             min-width: 170px; /* Asegura que el nombre sea legible */
             max-width: 250px; /* Evita que ocupe todo el ancho en pantallas gigantes */
         }
 
         /* Columna Ultima fecha de actualización */
         .col-fecha_actualizacion {
-            width: 15%;
+            width: 13%;
             min-width: 170px; /* Asegura que el nombre sea legible */
             max-width: 250px; /* Evita que ocupe todo el ancho en pantallas gigantes */
         }
@@ -781,7 +783,7 @@
 
         /* Columna Acciones */
         .col-acciones {
-            width: 8%; 
+            width: 6%; 
             min-width: 80px; /* CLAVE: El ancho mínimo debe ser suficiente para tus 3 botones */
         }
 

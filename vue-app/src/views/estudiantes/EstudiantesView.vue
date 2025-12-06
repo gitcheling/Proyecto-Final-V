@@ -31,7 +31,7 @@
 
             <div class="row">
                 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="codigo_estudiantil">Código estudiantil:</label>
                     <input 
                         type="text" 
@@ -43,7 +43,7 @@
                     >
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="prefijo">Prefijo:</label>
                     <select id="prefijo" v-model="filters.prefijo" class="form-control">
                         <option value="">Todos</option>
@@ -53,7 +53,7 @@
                     </select>
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="numero_identificacion">Número de identificación:</label>
                     <input 
                         type="text" 
@@ -65,7 +65,7 @@
                     >
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="nombre">Nombre:</label>
                     <input 
                         type="text" 
@@ -77,7 +77,7 @@
                     >
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="apellido">Apellido:</label>
                     <input 
                         type="text" 
@@ -89,7 +89,7 @@
                     >
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="estado">Estado:</label>
                     <select id="estado" v-model="filters.estado" class="form-control">
                         <option value="">Todos</option>
@@ -102,28 +102,27 @@
                 </div>
 
           
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="creadosDesde">Creados Desde:</label>
                     <input type="date" id="creadosDesde" v-model="filters.creadosDesde" class="form-control">
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3 ">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3 ">
                     <label for="creadosHasta">Creados Hasta:</label>
                     <input type="date" id="creadosHasta" v-model="filters.creadosHasta" class="form-control">
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="modificadosDesde">Modificados Desde:</label>
                     <input type="date" id="modificadosDesde" v-model="filters.modificadosDesde" class="form-control">
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="modificadosHasta">Modificados Hasta:</label>
                     <input type="date" id="modificadosHasta" v-model="filters.modificadosHasta" class="form-control">
                 </div>
                 
             </div>
-
 
         </div>
 
@@ -397,7 +396,22 @@
                     closeModal();
 
                 } catch (err) {
-                    error('Error al registrar al estudiante', `${err.response?.data?.message || 'Error de servidor.'}`);
+
+                    // Definición de la descripción de error
+                    let mensajeError = 'Error desconocido al procesar la solicitud.';
+
+                    // 1. Manejo de errores de Axios (si existe la respuesta del servidor)
+                    if (err.response) {
+                        // Se usa el mensaje que viene del backend o el estado HTTP
+                        mensajeError = err.response.data.message || `Error ${err.response.status}: ${err.message}`;
+                    } 
+
+                    // 2. Manejo de otros errores (ej. error de red, o si no hay respuesta)
+                    else if (err.message) {
+                        mensajeError = err.message;
+                    }
+
+                    error('Error al registrar al estudiante', mensajeError);
                 }
             };
 
@@ -582,8 +596,6 @@
 
                 // RESTABLECER FILTROS: Asigna una COPIA del estado inicial al valor del ref
                 filters.value = { ...initialFilters }; 
-
-                clearParentFilter();
 
                 // RECARGAR TABLA
                 loadStudents();

@@ -13,7 +13,7 @@ const Tipo_Proveedor = sequelize.define('Tipo_Proveedor', {
         allowNull: false,
     },
     descripcion: {
-        type: DataTypes.STRING(100),
+        type: DataTypes.STRING(255),
         allowNull: false
     }
 }, {

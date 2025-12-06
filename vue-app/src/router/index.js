@@ -9,6 +9,10 @@ import EstudiantesView from '../views/estudiantes/EstudiantesView.vue'
 import DetallesEstudianteView from '../views/estudiantes/DetallesEstudianteView.vue'
 
 import DocentesView from '../views/docentes/DocentesView.vue'
+import DetallesDocenteView from '../views/docentes/DetallesDocenteView.vue'
+
+import ProveedoresView from '../views/proveedores/ProveedoresView.vue'
+import DetallesProveedorView from '../views/proveedores/DetallesProveedorView.vue'
 
 import PlanCuentasView from '../views/contabilidad/PlanCuentasView.vue'
 import CuentaBancariaAprobadaView from '../views/cuentasBancarias/aprobadas/CuentasBancariasView.vue'
@@ -34,14 +38,29 @@ const routes = [
     // Estudiantes
     { path: '/Estudiantes', name: 'GestionEstudiantes', component: EstudiantesView },
     {
-      path: '/Estudiantes/:id', // La parte dinámica de la URL es :id
-      name: 'StudentDetails', // El nombre usado en el <router-link>
-      component: DetallesEstudianteView, // El componente a cargar
-      props: true // Permite que el 'id' del parámetro de ruta sea pasado como prop al componente
+      path: '/Estudiantes/:id',
+      name: 'StudentDetails', 
+      component: DetallesEstudianteView, 
+      props: true 
     },
 
     // Docentes
-    { path: '/Docentes', component: DocentesView },
+    { path: '/Docentes', name: 'GestionDocentes', component: DocentesView },
+    {
+      path: '/Docentes/:id', 
+      name: 'DocenteDetails', 
+      component: DetallesDocenteView, 
+      props: true 
+    },
+
+    // Proveedores
+    { path: '/Proveedores', name: 'GestionProveedores', component: ProveedoresView },
+    {
+      path: '/Proveedores/:id',
+      name: 'SupplierDetails', 
+      component: DetallesProveedorView, 
+      props: true 
+    },
     
     // Contabilidad
     { path: '/PlanCuentas', component: PlanCuentasView },

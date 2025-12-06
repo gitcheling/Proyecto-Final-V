@@ -31,7 +31,7 @@
 
             <div class="row">
                 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="codigo">Código:</label>
                     <input 
                         type="text" 
@@ -43,7 +43,7 @@
                     >
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="nombre">Nombre:</label>
                     <input 
                         type="text" 
@@ -55,7 +55,7 @@
                     >
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="nivel">Nivel:</label>
                     <select id="nivel" v-model="filters.nivel" class="form-control">
                         <option value="">Todos</option>
@@ -68,7 +68,7 @@
                     </select>
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="naturaleza">Naturaleza:</label>
                     <select id="naturaleza" v-model="filters.naturaleza" class="form-control">
                         <option value="">Todas</option>
@@ -77,7 +77,7 @@
                     </select>
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="clasificacion">Clasificación:</label>
                     <select id="clasificacion" v-model="filters.clasificacion" class="form-control">
                         <option value="">Todas</option>
@@ -87,27 +87,27 @@
                 </div>
                 
             
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="creadosDesde">Creados Desde:</label>
                     <input type="date" id="creadosDesde" v-model="filters.creadosDesde" class="form-control">
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3 ">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="creadosHasta">Creados Hasta:</label>
                     <input type="date" id="creadosHasta" v-model="filters.creadosHasta" class="form-control">
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="modificadosDesde">Modificados Desde:</label>
                     <input type="date" id="modificadosDesde" v-model="filters.modificadosDesde" class="form-control">
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="modificadosHasta">Modificados Hasta:</label>
                     <input type="date" id="modificadosHasta" v-model="filters.modificadosHasta" class="form-control">
                 </div>
                 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="estado">Estado:</label>
                     <select id="estado" v-model="filters.estado" class="form-control">
                         <option value="">Todos</option>
@@ -117,7 +117,7 @@
                 </div>
 
 
-                <div class="filter-group filter-parent col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group filter-parent col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="parent-search">Cuenta Padre:</label>
                     <input 
                         type="text" 
@@ -440,7 +440,22 @@
                     closeModal();
 
                 } catch (err) {
-                    error('Error al crear la cuenta', `${err.response?.data?.message || 'Error de servidor.'}`);
+
+                    // Definición de la descripción de error
+                    let mensajeError = 'Error desconocido al procesar la solicitud.';
+
+                    // 1. Manejo de errores de Axios (si existe la respuesta del servidor)
+                    if (err.response) {
+                        // Se usa el mensaje que viene del backend o el estado HTTP
+                        mensajeError = err.response.data.message || `Error ${err.response.status}: ${err.message}`;
+                    } 
+
+                    // 2. Manejo de otros errores (ej. error de red, o si no hay respuesta)
+                    else if (err.message) {
+                        mensajeError = err.message;
+                    }
+
+                    error('Error al crear la cuenta', mensajeError);
                 }
             };
 
@@ -464,7 +479,22 @@
 
 
                 } catch (err) {
-                    error('Error al modificar la cuenta', `${err.response?.data?.message || 'Error de servidor.'}`);
+
+                    // Definición de la descripción de error
+                    let mensajeError = 'Error desconocido al procesar la solicitud.';
+
+                    // 1. Manejo de errores de Axios (si existe la respuesta del servidor)
+                    if (err.response) {
+                        // Se usa el mensaje que viene del backend o el estado HTTP
+                        mensajeError = err.response.data.message || `Error ${err.response.status}: ${err.message}`;
+                    } 
+
+                    // 2. Manejo de otros errores (ej. error de red, o si no hay respuesta)
+                    else if (err.message) {
+                        mensajeError = err.message;
+                    }
+
+                    error('Error al modificar la cuenta', mensajeError);
                 }
             };
 
@@ -598,7 +628,22 @@
                     parentSearchResults.value = response.data.data;
                     
                 } catch (err) {
-                    error('Error al buscar cuentas padre', err);
+
+                    // Definición de la descripción de error
+                    let mensajeError = 'Error desconocido al procesar la solicitud.';
+
+                    // 1. Manejo de errores de Axios (si existe la respuesta del servidor)
+                    if (err.response) {
+                        // Se usa el mensaje que viene del backend o el estado HTTP
+                        mensajeError = err.response.data.message || `Error ${err.response.status}: ${err.message}`;
+                    } 
+
+                    // 2. Manejo de otros errores (ej. error de red, o si no hay respuesta)
+                    else if (err.message) {
+                        mensajeError = err.message;
+                    }
+
+                    error('Error al buscar cuentas padre', mensajeError);
                     parentSearchResults.value = [];
                 }
                 }, 300); // 300ms de retraso (Para lo que se dijo de esperar)
@@ -664,7 +709,22 @@
                     exito('Éxito', `Estado de la cuenta ${account.codigo} cambiado a: ${newStatus ? 'Activo' : 'Inactivo'}`);
 
                 } catch (err) {
-                    error('Error al cambiar el estado', err);
+
+                    // Definición de la descripción de error
+                    let mensajeError = 'Error desconocido al procesar la solicitud.';
+
+                    // 1. Manejo de errores de Axios (si existe la respuesta del servidor)
+                    if (err.response) {
+                        // Se usa el mensaje que viene del backend o el estado HTTP
+                        mensajeError = err.response.data.message || `Error ${err.response.status}: ${err.message}`;
+                    } 
+
+                    // 2. Manejo de otros errores (ej. error de red, o si no hay respuesta)
+                    else if (err.message) {
+                        mensajeError = err.message;
+                    }
+
+                    error('Error al cambiar el estado', mensajeError);
                 }
             };
 
@@ -720,65 +780,66 @@
 
 
       // ----------------------------------- Modal ----------------------------------------
-        /**
-        * Abre el modal y lo configura en modo Creación o Edición.
-        * @param {object|null} account - El objeto de cuenta para editar, o null para crear.
-        */
-        const openModal = (account = null) => {
 
-          /* En modo edición se tendría el objeto de la cuenta (es decir, el objeto del array), y se usará para crear una copia
-          y usar ésa copia en el modal (ya que asi, cualquier cosa que se modifique afecta a los inputs, si enviamos el bjeto
-          original significa que cualquier cambio sobre este se vería reflejado en la tabla, y solamente debe hacerse los cambios
-          cuando el usuario de click en el botón de "Guardar cambios") */
-          if (account) { 
-              
-              // Buscar y adjuntar la información del padre
-              let parentData = {};
+            /**
+            * Abre el modal y lo configura en modo Creación o Edición.
+            * @param {object|null} account - El objeto de cuenta para editar, o null para crear.
+            */
+            const openModal = (account = null) => {
 
-              if (account.padreId) {
-                  // Buscar el objeto completo de la cuenta padre en la lista completa (accountTypes)
-                  const parentAccount = accountTypes.value.find(a => a.id === account.padreId);
+            /* En modo edición se tendría el objeto de la cuenta (es decir, el objeto del array), y se usará para crear una copia
+            y usar ésa copia en el modal (ya que asi, cualquier cosa que se modifique afecta a los inputs, si enviamos el bjeto
+            original significa que cualquier cambio sobre este se vería reflejado en la tabla, y solamente debe hacerse los cambios
+            cuando el usuario de click en el botón de "Guardar cambios") */
+            if (account) { 
+                
+                // Buscar y adjuntar la información del padre
+                let parentData = {};
 
-                  if (parentAccount) {
-                      // Si se encuentra, crear un objeto con la información del padre
-                      parentData = {
-                          parentCode: parentAccount.codigo,
-                          parentName: parentAccount.nombre,
-  
-                      };
-                  }
-              }
+                if (account.padreId) {
+                    // Buscar el objeto completo de la cuenta padre en la lista completa (accountTypes)
+                    const parentAccount = accountTypes.value.find(a => a.id === account.padreId);
 
-              // Crear el objeto que se enviará al modal.
-              // Contiene los datos de la cuenta hija, MÁS la data del padre.
-              accountToEdit.value = { 
-                  ...account, 
-                  ...parentData // Adjunta parentCode, parentName, parentType (si existen)
-              };
+                    if (parentAccount) {
+                        // Si se encuentra, crear un objeto con la información del padre
+                        parentData = {
+                            parentCode: parentAccount.codigo,
+                            parentName: parentAccount.nombre,
+    
+                        };
+                    }
+                }
 
-          } else { // En modo creación el valor del objeto de la cuenta es null, ya que no hay un objeto a editar
+                // Crear el objeto que se enviará al modal.
+                // Contiene los datos de la cuenta hija, MÁS la data del padre.
+                accountToEdit.value = { 
+                    ...account, 
+                    ...parentData // Adjunta parentCode, parentName, parentType (si existen)
+                };
 
-              // Modo Creación
-              accountToEdit.value = null;
-          }
+            } else { // En modo creación el valor del objeto de la cuenta es null, ya que no hay un objeto a editar
 
-          // En cualquier caso, el modal debe hacerse visible
-          isModalVisible.value = true;
+                // Modo Creación
+                accountToEdit.value = null;
+            }
 
-        };
+            // En cualquier caso, el modal debe hacerse visible
+            isModalVisible.value = true;
+
+            };
 
 
-        /**
-        * Cierra el modal y resetea el estado de edición.
-        */
-        const closeModal = () => {
+            /**
+            * Cierra el modal y resetea el estado de edición.
+            */
+            const closeModal = () => {
 
-          // Modal oculto
-          isModalVisible.value = false;
+            // Modal oculto
+            isModalVisible.value = false;
 
-          // Sin objeto a editar
-          accountToEdit.value = null;
-        };
+            // Sin objeto a editar
+            accountToEdit.value = null;
+            };
 
 </script>
 

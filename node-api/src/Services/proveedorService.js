@@ -3,9 +3,10 @@
 Nota: Sólo necesitamos éste modelo, ya que después de todo establecimos las asociaciones, si queremos hacer una consulta directa sobre
 las tablas "clasificacion_cuenta" o "naturaleza"
 */
-const Estudiante_Model = require('../Models/estudiante'); 
+const Proveedor_Model = require('../Models/proveedor'); 
 const Entidad_Model = require('../Models/entidad'); 
-const Estado_Academico_Model = require('../Models/estado_academico'); 
+const Estado_Proveedor_Model = require('../Models/estado_proveedor');
+const Tipo_Proveedor_Model = require('../Models/tipo_proveedor');  
 
 // Se importan las funciones comúnes de validación
 const { validarExistencia, validarIdNumerico, validarSoloTexto, validarSoloNumeros, parseAndValidateDate} = require('../Utils/validators');
@@ -13,166 +14,161 @@ const { validarExistencia, validarIdNumerico, validarSoloTexto, validarSoloNumer
 // Se importan las funciones comúnes
 const { capitalizeFirstLetter} = require('../Utils/funciones');
 
-// Se importa la función del archivo de utilidades
-const { generarCodigoEstudiantil } = require('../Utils/generadorCodigos');
-
-// Se importa el mutex
-const { crearEstudianteMutex } = require('../Utils/mutex');
-
-
 
 // Se importa la clase "Op" que es necesaria para las operaciones de las clausulas WHERE de las consultas
 const { Op } = require('sequelize'); 
 
-class EstudianteService {
+class ProveedorService {
 
-
-    // Se crea un nuevo estudiante
-    async crearEstudiante({id}) {
+    // Se crea un nuevo proveedor
+    async crearProveedor({id, tipo}) {
+        
 
         // Validamos que existan todos los datos
         validarExistencia(id, "id", true);
+        validarExistencia(tipo, "tipo de proveedor", true);
 
-        validarIdNumerico(id, "El id no tiene el formato correcto");
+
+        const id_limpio = String(id).trim();
+        validarIdNumerico(id_limpio, "El id no tiene el formato correcto");
+        
+        if (id_limpio == 1){
+            throw new Error(`No se puede colocar la cuenta interna de la Academis como proveedor.`);
+        }
+
+        const tipo_proveedor_limpio = String(tipo).trim();
+        validarIdNumerico(tipo_proveedor_limpio, "El tipo de proveedor no tiene el formato correcto");
+
 
         // Se comprueba que exista una entidad con ese id
-        const entidad = await Entidad_Model.findByPk(id);
+        const entidad = await Entidad_Model.findByPk(id_limpio);
 
         if (!entidad) {
 
             // La Entidad  no existe, no se puede crear el estudiante.
-            throw new Error(`La entidad con ID ${id} no está registrada.`);
+            throw new Error(`La entidad con ID ${id_limpio} no está registrada.`);
 
         }else if(entidad.estado !== true){
 
-            throw new Error(`No se puede crear un estudiante de una entidad desactivada.`);
+            throw new Error(`No se puede crear un proveedor de una entidad desactivada.`);
 
-        }else if(entidad.id_prefijo == 4 || entidad.id_prefijo == 5){
-
-            throw new Error(`No se puede crear un estudiante de una entidad jurídica o gubernamental.`);
         }
 
-        // Se comprueba que no exista ya un estudiante con ese id
-        if(await Estudiante_Model.findByPk(id)){ 
-            // Si lo encuentra, ya es estudiante
-            throw new Error(`La Entidad '${entidad.nombre.charAt(0).toUpperCase() + entidad.nombre.slice(1)} ${entidad.apellido ? entidad.apellido.charAt(0).toUpperCase() + entidad.apellido.slice(1) : ""}' ya está registrada como estudiante.`);
+        // Se comprueba que no exista ya un proveedor con ese id (que para efectos prácticos, un proveedor sólo puede tener un tipo)
+        const proveedor = await Proveedor_Model.findByPk(id_limpio);
+
+        if (proveedor) {
+            // Si lo encuentra, ya es proveedor para ese tipo
+            throw new Error(`La Entidad ya está registrada como proveedor.`);
         }
 
-        // Adquirir el Mutex para proteger la generación y la creación.
-        /* Nota: La función "runExclusive" siempre devuelve una Promesa. Esta Promesa representa el resultado final de la ejecución de 
-        la función callback que se le pase.
+        const tipo_proveedor_objeto = await Tipo_Proveedor_Model.findByPk(tipo_proveedor_limpio);
 
-        Bloqueo y Cola: Cuando se llama a "runExclusive", el Mutex primero comprueba si la llave está libre. Si no lo está, la función 
-        asíncrona se pone en cola y se pausa (se crea una Promesa que espera).
+        if(!tipo_proveedor_objeto){ 
 
-        Ejecución Segura: Cuando la llave se libera, el Mutex ejecuta la función asíncrona.
+            throw new Error(`No existe el estado de proveedor solicitado.`);
+        }
 
-        Mantenimiento del Lock: Mientras la función asíncrona se ejecuta, puede encontrarse con varios await (como "await generarCodigoEstudiantil()" y 
-        "await Estudiante_Model.create()"). Aunque el Event Loop de Node.js se libera durante estos await, el Mutex mantiene el estado de 
-        "ocupado" porque sabe que la función aún no ha terminado. 
-        */
-        return crearEstudianteMutex.runExclusive(async () => {
-                        
-            try {
-                // 3. Generar el código (Bajo el lock/candado)
-                const codigoGenerado = await generarCodigoEstudiantil(); 
 
-                // 4. Preparar los datos finales
-                const datosFinales = {
-                    id_estudiante: id,
-                    codigo_estudiantil: codigoGenerado,
-                    id_estado_academico: 1
-                };
+
+        const datos = {
+            id_proveedor: entidad.id_entidad,
+            id_tipo_proveedor: tipo_proveedor_objeto.id_tipo_proveedor,
+            id_estado_proveedor: 1
+        };
+        
+        
+        const nuevoProveedor = await Proveedor_Model.create(datos);
+
+       
+        return {
+            id: nuevoProveedor.id_proveedor, 
+            estado_proveedor: "Activo",
+            tipo_proveedor: tipo_proveedor_objeto.nombre,
+
+            fechaCreacion: nuevoProveedor.createdAt,
+            fechaActualizacion: nuevoProveedor.updatedAt            
+        };
                 
-                // 5. Crear el registro (Bajo el lock/candado)
-                const nuevoEstudiante = await Estudiante_Model.create(datosFinales);
-
-                // 6. El Mutex se libera automáticamente aquí al retornar la Promesa.
-                return {
-                    id: nuevoEstudiante.id_estudiante, 
-                    codigo_estudiantil: nuevoEstudiante.codigo_estudiantil,
-                    estado_academico: "Activo",
-                  
-                    fechaCreacion: nuevoEstudiante.createdAt,
-                    fechaActualizacion: nuevoEstudiante.updatedAt            
-                };
-                
-                
-            } catch (error) {
-                // El Mutex se libera automáticamente incluso si hay un error aquí.
-                console.error("Error al crear estudiante en la sección crítica:", error);
-                
-                // Se puede manejar errores de la DB, como violaciones de unicidad.
-                if (error.name === 'SequelizeUniqueConstraintError') {
-                    throw new Error("Fallo al crear el estudiante. El código generado ya existía (Fallo de concurrencia).");
-                }
-                throw error;
-            }
-        });
-
     }
 
 
-    async cambiarEstadoEstudiante(id, nuevoEstado) {
+    async modificarProveedor(id, nuevoEstado, tipo) {
 
         if(!validarExistencia(id, "id", false)){
             return null;
         }
 
         validarExistencia(nuevoEstado, "nuevo estado", true);
+        validarExistencia(tipo, "tipo", true);
 
         // Se valida el id
-        validarIdNumerico(id, "El id no tiene el formato correcto");
+        const id_limpio = String(id).trim();
+        validarIdNumerico(id_limpio, "El id no tiene el formato correcto");
+        
 
         // Se valida el nuevo estado
-        validarIdNumerico(nuevoEstado, "El nuevo estado no tiene el formato correcto");
+        const estado_limpio = String(nuevoEstado).trim();
+        validarIdNumerico(estado_limpio, "El nuevo estado no tiene el formato correcto");
 
-        const estado_Numerico = parseInt(nuevoEstado, 10);
-        if ( isNaN(estado_Numerico) || estado_Numerico < 1 || estado_Numerico > 5) {
+        const estado_numerico = parseInt(estado_limpio, 10);
+        if ( isNaN(estado_numerico) || estado_numerico < 1 || estado_numerico > 4) {
            throw new Error(`El nuevo estado no es válido.`);
         }; 
 
 
-        // Se valida la existencia de la cuenta, si no existe se regresa null
-        const estudiante = await Estudiante_Model.findByPk(id)
+        // Se valida el nuevo tipo
+        const tipo_limpio = String(tipo).trim();
+        validarIdNumerico(tipo_limpio, "El nuevo tipo no tiene el formato correcto");
 
-        if(!estudiante){
+        const tipo_numerico = parseInt(tipo_limpio, 10);
+        if ( isNaN(tipo_numerico) || tipo_numerico < 1 || tipo_numerico > 10) {
+           throw new Error(`El nuevo estado no es válido.`);
+        }; 
+
+        // Se valida la existencia de la cuenta, si no existe se regresa null
+        const proveedor = await Proveedor_Model.findByPk(id)
+
+        if(!proveedor){
             return null;
         };
 
         // Solo se actualiza la columna 'estado'
-        const [filasAfectadas] = await Estudiante_Model.update(
-            { id_estado_academico: estado_Numerico }, 
-            { where: { id_estudiante: id } }
+        const [filasAfectadas] = await Proveedor_Model.update(
+            {   
+                id_estado_proveedor: estado_numerico,
+                id_tipo_proveedor: tipo_numerico 
+            }, 
+            { where: { id_proveedor: proveedor.id_proveedor } }
         );
 
         if (filasAfectadas === 0) {       
             return null;      
         }
 
-        return Estado_Academico_Model.findByPk(estado_Numerico);
+        return true;
     
     }
 
 
-    // Se obtiene un solo estudiante por el id
-    async obtenerEstudiantePorId(id) {
+    // Se obtiene un solo proveedor por el id
+    async obtenerProveedorPorId(id) {
 
         validarExistencia(id, "id", true);
 
         validarIdNumerico(id, "El ID proporcionado no es un número entero válido o positivo.");
 
-        // Método de Sequelize para buscar una entidad por su Primary Key
-        const estudiante = await Estudiante_Model.findByPk(id, {
+        // Método de Sequelize para buscar un proveedor por su Primary Key
+        const proveedor = await Proveedor_Model.findByPk(id, {
 
-                attributes: [// Atributos de la tabla principal (estudiante)                
-                    'id_estudiante', 'codigo_estudiantil', 'createdAt', 'updatedAt'
+                attributes: [// Atributos de la tabla principal (docente)                
+                    'id_proveedor', 'createdAt', 'updatedAt'
                 ],
                 include: [ /*Le indica a Sequelize que debe realizar operaciones JOIN para traer datos de las 
                     tablas relacionadas definidas en las asociaciones del modelo*/
                     { 
-                        association: 'entidad', // Esto debe coincidir exactamente con el alias (as) que se le dió a la relación en el modelo (en este caso "estudiante")
-                        attributes: ['numero_identificacion', 'nombre', 'apellido', 'email', 'telefono', 'estado'], // Estos son los campos que se traerán de la tabla asociada (tipo_entidad)
+                        association: 'entidad', // Esto debe coincidir exactamente con el alias (as) que se le dió a la relación en el modelo (en este caso "docente")
+                        attributes: ['numero_identificacion', 'nombre', 'apellido', 'estado', 'email', "telefono"], // Estos son los campos que se traerán de la tabla asociada (tipo_entidad)
                     
                         // Este include anidado es para tener acceso a los prefijos
                         include: [{
@@ -183,23 +179,27 @@ class EstudianteService {
                                
                     },
                     { 
-                        association: 'estado_academico', 
-                        attributes: ['id_estado_academico', 'nombre', 'permite_inscripcion'] 
+                        association: 'tipo_proveedor', 
+                        attributes: ['id_tipo_proveedor', 'nombre', 'descripcion'] 
+                    },
+                    { 
+                        association: 'estado_proveedor', 
+                        attributes: ['id_estado_proveedor', 'nombre', 'descripcion', 'permite_pago'] 
                     }
                 ]
         });
         
-        return EstudianteService.formatearEstudiante(estudiante);
+        return ProveedorService.formatearProveedor(proveedor);
        
     }
 
 
     // Permite buscar cuentas basandose en filtros
-    async buscarEstudiantes(criteriosBusqueda = {}) {
+    async buscarProveedores(criteriosBusqueda = {}) {
         
-        // Objeto para condiciones en la tabla Estudiante (base)
-        const estudianteWhere = {};
-        // Objeto para condiciones en la tabla Entidad (asociada)
+        // Objeto para condiciones en la tabla proveedor (base)
+        const proveedorWhere = {};
+        // Objeto para condiciones en la tabla entidad (asociada)
         const entidadWhere = {};
 
         // Variable auxiliar para datos limpios
@@ -211,7 +211,6 @@ class EstudianteService {
             numero_identificacion, 
             nombre, 
             apellido,
-            codigo_estudiantil,
             estado,
             creadosDesde,
             creadosHasta,
@@ -279,19 +278,8 @@ class EstudianteService {
                 }
             }
 
-            // Filtro 5: Código estudiantil 
-            if (validarExistencia(codigo_estudiantil, "", false)) {
-                // Limpieza y Validación:
-                valorLimpio = String(codigo_estudiantil).trim();
-
-                if (valorLimpio) { 
-                    validarSoloNumeros(valorLimpio, "El código estudiantil debe contener solo números (dígitos 0-9).");
-                    estudianteWhere.codigo_estudiantil = { [Op.iLike]: `%${valorLimpio}%` };
-                }
-            }
-
-        
-            // Filtro 9: Estado 
+  
+            // Filtro 5: Estado 
             if (validarExistencia(estado, "", false)) { 
 
                 // Limpieza y Validación:
@@ -302,9 +290,9 @@ class EstudianteService {
 
                     validarSoloNumeros(valorLimpio, "El estado debe contener solo números (dígitos 0-9).");
                     const estado_Numerico = parseInt(valorLimpio, 10);
-                    if ( !(isNaN(estado_Numerico) || estado_Numerico < 1 || estado_Numerico > 5)) {
+                    if ( !(isNaN(estado_Numerico) || estado_Numerico < 1 || estado_Numerico > 10)) {
 
-                        estudianteWhere.id_estado_academico = estado_Numerico;
+                        proveedorWhere.id_estado_proveedor = estado_Numerico;
                     }; 
                 } 
        
@@ -314,7 +302,7 @@ class EstudianteService {
             //Filtro 10: Se verifica si el usuario ha proporcionado al menos una de las fechas de creación
             if (fechaCreacionDesde || fechaCreacionHasta) {
 
-                estudianteWhere.createdAt = {}; 
+                proveedorWhere.createdAt = {}; 
                 
                 /* [Op.gte]: Este es el operador "Greater Than or Equal" (Mayor o Igual que).
 
@@ -324,7 +312,7 @@ class EstudianteService {
                 Traducción SQL: WHERE "createdAt" >= 'fecha_inicio'
                 */
                 if (fechaCreacionDesde) {
-                    estudianteWhere.createdAt[Op.gte] = fechaCreacionDesde;
+                    proveedorWhere.createdAt[Op.gte] = fechaCreacionDesde;
                 }
 
                 if (fechaCreacionHasta) {
@@ -339,7 +327,7 @@ class EstudianteService {
                     // Si la fecha inicial es 2025-11-09 00:00:00Z, esta línea la convierte a 2025-11-10 00:00:00Z
                     inicioDiaSiguiente.setTime(inicioDiaSiguiente.getTime() + milisegundosEnUnDia);
                     
-                    estudianteWhere.createdAt[Op.lt] = inicioDiaSiguiente;
+                    proveedorWhere.createdAt[Op.lt] = inicioDiaSiguiente;
         
                 }
             }
@@ -347,7 +335,7 @@ class EstudianteService {
             // Filtro 11: Se verifica si el usuario ha proporcionado al menos una de las fechas de modificación
             if (fechamodificadosDesde || fechamodificadosHasta) {
 
-                estudianteWhere.updatedAt = {}; 
+                proveedorWhere.updatedAt = {}; 
                 
                 /* [Op.gte]: Este es el operador "Greater Than or Equal" (Mayor o Igual que).
 
@@ -357,7 +345,7 @@ class EstudianteService {
                 Traducción SQL: WHERE "createdAt" >= 'fecha_inicio'
                 */
                 if (fechamodificadosDesde) {
-                    estudianteWhere.updatedAt[Op.gte] = fechamodificadosDesde;
+                    proveedorWhere.updatedAt[Op.gte] = fechamodificadosDesde;
                 }
 
                 if (fechamodificadosHasta) {
@@ -372,16 +360,16 @@ class EstudianteService {
                     // Si la fecha inicial es 2025-11-09 00:00:00Z, esta línea la convierte a 2025-11-10 00:00:00Z
                     inicioDiaSiguiente.setTime(inicioDiaSiguiente.getTime() + milisegundosEnUnDia);
                     
-                    estudianteWhere.updatedAt[Op.lt] = inicioDiaSiguiente;
+                    proveedorWhere.updatedAt[Op.lt] = inicioDiaSiguiente;
                 }
             }
 
 
 
             // --- 3. Ejecutar la Consulta con Cláusulas WHERE separadas ---
-            const estudiantes = await Estudiante_Model.findAll({
+            const proveedores = await Proveedor_Model.findAll({
                 // Aplicamos los filtros directos de la tabla Estudiante
-                where: estudianteWhere, 
+                where: proveedorWhere, 
                 
                 include: [ // Define qué otras tablas deben unirse a la consulta y qué campos de esas tablas deben traerse.
                     { 
@@ -402,11 +390,15 @@ class EstudianteService {
                             { association: 'prefijo', attributes: ['id_prefijo', 'letra_prefijo'] }
                         ],
                         // Atributos de la entidad que queremos traer:
-                        attributes: ['numero_identificacion', 'nombre', 'apellido', 'estado', 'telefono', 'email'] 
+                        attributes: ['numero_identificacion', 'nombre', 'apellido', 'telefono', 'email'] 
                     },
                     { 
-                        association: 'estado_academico', 
-                        attributes: ['id_estado_academico', 'nombre', 'permite_inscripcion'] 
+                        association: 'tipo_proveedor', 
+                        attributes: ['id_tipo_proveedor', 'nombre', 'descripcion'] 
+                    },
+                    { 
+                        association: 'estado_proveedor', 
+                        attributes: ['id_estado_proveedor', 'nombre', 'descripcion', 'permite_pago'] 
                     }
                 ],
 
@@ -416,48 +408,62 @@ class EstudianteService {
 
 
         // --- Se devuelven los resultados formateados ---
-        return estudiantes.map(instancia => EstudianteService.formatearEstudiante(instancia));
+        return proveedores.map(instancia => ProveedorService.formatearProveedor(instancia));
     }
     
 
-    // Esta función complementa a las funciones "buscarEstudiantes" y "obtenerEstudiantePorId", y sirve para formatear las claves que le llegará al usuario
-    static formatearEstudiante(estudianteInstance) {
+    // Esta función complementa a las funciones "buscarProveedores" y "obtenerProveedorPorId", y sirve para formatear las claves que le llegará al usuario
+    static formatearProveedor(proveedorInstance) {
 
         // Si no existe la entidad se devuelve null
-        if (!estudianteInstance) return null;
+        if (!proveedorInstance) return null;
 
-        const estudiante = estudianteInstance.toJSON(); 
+        const proveedor = proveedorInstance.toJSON(); 
+        
+
+        // Función auxiliar para convertir booleanos a "Si"/"No"
+        // Nota: si recibe "undefined" sería: "undefined === true" es false
+        const boolToText = (value) => value === true ? "Si" : "No";
 
         return {
-            id: estudiante.id_estudiante, 
-            codigo_estudiantil: estudiante.codigo_estudiantil.toString(),
+            id: proveedor.id_proveedor, 
 
             entidad: {
-                numero_identificacion: estudiante.entidad.numero_identificacion ? estudiante.entidad.numero_identificacion.toString() : null,
-                nombre: estudiante.entidad.nombre ? capitalizeFirstLetter(estudiante.entidad.nombre.toString()) : null,
-                apellido: estudiante.entidad.apellido ? capitalizeFirstLetter(estudiante.entidad.apellido.toString()) : null,
-                email: estudiante.entidad.email ? estudiante.entidad.email : null,
-                telefono: estudiante.entidad.telefono ? estudiante.entidad.telefono : null,
-                estado: estudiante.entidad.estado ? estudiante.entidad.estado : null,
+                numero_identificacion: proveedor.entidad?.numero_identificacion ?? null,
+                nombre: proveedor.entidad?.nombre ? capitalizeFirstLetter(proveedor.entidad.nombre.toString()) : null,
+                apellido: proveedor.entidad?.apellido ? capitalizeFirstLetter(proveedor.entidad.apellido.toString()) : null,
+                telefono: proveedor.entidad?.telefono ?? null,
+                email: proveedor.entidad?.email ?? null,
+
+                estado: proveedor.entidad?.estado ?? null,
 
                 prefijo: {
-                    letra_prefijo: estudiante.entidad.prefijo.letra_prefijo ? estudiante.entidad.prefijo.letra_prefijo.toString() : null,
+                    letra_prefijo: proveedor.entidad.prefijo.letra_prefijo?.toString() ?? null,
                 }
             },
 
             estado: {
-                id: estudiante.estado_academico.id_estado_academico ? estudiante.estado_academico.id_estado_academico : null,
-                nombre: estudiante.estado_academico.nombre ? estudiante.estado_academico.nombre.toString() : null,
-                puede_inscribirse: estudiante.estado_academico.permite_inscripcion == true ? "Si" : "No",
+                id: proveedor.estado_proveedor?.id_estado_proveedor ?? null,
+                nombre: proveedor.estado_proveedor?.nombre ?? null,
+                descripcion: proveedor.estado_proveedor?.descripcion ?? null,
+
+                // Si no existe se envía "undefined"
+                permite_pago: boolToText(proveedor.estado_proveedor?.permite_pago),
+            },
+
+            tipo_proveedor: {
+                id: proveedor.tipo_proveedor?.id_tipo_proveedor ?? null,
+                nombre: proveedor.tipo_proveedor?.nombre ?? null,
+                descripcion: proveedor.tipo_proveedor?.descripcion ?? null,
+
             },
        
-            fechaCreacion: estudiante.createdAt,
-            fechaActualizacion: estudiante.updatedAt 
+            fechaCreacion: proveedor.createdAt,
+            fechaActualizacion: proveedor.updatedAt 
         };
 
     }
 
-
 }
 
-module.exports = EstudianteService;
+module.exports = ProveedorService;

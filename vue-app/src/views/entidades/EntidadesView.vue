@@ -31,7 +31,7 @@
 
             <div class="row">
                 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="tipo_entidad">Tipo de entidad:</label>
                     <select id="tipo_entidad" v-model="filters.tipo_entidad" class="form-control">
                         <option value="">Todos</option>
@@ -41,7 +41,7 @@
                     </select>
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="tipo_identificacion">Tipo de identificación:</label>
                     <select id="tipo_identificacion" v-model="filters.tipo_identificacion" class="form-control">
                         <option value="">Todos</option>
@@ -52,7 +52,7 @@
                     </select>
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="prefijo">Prefijo:</label>
                     <select id="prefijo" v-model="filters.prefijo" class="form-control">
                         <option value="">Todos</option>
@@ -64,7 +64,7 @@
                     </select>
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="numero_identificacion">Número de identificación:</label>
                     <input 
                         type="text" 
@@ -76,7 +76,7 @@
                     >
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="nombre">Nombre:</label>
                     <input 
                         type="text" 
@@ -88,7 +88,7 @@
                     >
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="apellido">Apellido:</label>
                     <input 
                         type="text" 
@@ -100,27 +100,27 @@
                     >
                 </div>
             
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="creadosDesde">Creados Desde:</label>
                     <input type="date" id="creadosDesde" v-model="filters.creadosDesde" class="form-control">
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3 ">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="creadosHasta">Creados Hasta:</label>
                     <input type="date" id="creadosHasta" v-model="filters.creadosHasta" class="form-control">
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="modificadosDesde">Modificados Desde:</label>
                     <input type="date" id="modificadosDesde" v-model="filters.modificadosDesde" class="form-control">
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="modificadosHasta">Modificados Hasta:</label>
                     <input type="date" id="modificadosHasta" v-model="filters.modificadosHasta" class="form-control">
                 </div>
                 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="estado">Estado:</label>
                     <select id="estado" v-model="filters.estado" class="form-control">
                         <option value="">Todos</option>
@@ -266,9 +266,6 @@
 
             // Modificar entidad
             const rutaModificar = `${rutaBase}Modificar`
-
-            // Modificar entidad
-            const rutaCambiarEstado = `${rutaBase}CambiarEstado`
 
 
         // Se inicializa como array vacío. Los datos se cargarán de la API al montar el componente.
@@ -420,31 +417,22 @@
                     closeModal();
 
                 }catch (err) {
-                    error('Error al crear la entidad', `${err.response?.data?.message || 'Error de servidor.'}`);
-                }
-            };
 
+                    // Definición de la descripción de error
+                    let mensajeError = 'Error desconocido al procesar la solicitud.';
 
-            /**
-             * Maneja el evento 'update-account' del modal llamando a la API.
-             */
-            const updateEntity = async (updatedData) => {
-    
-                try {
-                    // 1. Llama a la API (PUT) para actualizar la cuenta.
-                    // La ruta incluye el ID: /api/accounts/:id
-                    const response = await api.put(`${rutaModificar}/${updatedData.id}`, updatedData);
+                    // 1. Manejo de errores de Axios (si existe la respuesta del servidor)
+                    if (err.response) {
+                        // Se usa el mensaje que viene del backend o el estado HTTP
+                        mensajeError = err.response.data.message || `Error ${err.response.status}: ${err.message}`;
+                    } 
 
-                    exito('Éxito', 'Entidad modificada correctamente.');
+                    // 2. Manejo de otros errores (ej. error de red, o si no hay respuesta)
+                    else if (err.message) {
+                        mensajeError = err.message;
+                    }
 
-                    await loadEntities(); 
-
-                    // 4. Cerrar el modal.
-                    closeModal();
-
-
-                }catch (err) {
-                    error('Error al modificar la entidad', `${err.response?.data?.message || 'Error de servidor.'}`);
+                    error('Error al crear la entidad', mensajeError);
                 }
             };
 
@@ -560,30 +548,6 @@
            
 
             /**
-             * Cambia el estado de una cuenta (activo/inactivo) llamando a la API.
-             * @param {object} account - El objeto de cuenta a modificar.
-             */
-            const toggleStatus = async (entity) => {
-
-            const newStatus = !entity.estado;
-
-                try {
-
-                    await api.put(`${rutaCambiarEstado}/${entity.id}`, { estado: newStatus });
-
-                    // Si la llamada es exitosa, actualiza la variable local para que Vue refresque el DOM.
-                    entity.estado = newStatus;
-
-                    exito('Éxito', `Estado de la entidad ${entity.numero_identificacion} cambiado a: ${newStatus ? 'Activo' : 'Inactivo'}`);
-
-                } catch (err) {
-                    error('Error al cambiar el estado', `${err.response?.data?.message || 'Error de servidor.'}`);
-
-                }
-            };
-
-
-            /**
              * Formatea una cadena de fecha/hora ISO a un formato local legible.
              * @param {string} isoString - La cadena de fecha ISO (ej: "2025-11-07T23:16:53.982Z").
              * @returns {string} La fecha y hora formateadas.
@@ -677,25 +641,6 @@
                     entityToEdit.value = null;
                 };
 
-
-            // ----------------------------------- Visualización de datos ----------------------------------------
-
-            /**
-             * Muestra el modal de detalles (solo vista) para una entidad.
-             * @param {Object} entity - La entidad seleccionada de la tabla.
-             */
-            function showDetailsModal(entity) {
-                entityToView.value = entity;
-                isDetailsModalVisible.value = true;
-            }
-
-            /**
-             * Cierra el modal de detalles.
-             */
-            function closeDetailsModal() {
-                isDetailsModalVisible.value = false;
-                entityToView.value = null; // Limpiar los datos al cerrar
-            }
 
 
 </script>

@@ -394,7 +394,22 @@
                         suggestions.value = response.data.data; 
 
                     } catch (err) {
-                        error('Error al buscar cuentas padre', err);
+
+                        // Definición de la descripción de error
+                        let mensajeError = 'Error desconocido al procesar la solicitud.';
+
+                        // 1. Manejo de errores de Axios (si existe la respuesta del servidor)
+                        if (err.response) {
+                            // Se usa el mensaje que viene del backend o el estado HTTP
+                            mensajeError = err.response.data.message || `Error ${err.response.status}: ${err.message}`;
+                        } 
+
+                        // 2. Manejo de otros errores (ej. error de red, o si no hay respuesta)
+                        else if (err.message) {
+                            mensajeError = err.message;
+                        }
+
+                        error('Error al buscar cuentas padre', mensajeError);
                         suggestions.value = [];
                     } finally {
                         isLoading.value = false;
@@ -626,7 +641,23 @@
                         existeNombre: response.data.existeNombre 
                     };
                 } catch (err) {
-                    error('Error al verificar la existencia de la cuenta', err);      
+
+                    // Definición de la descripción de error
+                    let mensajeError = 'Error desconocido al procesar la solicitud.';
+
+                    // 1. Manejo de errores de Axios (si existe la respuesta del servidor)
+                    if (err.response) {
+                        // Se usa el mensaje que viene del backend o el estado HTTP
+                        mensajeError = err.response.data.message || `Error ${err.response.status}: ${err.message}`;
+                    } 
+
+                    // 2. Manejo de otros errores (ej. error de red, o si no hay respuesta)
+                    else if (err.message) {
+                        mensajeError = err.message;
+                    }
+
+
+                    error('Error al verificar la existencia de la cuenta', mensajeError);      
                     // En caso de error de servidor, asumimos que es único para no bloquear, pero es riesgoso. 
                     // Idealmente, se debe mostrar un error de conexión.
                     return { existeCodigo: false, existeNombre: false }; 

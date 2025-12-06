@@ -52,6 +52,13 @@
                                     <span :class="['badge', getStatusBadge(student.estado.nombre)]">{{ student.estado.nombre }}</span>
                                 </dd>
 
+                                <dt class="col-sm-5">Teléfono:</dt>
+                                <dd class="col-sm-7">{{ student.entidad.telefono || 'No registrado' }}</dd>
+                                
+                                <dt class="col-sm-5">Correo:</dt>
+                                <dd class="col-sm-7">{{ student.entidad.email || 'No registrado' }}</dd>
+
+                                
                                 <dt class="col-sm-5">¿Puede Inscribirse en Nuevos Cursos?:</dt>
                                 <dd class="col-sm-7">{{ student.estado.puede_inscribirse == true ? 'Sí' : 'No' }}</dd>
                                 
@@ -61,11 +68,7 @@
                                 <dt class="col-sm-5">Última Modificación:</dt>
                                 <dd class="col-sm-7">{{ formatDateTime(student.fechaActualizacion) }}</dd>
 
-                                <dt class="col-sm-5">Teléfono:</dt>
-                                <dd class="col-sm-7">{{ student.entidad.telefono || 'No registrado' }}</dd>
                                 
-                                <dt class="col-sm-5">Correo:</dt>
-                                <dd class="col-sm-7">{{ student.entidad.email || 'No registrado' }}</dd>
                             </dl>
                         </div>
                     </div>
@@ -261,8 +264,23 @@
                     studentAccounts.value = accountsResponse.data.data;
 
                 } catch (err) {
-                    console.error('Error al cargar los datos del estudiante:', err);
-                    // Manejo de error, por ejemplo, redirigir a una página 404
+
+                    // Definición de la descripción de error
+                    let mensajeError = 'Error desconocido al procesar la solicitud.';
+
+                    // 1. Manejo de errores de Axios (si existe la respuesta del servidor)
+                    if (err.response) {
+                        // Se usa el mensaje que viene del backend o el estado HTTP
+                        mensajeError = err.response.data.message || `Error ${err.response.status}: ${err.message}`;
+                    } 
+
+                    // 2. Manejo de otros errores (ej. error de red, o si no hay respuesta)
+                    else if (err.message) {
+                        mensajeError = err.message;
+                    }
+
+                    error('Error al cargar los datos del estudiante:', mensajeError);
+
                 } finally {
                     isLoading.value = false;
                 }
@@ -281,7 +299,7 @@
             const toggleAccountAssociation = async (account) => {
 
                 // 1. Determinar el nuevo estado
-                const newStatus = !account.asociacion.es_vigente;
+                const newStatus = !account.entidades_asociadas?.[0]?.asociacion?.es_vigente;
                 
                 // Mensajes para el usuario
                 const action = newStatus ? 'activada' : 'desactivada';
@@ -289,10 +307,10 @@
                 try {
                     // 3. Llamada a la API (Asume que la API acepta un PUT a la ruta con el cuerpo de datos)
 
-                    await api.put(`${rutaCambiarEstadoAsociacion}/${account.asociacion.id}`, { nuevoEstado: newStatus });
+                    await api.put(`${rutaCambiarEstadoAsociacion}/${account.entidades_asociadas[0].asociacion.id}`, { nuevoEstado: newStatus });
 
                     // 4. Si es exitoso, actualizar el estado local y mostrar éxito
-                    account.asociacion.es_vigente = newStatus;
+                    account.entidades_asociadas[0].asociacion.es_vigente = newStatus;
         
                     exito('Éxito', `Asociación de la cuenta ha sido ${action} correctamente.`);
 
@@ -300,9 +318,24 @@
                     // await loadStudentDetails(); 
 
                 } catch (err) {
+
+                    // Definición de la descripción de error
+                    let mensajeError = 'Error desconocido al procesar la solicitud.';
+
+                    // 1. Manejo de errores de Axios (si existe la respuesta del servidor)
+                    if (err.response) {
+                        // Se usa el mensaje que viene del backend o el estado HTTP
+                        mensajeError = err.response.data.message || `Error ${err.response.status}: ${err.message}`;
+                    } 
+
+                    // 2. Manejo de otros errores (ej. error de red, o si no hay respuesta)
+                    else if (err.message) {
+                        mensajeError = err.message;
+                    }
+
                     // Revertir el estado visual si la API falla
                     // account.isAssociated = !newStatus; 
-                    error('Error al cambiar la asociación', `No se pudo cambiar el estado de la cuenta. ${err.response?.data?.message || 'Error de servidor.'}`);
+                    error('Error al cambiar la asociación', mensajeError);
                 }
             };
 
@@ -429,7 +462,6 @@
                     
                     // 5. Si la llamada falla (ej. error 400/500), se muestra el error.
                     error('Error al actualizar', 'No se pudo actualizar el estado académico del estudiante. Intente de nuevo.');
-                    console.error('Error de API:', err);
                     
                 }
             }

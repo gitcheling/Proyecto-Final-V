@@ -74,6 +74,7 @@ class DocenteService {
 
     async cambiarEstadoDocente(id, nuevoEstado) {
 
+        console.log(String(nuevoEstado))
         if(!validarExistencia(id, "id", false)){
             return null;
         }
@@ -81,12 +82,14 @@ class DocenteService {
         validarExistencia(nuevoEstado, "nuevo estado", true);
 
         // Se valida el id
-        validarIdNumerico(id, "El id no tiene el formato correcto");
+        const id_limpio = String(id).trim();
+        validarIdNumerico(id_limpio, "El id no tiene el formato correcto");
 
         // Se valida el nuevo estado
-        validarIdNumerico(nuevoEstado, "El nuevo estado no tiene el formato correcto");
+        const estado_limpio = String(nuevoEstado).trim();
+        validarIdNumerico(estado_limpio, "El nuevo estado no tiene el formato correcto");
 
-        const estado_Numerico = parseInt(nuevoEstado, 10);
+        const estado_Numerico = parseInt(estado_limpio, 10);
         if ( isNaN(estado_Numerico) || estado_Numerico < 1 || estado_Numerico > 4) {
            throw new Error(`El nuevo estado no es válido.`);
         }; 
@@ -130,7 +133,7 @@ class DocenteService {
                     tablas relacionadas definidas en las asociaciones del modelo*/
                     { 
                         association: 'entidad', // Esto debe coincidir exactamente con el alias (as) que se le dió a la relación en el modelo (en este caso "docente")
-                        attributes: ['numero_identificacion', 'nombre', 'apellido', 'estado'], // Estos son los campos que se traerán de la tabla asociada (tipo_entidad)
+                        attributes: ['numero_identificacion', 'nombre', 'apellido', 'estado', 'email', "telefono"], // Estos son los campos que se traerán de la tabla asociada (tipo_entidad)
                     
                         // Este include anidado es para tener acceso a los prefijos
                         include: [{
@@ -250,7 +253,7 @@ class DocenteService {
                     const estado_Numerico = parseInt(valorLimpio, 10);
                     if ( !(isNaN(estado_Numerico) || estado_Numerico < 1 || estado_Numerico > 4)) {
 
-                        docenteWhere.id_estado_academico = estado_Numerico;
+                        docenteWhere.id_estado_docente = estado_Numerico;
                     }; 
                 } 
        
@@ -348,7 +351,7 @@ class DocenteService {
                             { association: 'prefijo', attributes: ['id_prefijo', 'letra_prefijo'] }
                         ],
                         // Atributos de la entidad que queremos traer:
-                        attributes: ['numero_identificacion', 'nombre', 'apellido', 'estado'] 
+                        attributes: ['numero_identificacion', 'nombre', 'apellido', 'estado', 'telefono', 'email'] 
                     },
                     { 
                         association: 'estado_docente', 
@@ -373,28 +376,38 @@ class DocenteService {
         if (!docenteInstance) return null;
 
         const docente = docenteInstance.toJSON(); 
+        
+
+        // Función auxiliar para convertir booleanos a "Si"/"No"
+        // Nota: si recibe "undefined" sería: "undefined === true" es false
+        const boolToText = (value) => value === true ? "Si" : "No";
 
         return {
-            id: docente.id_estudiante, 
-            codigo_estudiantil: docente.codigo_estudiantil.toString(),
+            id: docente.id_docente, 
 
             entidad: {
-                numero_identificacion: docente.entidad.numero_identificacion ? docente.entidad.numero_identificacion.toString() : null,
-                nombre: docente.entidad.nombre ? capitalizeFirstLetter(docente.entidad.nombre.toString()) : null,
-                apellido: docente.entidad.apellido ? capitalizeFirstLetter(docente.entidad.apellido.toString()) : null,
-                estado: docente.entidad.estado ? docente.entidad.estado : null,
+                numero_identificacion: docente.entidad?.numero_identificacion ?? null,
+                nombre: docente.entidad?.nombre ? capitalizeFirstLetter(docente.entidad.nombre.toString()) : null,
+                apellido: docente.entidad?.apellido ? capitalizeFirstLetter(docente.entidad.apellido.toString()) : null,
+                telefono: docente.entidad?.telefono ?? null,
+                email: docente.entidad?.email ?? null,
+                numero_identificacion: docente.entidad?.numero_identificacion ?? null,
+
+                estado: docente.entidad?.estado ?? null,
 
                 prefijo: {
-                    letra_prefijo: docente.entidad.prefijo.letra_prefijo ? docente.entidad.prefijo.letra_prefijo.toString() : null,
+                    letra_prefijo: docente.entidad.prefijo.letra_prefijo?.toString() ?? null,
                 }
             },
 
             estado: {
-                id: docente.estado_docente.id_estado_docente ? docente.estado_docente.id_estado_docente : null,
-                nombre: docente.estado_docente.nombre ? docente.estado_docente.nombre.toString() : null,
-                descripcion: docente.estado_docente.descripcion ? docente.estado_docente.descripcion.toString() : null,
-                permite_asignacion: docente.estado_docente.permite_asignacion == true ? "Si" : "No",
-                aplica_pago: docente.estado_docente.aplica_pago == true ? "Si" : "No"
+                id: docente.estado_docente?.id_estado_docente ?? null,
+                nombre: docente.estado_docente?.nombre ?? null,
+                descripcion: docente.estado_docente?.descripcion ?? null,
+
+                // Si no existe se envía "undefined"
+                permite_asignacion: boolToText(docente.estado_docente?.permite_asignacion),
+                aplica_pago: boolToText(docente.estado_docente?.aplica_pago)
             },
        
             fechaCreacion: docente.createdAt,
@@ -404,26 +417,6 @@ class DocenteService {
     }
 
 
-    // Se obtienen los estados académicos
-    async obtenerEstadosDocente() {
-
-        const resultado = await Estado_Docente_Model.findAll();
-
-        // Verificar si el tipo de identificación fue encontrado
-        if (!resultado) { 
-            return [];
-        }
-
-        return resultado.map(instancia => ({
-            id: instancia.id_estado_docente, 
-            nombre: instancia.nombre.toString(),
-            descripcion: instancia.descripcion.toString(), 
-            permite_asignacion:  instancia.permite_asignacion == true ? "Si" : "No",    
-            aplica_pago: instancia.aplica_pago == true ? "Si" : "No"            
-        }));
-    
-    }
-    
 }
 
 module.exports = DocenteService;

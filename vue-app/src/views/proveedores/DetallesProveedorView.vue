@@ -1,18 +1,18 @@
 <template>
     <div class="details-page container mt-5">
         
-        <router-link :to="{ name: 'GestionEntidades' }" class="btn mb-4 back-button btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Volver a la Lista de Entidades
+        <router-link :to="{ name: 'GestionProveedores' }" class="btn mb-4 back-button btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver a la Lista de Proveedores
         </router-link>
 
         <div v-if="isLoading" class="text-center py-5">
             <div class="spinner-border text-primary-custom" role="status">
                 <span class="visually-hidden">Cargando...</span>
             </div>
-            <p class="mt-3">Cargando datos de la entidad...</p>
+            <p class="mt-3">Cargando datos del proveedor...</p>
         </div>
 
-        <div v-else-if="entity">
+        <div v-else-if="supplier">
             
             <div class="header-card mb-4 p-4 rounded-3 hover-lift">
                 
@@ -21,13 +21,13 @@
                     <div class="row align-items-center">
                         <div class="col-9"> 
                             <h1 class="display-6 page-title-light"> <i class="bi bi-person-circle me-3"></i> 
-                                Ficha de Entidad: {{ entity.nombre }} {{ entity.apellido ? entity.apellido : "" }}
-                            </h1>
+                                Ficha de Proveedor: {{ supplier.entidad.nombre }} {{ supplier.entidad.apellido }}
+                            </h1>                
                         </div>
                         
                         <div class="col-3 text-end">
-                            <button @click="openEditModal" class="btn btn-edit-student" title="Editar Estado y Datos del Estudiante">
-                                <i class="bi bi-pencil-square me-2"></i> Editar Entidad
+                            <button @click="openEditModal" class="btn btn-edit" title="Editar Estado y Datos del Proveedor">
+                                <i class="bi bi-pencil-square me-2"></i> Editar Proveedor
                             </button>
                         </div>
                     </div>
@@ -39,32 +39,36 @@
                 <div class="col-lg-6 mb-4">
                     <div class="card h-100 data-card hover-lift">
                         <div class="card-header data-header">
-                            <h3 class="h5 mb-0"><i class="bi bi-info-circle me-2"></i> Datos Generales de la Entidad</h3>
+                            <h3 class="h5 mb-0"><i class="bi bi-info-circle me-2"></i> Datos Generales del Proveedor</h3>
                         </div>
                         <div class="card-body">
                             <dl class="row detail-list">
                                 <dt class="col-sm-5">Número de Identificación:</dt>
-                                <dd class="col-sm-7">{{ entity.prefijo.letra_prefijo }} - {{ entity.numero_identificacion }}</dd>
+                                <dd class="col-sm-7">{{ supplier.entidad.prefijo.letra_prefijo }} - {{ supplier.entidad.numero_identificacion }}</dd>    
 
-                                <dt class="col-sm-5">Teléfono:</dt>
-                                <dd class="col-sm-7">{{ entity.telefono || 'No registrado' }}</dd>
-                                
-                                <dt class="col-sm-5">Correo:</dt>
-                                <dd class="col-sm-7">{{ entity.email || 'No registrado' }}</dd>
-
-                                <dt class="col-sm-5">Dirección:</dt>
-                                <dd class="col-sm-7">{{ entity.direccion || 'No registrado' }}</dd>
+                                <dt class="col-sm-5">Tipo de Proveedor:</dt>
+                                <dd class="col-sm-7">{{ supplier.tipo_proveedor.nombre }}</dd>    
 
                                 <dt class="col-sm-5">Estado Actual:</dt>
                                 <dd class="col-sm-7">
-                                    <span :class="['badge', getStatusBadge('activo')]">{{ entity.estado }}</span>
+                                    <span :class="['badge', getStatusBadge(supplier.estado.nombre)]">{{ supplier.estado.nombre }}</span>
                                 </dd>
+
+                                <dt class="col-sm-5">Teléfono:</dt>
+                                <dd class="col-sm-7">{{ supplier.entidad.telefono || 'No registrado' }}</dd>
                                 
-                                <dt class="col-sm-5">Fecha de Creación:</dt>
-                                <dd class="col-sm-7">{{ formatDateTime(entity.fechaCreacion) }}</dd>
+                                <dt class="col-sm-5">Correo:</dt>
+                                <dd class="col-sm-7">{{ supplier.entidad.email || 'No registrado' }}</dd>
+                                
+
+                                <dt class="col-sm-5">¿Aplica para recibir pagos?:</dt>
+                                <dd class="col-sm-7">{{ supplier.estado.permite_pago}}</dd>
+                                
+                                <dt class="col-sm-5">Fecha de Registro como Proveedor:</dt>
+                                <dd class="col-sm-7">{{ formatDateTime(supplier.fechaCreacion) }}</dd>
                                 
                                 <dt class="col-sm-5">Última Modificación:</dt>
-                                <dd class="col-sm-7">{{ formatDateTime(entity.fechaActualizacion) }}</dd>
+                                <dd class="col-sm-7">{{ formatDateTime(supplier.fechaActualizacion) }}</dd>
 
                                 
                             </dl>
@@ -72,87 +76,123 @@
                     </div>
                 </div>
 
-
                 <div class="col-lg-6 mb-4">
-                    <div class="card h-100 data-card hover-lift">
+                    <div class="card h-100 data-card hover-lift"> 
+
                         <div class="card-header data-header d-flex justify-content-between align-items-center">
-                            <div class="d-flex align-items-center">
+
+                           <div class="d-flex align-items-center">
                                 <h3 class="h5 mb-0 me-2">
-                                    <i class="bi bi-bank me-2"></i> Cuentas Titulares
+                                    <i class="bi bi-bank me-2"></i> Cuentas Bancarias Asociadas
                                 </h3>
+
                                 <span class="badge badge-account-count me-2"> 
-                                    {{ entityAccounts.length }} {{ entityAccounts.length === 1 ? 'Cuenta' : 'Cuentas' }}
+                                    {{ supplierAccounts.length }} {{ supplierAccounts.length === 1 ? 'Cuenta' : 'Cuentas' }}
                                 </span>
                             </div>
+
+                            <button @click="openAssociationModal" class="btn btn-sm btn-outline-primary-custom add-account-btn"> 
+                                <i class="bi bi-plus-circle me-1"></i> Asociar Cuenta
+                            </button>
                         </div>
 
                         <div class="card-body">
                             
-                            <div v-if="entityAccounts.length === 0" class="alert alert-purple-info text-center">
-                                La entidad no tiene cuentas bancarias registradas como titular.
+                            <div v-if="supplierAccounts.length === 0" class="alert alert-purple-info text-center">
+                                No se han asociado cuentas bancarias.
                             </div>
 
-                            <ul v-else class="list-group list-group-flush account-list-v2 account-list-container">
-                                <li v-for="account in entityAccounts" :key="account.id" class="list-group-item account-card-template3 hover-lift">
-                                    
-                                    <div class="account-header-3 d-flex w-100 justify-content-between">
-                                        <h5 class="mb-1 account-bank-name-3">
-                                            <i class="bi bi-bank me-2"></i> {{ account.banco.nombre || 'Banco Desconocido' }}
-                                        </h5> 
-                                        <small>{{ account.tipo_cuenta.nombre || 'Tipo N/A' }}</small>
-                                    </div>
-                                    
-                                    <hr class="separator-pink my-2">
-
-                                    <div class="account-details-3">
+                                <ul v-else class="list-group list-group-flush account-list-v2 account-list-container">
+                                    <li v-for="account in supplierAccounts" :key="account.id" class="list-group-item account-card-template3 hover-lift">
                                         
-                                        <p class="mb-1 text-primary-custom fw-bold">Nº Cuenta: <span class="text-secondary fw-normal">{{ account.numero_cuenta || 'N/A' }}</span></p>
-                                        
-                                        
-                                        <p class="mb-1 text-primary-custom fw-bold">Estado: <span class="text-secondary fw-normal">{{ account.estado.nombre || 'N/A' }}</span></p>
-                                        
-                                        <div class="mt-2 text-end">
-                                            <button 
-                                                @click="openAssociatedEntitiesModal(account)" 
-                                                class="btn btn-sm btn-outline-info-custom" 
-                                                title="Ver Entidades Asociadas"
-                                            >
-                                                <i class="bi bi-people me-1"></i> Entidades Asociadas 
-                                              
-                                            </button>
+                                        <div class="account-header-3 d-flex w-100 justify-content-between">
+                                            <h5 class="mb-1 account-bank-name-3">
+                                                <i class="bi bi-bank me-2"></i> {{ account.banco.nombre || 'Banco Desconocido' }}
+                                            </h5> 
+                                            <small>{{ account.tipo_cuenta.nombre || 'Tipo N/A' }}</small>
                                         </div>
+                                        
+                                        <hr class="separator-pink my-2">
 
-                                    </div>
-                                </li>
-                            </ul>
+                                        <div class="account-details-3">
+                                            
+                                            <p class="mb-1 text-primary-custom fw-bold">Nº Cuenta: <span class="text-secondary fw-normal">{{ account.numero_cuenta || 'N/A' }}</span></p>
+                                            
+                                            <p class="mb-1 text-primary-custom fw-bold">Propietario: 
+                                                <span class="text-secondary fw-normal"> 
+                                                    {{ account.entidad_titular.nombre }} 
+                                                    {{ account.entidad_titular.apellido ? account.entidad_titular.apellido : ""}}
+                                                    ( {{ account.entidad_titular.prefijo.letra_prefijo }}-
+                                                    {{ account.entidad_titular.numero_identificacion}} )
+
+                                                </span></p>
+                                            
+                                            <p class="mb-1 text-primary-custom fw-bold">
+                                                Estado de la asociación: 
+                                                
+                                                <span 
+                                                    class="status-badge" 
+                                                    :class="{ 
+                                                        'status-active': account.entidades_asociadas[0].asociacion.es_vigente === true, 
+                                                        'status-inactive': account.entidades_asociadas[0].asociacion.es_vigente === false,
+                                                        'status-na': account.entidades_asociadas[0].asociacion.es_vigente === null || account.entidades_asociadas[0].asociacion.es_vigente === undefined
+                                                    }"
+                                                >
+                                                    {{ 
+                                                        account.entidades_asociadas[0].asociacion.es_vigente === true ? 'Activa' : 
+                                                        (account.entidades_asociadas[0].asociacion.es_vigente === false ? 'Inactiva' : 'N/A')
+                                                    }}
+                                                </span>
+                                            </p>
+
+                                            <p class="mb-1 text-primary-custom fw-bold">Estado de la cuenta bancaria: <span class="text-secondary fw-normal">{{ account.estado.nombre || 'N/A' }}</span></p>
+                                                           
+                                             <div class="mt-1 text-end">
+                                                <button 
+                                                    class="btn btn-sm me-2" 
+                                                    @click="toggleAccountAssociation(account)"
+                                                    :class="account.entidades_asociadas[0].asociacion.es_vigente ? 'btn-outline-danger' : 'btn-outline-success'"
+                                                    :title="account.entidades_asociadas[0].asociacion.es_vigente ? 'Desactivar Asociación' : 'Activar Asociación'"
+                                                >
+                                                    <i :class="account.entidades_asociadas[0].asociacion.es_vigente ? 'bi bi-x-circle' : 'bi bi-check-circle'"></i> 
+                                                  {{ account.entidades_asociadas[0].asociacion.es_vigente ? 'Desactivar' : 'Activar' }}
+                                                </button>
+                                            </div>
+
+
+                                        </div>
+                                    </li>
+                                </ul>
 
                         </div>
                     </div>
                 </div>
-
-
             </div>
             
         </div> <div v-else class="alert alert-danger text-center py-5">
-            <h2 class="h4">❌ Error 404: Entidad no encontrada.</h2>
+            <h2 class="h4">❌ Error 404: Proveedor no encontrado.</h2>
             <p>Verifica el ID proporcionado o el estado del servidor.</p>
         </div>
 
 
-        <EntidadModal 
-            v-if="entity"
+        <ProveedorModal 
+            v-if="supplier"
             :isVisible="isModalVisible" 
-            :initialData="entity"
+            :initialData="supplier"
             @close="closeEditModal"
-            @update-entity="updateEntity" 
+            @update-supplier="updateSupplier" 
         />
 
-        <AssociatedEntitiesModal 
-            :isVisible="isAssociatedEntitiesModalVisible" 
-            :cuentaId="accountToDetail ? accountToDetail.id : null"
-            :accountData="accountToDetail"
-            @close="closeAssociatedEntitiesModal"
-        />
+        <Teleport to="body">
+            <AsociarCuentaModal
+                v-if="supplier"
+                :isVisible="isAssociationModalVisible"
+                :entidadId="supplier.id"
+                entidadRol="proveedor" 
+                @close="closeAssociationModal"
+                @association-success="fetchSupplierData()"
+            />
+        </Teleport>
 
     </div>
 </template>
@@ -167,23 +207,21 @@
 
     import { useToast } from '../../services/notificacionesService'; 
 
-    import EntidadModal from './FormularioEntidadesView.vue'; 
+    import ProveedorModal from './FormularioProveedoresView.vue'; 
 
-    import AssociatedEntitiesModal from './AssociatedEntitiesModal.vue';
+    import AsociarCuentaModal from '../cuentasBancarias/asociacion/AsociarCuentaModal.vue'; 
 
 
     // ----------------------------------- Variables ----------------------------------------
 
         // Rutas
-            const rutaBaseEntidad = "/Entidad/";
-            const rutaBaseCuentasBancarias = "/CuentaBancaria/";
+        const rutaBaseProveedor = "/Proveedor/";
+        const rutaBaseAsociacion = "/EntidadCuentaAsociacion/"
 
-            const rutaCambiarEstado = `${rutaBaseEntidad}CambiarEstado`;
+        const rutaModificar = `${rutaBaseProveedor}Modificar`;
 
-            // Modificar entidad
-            const rutaModificar = `${rutaBaseEntidad}Modificar`
-
-            const rutaCuentasAsociadas = `${rutaBaseCuentasBancarias}Buscar/Aprobadas/Titular/`;
+        // Ruta para Cambiar el estado de la asociación de cuenta bancaria con el docente
+        const rutaCambiarEstadoAsociacion = `${rutaBaseAsociacion}CambiarEstado`;
 
 
         const { exito, error } = useToast();
@@ -196,11 +234,11 @@
         }
         });
 
-        // La entidad
-        const entity = ref(null);
+        // El proveedor
+        const supplier = ref(null);
 
-        // Las cuentas bancarias de las que es titular la entidad
-        const entityAccounts = ref([]);
+        // Las cuentas bancarias asociadas al proveedor
+        const supplierAccounts = ref([]);
 
         const isLoading = ref(true);
 
@@ -209,22 +247,82 @@
 
         // ----------------------------------- API ----------------------------------------
 
-            // Función para cargar los datos de la entidad y sus cuentas bancarias
-            const fetchEntityData = async () => {
+            // Función para cargar los datos del proveedor y sus cuentas bancarias
+            const fetchSupplierData = async () => {
                 isLoading.value = true;
                 try {
                     // Carga los datos principales usando el ID
-                    const Response = await api.get(`${rutaBaseEntidad}${props.id}`);
-                    console.log("id prop:", props.id);
-                    entity.value = Response.data.data;
-                    
-                    // Carga las cuentas bancarias de las que es titular
-                    const accountsResponse = await api.get(`${rutaCuentasAsociadas}${props.id}`);
-                    entityAccounts.value = accountsResponse.data.data;
+                    const Response = await api.get(`${rutaBaseProveedor}${props.id}`);
 
+                    supplier.value = Response.data.data;
                     
+                    // Carga las cuentas bancarias asociadas
+                    const accountsResponse = await api.get(`/CuentaBancaria/Buscar/PorRol`, {
+                                                                                                params: { 
+                                                                                                    id: props.id, 
+                                                                                                    rol: "proveedor"
+                                                                                                }
+                                                                                            });
+                    supplierAccounts.value = accountsResponse.data.data;
 
                 } catch (err) {
+                    // Definición de la descripción de error
+                    let mensajeError = 'Error desconocido al procesar la solicitud.';
+
+                    // 1. Manejo de errores de Axios (si existe la respuesta del servidor)
+                    if (err.response) {
+                        // Se usa el mensaje que viene del backend o el estado HTTP
+                        mensajeError = err.response.data.message || `Error ${err.response.status}: ${err.message}`;
+                    } 
+
+                    // 2. Manejo de otros errores (ej. error de red, o si no hay respuesta)
+                    else if (err.message) {
+                        mensajeError = err.message;
+                    }
+
+                    error('Error al cargar los datos del proveedor:', mensajeError);
+                    // Manejo de error, por ejemplo, redirigir a una página 404
+                } finally {
+                    isLoading.value = false;
+                }
+            };
+
+            onMounted(() => {
+                fetchSupplierData();
+            });
+
+
+
+            /**
+             * Cambia el estado de asociación (activo/inactivo) de una cuenta bancaria con el estudiante.
+             * @param {object} account - El objeto de cuenta asociada a modificar.
+             */
+            const toggleAccountAssociation = async (account) => {
+
+                
+                // 1. Determinar el nuevo estado
+                const newStatus = !account.entidades_asociadas?.[0]?.asociacion?.es_vigente;
+                
+                // Mensajes para el usuario
+                const action = newStatus ? 'activada' : 'desactivada';
+
+                try {
+                    // 3. Llamada a la API (Asume que la API acepta un PUT a la ruta con el cuerpo de datos)
+
+                    await api.put(`${rutaCambiarEstadoAsociacion}/${account.entidades_asociadas[0].asociacion.id}`, { nuevoEstado: newStatus });
+
+                    // 4. Si es exitoso, actualizar el estado local y mostrar éxito
+                    account.entidades_asociadas[0].asociacion.es_vigente = newStatus;
+        
+                    exito('Éxito', `Asociación de la cuenta ha sido ${action} correctamente.`);
+
+                    // Opcional: Recargar los datos del estudiante si es necesario
+                    // await loadStudentDetails(); 
+
+                } catch (err) {
+                    
+                    // Revertir el estado visual si la API falla
+                    // account.isAssociated = !newStatus; 
 
                     // Definición de la descripción de error
                     let mensajeError = 'Error desconocido al procesar la solicitud.';
@@ -240,43 +338,9 @@
                         mensajeError = err.message;
                     }
 
-                    error('Error al cargar los datos de la entidad:', mensajeError);
-
-                } finally {
-                    isLoading.value = false;
+                    error('Error al cambiar la asociación', mensajeError);
                 }
             };
-
-            onMounted(() => {
-                fetchEntityData();
-            });
-
-
-
-
-            /**
-             * Cambia el estado de una entidad (activo/inactivo) llamando a la API.
-             * @param {object} account - El objeto de cuenta a modificar.
-             */
-            const toggleStatus = async (entity) => {
-
-                const newStatus = !entity.estado;
-
-                try {
-
-                    await api.put(`${rutaCambiarEstado}/${entity.id}`, { estado: newStatus });
-
-                    // Si la llamada es exitosa, actualiza la variable local para que Vue refresque el DOM.
-                    entity.estado = newStatus;
-
-                    exito('Éxito', `Estado de la entidad ${entity.numero_identificacion} cambiado a: ${newStatus ? 'Activo' : 'Inactivo'}`);
-
-                } catch (err) {
-                    error('Error al cambiar el estado', `${err.response?.data?.message || 'Error de servidor.'}`);
-
-                }
-            };
-
 
 
         // ----------------------------------- Interfaz  ----------------------------------------
@@ -286,14 +350,12 @@
                 switch (statusName.toLowerCase()) {
                     case 'activo':
                         return 'badge-active';
-                    case 'egresado':
-                        return 'badge-graduated';
-                    case 'retirado':
-                        return 'badge-retired';
-                    case 'suspendido':
+                    case 'inactivo':
+                        return 'badge-inactive';
+                    case 'contrato vencido':
+                        return 'badge-absence';
+                    case 'bloqueado':
                         return 'badge-suspended';
-                    case 'moroso':
-                        return 'badge-delinquent';
                     default:
                         return 'bg-secondary';
                 }
@@ -337,93 +399,70 @@
             };
 
 
-        // ----------------------------- Lógica del Modal de Entidades Asociadas a una Cuenta ---------------------------------
-        
-            const isAssociatedEntitiesModalVisible = ref(false);
-            const accountToDetail = ref(null); // Guardará el objeto completo de la cuenta
+        // ----------------------------------- Lógica del Modal de cuentas bancarias ----------------------------------------
 
-            /**
-             * Abre el modal de detalle de entidades asociadas.
-             * Envía el objeto de cuenta completo (que incluye el ID necesario para la API).
-             * @param {object} account - El objeto de cuenta (de entityAccounts) que disparó la acción.
-             */
-            const openAssociatedEntitiesModal = (account) => {
-                // 1. Guardar la data de la cuenta para mostrarla en el modal
-                accountToDetail.value = account;
-                // 2. Mostrar el modal
-                isAssociatedEntitiesModalVisible.value = true;
-            };
+            const isAssociationModalVisible = ref(false);
 
-            /**
-             * Cierra el modal de detalle de entidades asociadas.
-             */
-            const closeAssociatedEntitiesModal = () => {
-                isAssociatedEntitiesModalVisible.value = false;
-                accountToDetail.value = null; // Limpiar la data al cerrar
-            };
+            function openAssociationModal() {
+                isAssociationModalVisible.value = true;
+            }
 
+            function closeAssociationModal() {
+                isAssociationModalVisible.value = false;
+            }
 
         // ----------------------------------- Lógica del Modal de edición ----------------------------------------
 
             const isModalVisible = ref(false);
-            const studentDataToEdit = ref(null);
+            const supplierDataToEdit = ref(null);
 
             /**
-            * Abre el modal y lo configura en modo Creación o Edición.
-            * @param {object|null} account - El objeto de cuenta para editar, o null para crear.
-            */
+             * Abre el modal en modo edición.
+             */
             const openEditModal = () => {
-                // En cualquier caso, el modal debe hacerse visible
+                // 1. Prepara los datos del estudiante para pasarlos al modal
+                if (supplier.value) {
+                    supplierDataToEdit.value = {
+                        id: supplier.value.id,
+                        estado: supplier.value.estado, // Pasamos el objeto estado completo
+                        entidadId: supplier.value.entidadId 
+                    };
+                }
+                // 2. Muestra el modal
                 isModalVisible.value = true;
             };
 
-
             /**
-            * Cierra el modal y resetea el estado de edición.
-            */
-            const closeEditModal = () => {
-                // Modal oculto
-                isModalVisible.value = false;
-            };
-
-
-        
-            /**
-             * Maneja el evento 'update-entity' del modal llamando a la API.
+             * Cierra el modal y limpia el estado.
              */
-            const updateEntity = async (updatedData) => {
-    
-                try {
-
-                    const response = await api.put(`${rutaModificar}/${updatedData.id}`, updatedData);
-
-                    exito('Éxito', 'Entidad modificada correctamente.');
-
-                    await fetchEntityData(); 
-
-                    // 4. Cerrar el modal.
-                    closeEditModal();
-
-
-                }catch (err) {
-
-                    // Definición de la descripción de error
-                    let mensajeError = 'Error desconocido al procesar la solicitud.';
-
-                    // 1. Manejo de errores de Axios (si existe la respuesta del servidor)
-                    if (err.response) {
-                        // Se usa el mensaje que viene del backend o el estado HTTP
-                        mensajeError = err.response.data.message || `Error ${err.response.status}: ${err.message}`;
-                    } 
-
-                    // 2. Manejo de otros errores (ej. error de red, o si no hay respuesta)
-                    else if (err.message) {
-                        mensajeError = err.message;
-                    }
-
-                    error('Error al modificar la entidad', mensajeError);
-                }
+            const closeEditModal = () => {
+                isModalVisible.value = false;
+                supplierDataToEdit.value = null;
             };
+
+
+            /**
+             * Función que maneja el evento 'update-supplier' del modal
+             */
+            async function updateSupplier(data) {
+                try {
+                    
+                    await api.put(`${rutaModificar}/${data.id}`, data); 
+
+                    exito('Éxito', 'Proveedor actualizado exitosamente.');
+                    
+                    // 3. Cerrar el modal
+                    isModalVisible.value = false;
+                    
+                    await fetchSupplierData(); 
+
+                } catch (err) {
+                    
+                    // 5. Si la llamada falla (ej. error 400/500), se muestra el error.
+                    error('Error al modificar', 'No se pudo modificar al proveedor. Intente de nuevo.');
+                  
+                }
+            }
 
 </script>
 
@@ -494,7 +533,7 @@
     }
 
     /* 🌟 Ajuste del botón para que se vea bien en fondo claro 🌟 */
-    .btn-edit-student {
+    .btn-edit {
         /* Mantenemos los estilos anteriores, ya que funcionan en el fondo lavanda */
         background-color: white;
         color: #7b19a8; 
@@ -502,7 +541,7 @@
         font-weight: bold;
         transition: all 0.2s;
     }
-    .btn-edit-student:hover {
+    .btn-edit:hover {
         background-color: #ab47bc; 
         color: white;
         border-color: #7b19a8;
@@ -635,20 +674,20 @@
         background-color: #4CAF50; 
         color: white;
     }
+    .badge-inactive {
+        background-color: #a7a7a7; 
+        color: white;
+    }
     .badge-graduated {
         background-color: #ab47bc; 
         color: white;
     }
-    .badge-retired {
-        background-color: #FFC107; 
-        color: #333;
+    .badge-absence {
+        background-color: #06c4fd; 
+        color: #ffffff;
     }
     .badge-suspended {
-        background-color: #ff4235; 
-        color: white;
-    }
-    .badge-delinquent {
-        background-color: #e62626; 
+        background-color: #ff0000; 
         color: white;
     }
 

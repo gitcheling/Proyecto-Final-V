@@ -13,7 +13,7 @@
             <div class="row">
 
                 <!-- Se oculta si es modo edición -->
-                <div v-if="!newTeacher.id" class="form-group col-12 col-lg-6">
+                <div v-if="!newSupplier.id" class="form-group col-12 col-lg-6">
                     <label for="entity-search">Buscar Entidad: <span class="asterisc">*</span></label>
                     <input type="text" 
                         id="entity-search" 
@@ -35,12 +35,36 @@
                 </div>
 
 
+
+                <div class="form-group col-12 col-lg-6">
+                    <label for="tipo">Tipo Proveedor: <span class="asterisc">*</span></label>
+                    <select 
+                        id="tipo" 
+                        v-model="newSupplier.tipo"  
+                        class="form-control"
+                    >
+                        <option value="" disabled selected> Seleccione un tipo... </option>
+                        
+                        <option 
+                            v-for="tipo in tiposDisponibles" 
+                            :key="tipo.id" 
+                            :value="tipo.id"
+                            :title="tipo.descripcion"
+                        >
+                            {{ tipo.nombre }}
+                        </option>
+                        
+                    </select>
+                    <small v-if="errors.tipo" class="error-message">{{ errors.tipo }}</small>
+                </div>
+
+
                 <!-- Se oculta si es modo creación -->
-                <div v-if="newTeacher.id" class="form-group col-12 col-lg-6">
-                    <label for="estado">Estado Docente: <span class="asterisc">*</span></label>
+                <div v-if="newSupplier.id" class="form-group col-12 col-lg-6">
+                    <label for="estado">Estado Proveedor: <span class="asterisc">*</span></label>
                     <select 
                         id="estado" 
-                        v-model="newTeacher.estado"  
+                        v-model="newSupplier.estado"  
                         class="form-control"
                     >
                         <option value="" disabled selected> Seleccione un estado... </option>
@@ -65,7 +89,7 @@
 
             <div class="modal-actions">
                 <button type="submit" class="btn-primary" :disabled="!isFormValid" >
-                    {{ newTeacher.id ? 'Guardar Cambios' : 'Registrar Docente' }}
+                    {{ newSupplier.id ? 'Guardar Cambios' : 'Registrar Proveedor' }}
                 </button>
                 
                 <button type="button" @click="$emit('close')" class="btn btn-outline-secondary-custom">
@@ -104,14 +128,20 @@
             // Ruta base
             const rutaBase = "/Entidad/"
 
-            // Ruta base estados docente
-            const rutaBaseEstadoDocente = "/EstadoDocente/"
+            // Ruta base estados proveedor
+            const rutaBaseEstadoProveedor = "/EstadoProveedor/"
 
-            // Buscar docentes
+            // Ruta base tipos de proveedor
+            const rutaBaseTipoProveedor = "/TipoProveedor/"
+
+            // Buscar proveedor
             const rutaBuscar = `${rutaBase}Buscar`
 
-            // obtener estados docente
-            const rutaObtenerEstadosDocente = `${rutaBaseEstadoDocente}ObtenerEstadosDocente`
+            // obtener estados proveedor
+            const rutaObtenerEstadosProveedor = `${rutaBaseEstadoProveedor}ObtenerEstadosProveedor`
+
+            // obtener tipos proveedor
+            const rutaObtenerTiposProveedor = `${rutaBaseTipoProveedor}ObtenerTiposProveedor`
 
 
       // ----------------------------------- Propiedades ----------------------------------------
@@ -134,7 +164,7 @@
 
             /* Se definen las salidas (los eventos o señales) que el componente hijo puede generar. la función llamada "emit" es la que 
             utilizará en el código para disparar las señales de salida. */
-            const emit = defineEmits(['close', 'add-teacher', 'update-status']);
+            const emit = defineEmits(['close', 'add-supplier', 'update-supplier']);
 
 
 
@@ -145,7 +175,7 @@
                 // Si props.initialData tiene un 'id' (es decir, no es null/undefined y tiene un id), es true.
                 const hasId = !!props.initialData?.id; 
                 
-                return hasId ? 'Editar Docente' : 'Registrar Nuevo Docente';
+                return hasId ? 'Editar Proveedor' : 'Registrar Nuevo Proveedor';
             }); 
             
           
@@ -154,10 +184,11 @@
 
         // Almacena los datos del formulario, y se le asignan valores por defecto para cuando se abra el modal
         // Nota: Es reactivo, por lo que Vue estará pendiente de cuando haya un cambio en alguna de sus propiedades
-        const newTeacher = ref({
+        const newSupplier = ref({
         id: null,
         estado: '',
-        entidadId: null,
+        entidad: null,
+        tipo: null,
         });
     
         // Antes: padreSeleccionado
@@ -176,18 +207,22 @@
         // Para manejar el debouncing de la búsqueda
         let searchTimeout = null;
 
-        // Variable para almacenar los estados académicos traídos del servidor
+        // Variable para almacenar los estados traídos del servidor
         const estadosDisponibles = ref([]); // Es un array vacío por defecto
+
+        // Variable para almacenar los tipos traídos del servidor
+        const tiposDisponibles = ref([]); // Es un array vacío por defecto
 
 
         // Propiedad que indíca si el modal está en modo edición
-        const isEditMode = computed(() => !!newTeacher.value.id);
+        const isEditMode = computed(() => !!newSupplier.value.id);
 
 
         // Objeto reactivo para almacenar todos los posibles errores del formulario del modal
         const errors = ref({
             estado: '',
-            entidad: ''
+            entidad: '',
+            tipo: null,
         });
 
 
@@ -206,17 +241,22 @@
   
             // Reinicia todos los campos del formulario
             const resetFormState = (initialData = null) => {
+
                     // Reinicia los datos principales (newAccount)
-                    newTeacher.value = {
+                    newSupplier.value = {
                         // Usa initialData para pre-cargar en modo Edición, o null/'' en modo Creación
                         id: initialData?.id || null,
                         estado: initialData?.estado?.id || '',
-                        entidadId: initialData?.entidadId || null           
+                        entidad: initialData?.entidad || null,
+                        tipo: initialData?.tipo_proveedor?.id || null           
                     };
                 
                     // Reinicia los estados de búsqueda y entidad
                     suggestions.value = [];
                     entidadSeleccionada.value = null; 
+
+                    // Reinicia los tipos
+                    tiposDisponibles.value = []; 
 
                     // Limpiar el temporizador de debouncing por si acaso
                     clearTimeout(searchTimeout);
@@ -227,6 +267,7 @@
                     // Reinicia todos los errores (para que los inputs no se vean rojos al abrir)
                     errors.value.estado = ''; 
                     errors.value.entidad = '';
+                    errors.value.tipo = '';
             };
 
 
@@ -240,6 +281,7 @@
                 if (newVal) {
                     resetFormState(props.initialData); 
                     fetchEstados();
+                    fetchTipos();
                 } else {
                     // En modo "cerrar", se limpia todo.
                     resetFormState(null);
@@ -259,7 +301,7 @@
 
                 // Si la caja de búsqueda está vacía, se deselecciona la entidad y se sale.
                 if (query.length < 2) { // Se recomienda buscar solo con 2 o más caracteres
-                    newTeacher.value.entidadId = null;
+                    newSupplier.value.entidad = null;
                     entidadSeleccionada.value = null;
                     return;
                 }
@@ -312,7 +354,7 @@
             function selectEntity(entity) {
 
                 // Asignar el ID de la entidad seleccionada al objeto principal del formulario
-                newTeacher.value.entidadId = entity.id; 
+                newSupplier.value.entidad = entity.id; 
                 
                 // Guardar el objeto completo de la entidad seleccionada
                 entidadSeleccionada.value = entity; 
@@ -326,20 +368,20 @@
 
             // Monitorear los campos clave para validar en tiempo real
             watch([
-                () => newTeacher.value.estado
+                () => newSupplier.value.estado
             ], async () => {
                 await runValidations(); 
             });
 
 
             /**
-            * Función para cargar los estados docente desde el servidor basados
+            * Función para cargar los estados proveedor desde el servidor basados
             */
             async function fetchEstados() {
 
                 try {
                     // Construye la URL con el ID de la identificación
-                    const response = await api.get(rutaObtenerEstadosDocente);
+                    const response = await api.get(rutaObtenerEstadosProveedor);
                     
                     // Asigna la propiedad 'data' de la respuesta a la variable reactiva.
                     // Se asume que el backend envía un array en la propiedad 'data'.
@@ -362,10 +404,49 @@
                         mensajeError = err.message;
                     }
 
-                    error('Error al cargar estados docente', mensajeError);
+                    error('Error al cargar estados proveedor', mensajeError);
 
                     estadosDisponibles.value = []; 
-                    newTeacher.value.estado = ''; // Limpiar el valor ante un error
+                    newSupplier.value.estado = ''; // Limpiar el valor ante un error
+                }
+            }
+
+
+            
+            /**
+            * Función para cargar los tipos proveedor desde el servidor basados
+            */
+            async function fetchTipos() {
+
+                try {
+                    // Construye la URL con el ID de la identificación
+                    const response = await api.get(rutaObtenerTiposProveedor);
+                    
+                    // Asigna la propiedad 'data' de la respuesta a la variable reactiva.
+                    // Se asume que el backend envía un array en la propiedad 'data'.
+                    tiposDisponibles.value = response.data.data; 
+
+
+                } catch (err) {
+
+                    // Definición de la descripción de error
+                    let mensajeError = 'Error desconocido al procesar la solicitud.';
+
+                    // 1. Manejo de errores de Axios (si existe la respuesta del servidor)
+                    if (err.response) {
+                        // Se usa el mensaje que viene del backend o el estado HTTP
+                        mensajeError = err.response.data.message || `Error ${err.response.status}: ${err.message}`;
+                    } 
+
+                    // 2. Manejo de otros errores (ej. error de red, o si no hay respuesta)
+                    else if (err.message) {
+                        mensajeError = err.message;
+                    }
+
+                    error('Error al cargar tipos de proveedor', mensajeError);
+
+                    tiposDisponibles.value = []; 
+                    newSupplier.value.tipo = ''; // Limpiar el valor ante un error
                 }
             }
 
@@ -381,8 +462,9 @@
                 // Limpiar errores
                 errors.value.estado = '';
                 errors.value.entidad = '';
-                const estado = newTeacher.value.estado?.toString() ?? '';
-                const entidadId = newTeacher.value.entidadId?.toString() ?? '';
+                const estado = newSupplier.value.estado?.toString() ?? '';
+                const entidad = newSupplier.value.entidad?.toString() ?? '';
+                const tipo = newSupplier.value.tipo?.toString() ?? '';
 
 
                 // ----------------------------------------------------
@@ -392,16 +474,22 @@
                 // Si es creación
                 if (!isEditMode.value) { 
                     
-                    if (!entidadId && isSubmitting) {
-                        errors.value.entidad = 'Debe seleccionar una entidad para el docente.';
+                    if (!entidad && isSubmitting) {
+                        errors.value.entidad = 'Debe seleccionar una entidad para el proveedor.';
                     }
+
+
+                    if (!tipo && isSubmitting) {
+                        errors.value.entidad = 'Debe seleccionar un tipo para el proveedor.';
+                    }
+                    
      
                 }else{
 
                     // Validación del estado
                     if (estado === "") {
                         if (isSubmitting) {
-                            errors.value.estado = 'La selección de un estado docente es obligatorio.';
+                            errors.value.estado = 'La selección de un estado proveedor es obligatorio.';
                         }
                     
                     }else{
@@ -409,7 +497,7 @@
                         // La lista de estados válidos se asume que son los IDs 1 al 5
                         // Se compara como string porque fue convertido arriba con .toString()
                         if(!['1', '2', '3', '4'].includes(estado)) {
-                            errors.value.estado = 'Debe seleccionar un estado docente válido';
+                            errors.value.estado = 'Debe seleccionar un estado proveedor válido';
                         }
                     }
                 }
@@ -431,21 +519,24 @@
                 // Determinar los datos a enviar
                 let dataToSend = {};
 
-                if (newTeacher.value.id) {
+                if (newSupplier.value.id) {
                     // MODO EDICIÓN: Solo enviamos el ID y el campo a actualizar (estado)
                     dataToSend = {
-                        id: newTeacher.value.id, 
-                        estado: newTeacher.value.estado,
+                        id: newSupplier.value.id, 
+                        estado: newSupplier.value.estado,
+                        tipo: newSupplier.value.tipo
                     };
+                    
 
-                    emit('update-status', dataToSend);
+                    emit('update-supplier', dataToSend);
 
                 } else {
                     // MODO CREACIÓN: Enviamos todos los campos requeridos
                     dataToSend = {
-                        id: newTeacher.value.entidadId
+                        id: newSupplier.value.entidad,
+                        tipo: newSupplier.value.tipo
                     };
-                    emit('add-teacher', dataToSend);
+                    emit('add-supplier', dataToSend);
                 }
 
             };

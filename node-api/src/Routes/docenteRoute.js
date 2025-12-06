@@ -6,12 +6,11 @@ const docenteController = require('../Controller/docenteController');
 
 router.get('/Buscar', docenteController.buscarDocentes);  
 
-router.get('/ObtenerEstadosDocente', docenteController.obtenerEstadosDocente);  
-
 router.get('/:id', docenteController.obtenerDocentePorId);
 
-router.post('/CrearDocente', docenteController.crearDocente);     
-        
-// router.put('/Modificar/:id', docenteController.cambiarEstadoEstudiante);
+router.post('/CrearDocente', docenteController.crearDocente);  
+
+router.put('/CambiarEstado/:id', docenteController.cambiarEstadoDocente);
+
 
 module.exports = router;

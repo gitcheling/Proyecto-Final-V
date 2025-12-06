@@ -503,7 +503,21 @@
 
                 } catch (err) {
 
-                    error('Error al cargar prefijos', err);
+                    // Definición de la descripción de error
+                    let mensajeError = 'Error desconocido al procesar la solicitud.';
+
+                    // 1. Manejo de errores de Axios (si existe la respuesta del servidor)
+                    if (err.response) {
+                        // Se usa el mensaje que viene del backend o el estado HTTP
+                        mensajeError = err.response.data.message || `Error ${err.response.status}: ${err.message}`;
+                    } 
+
+                    // 2. Manejo de otros errores (ej. error de red, o si no hay respuesta)
+                    else if (err.message) {
+                        mensajeError = err.message;
+                    }
+
+                    error('Error al cargar prefijos', mensajeError);
 
                     prefijosDisponibles.value = []; 
                     newEntity.value.prefijo = ''; // Limpiar el valor ante un error
@@ -784,7 +798,21 @@
                     };
                 } catch (err) {
 
-                    error('Error al verificar unicidad', err);
+                    // Definición de la descripción de error
+                    let mensajeError = 'Error desconocido al procesar la solicitud.';
+
+                    // 1. Manejo de errores de Axios (si existe la respuesta del servidor)
+                    if (err.response) {
+                        // Se usa el mensaje que viene del backend o el estado HTTP
+                        mensajeError = err.response.data.message || `Error ${err.response.status}: ${err.message}`;
+                    } 
+
+                    // 2. Manejo de otros errores (ej. error de red, o si no hay respuesta)
+                    else if (err.message) {
+                        mensajeError = err.message;
+                    }
+
+                    error('Error al verificar unicidad', mensajeError);
                     return { existeEmail: true, existeIdentidad: true }; 
                 }
             }

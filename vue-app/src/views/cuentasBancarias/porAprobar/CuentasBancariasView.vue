@@ -28,7 +28,7 @@
 
             <div class="row">
                 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="prefijo">Prefijo:</label>
                     <select id="prefijo" v-model="filters.prefijo" class="form-control">
                         <option value="">Todos</option>
@@ -40,7 +40,7 @@
                     </select>
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="numero_identificacion">Número de identificación:</label>
                     <input 
                         type="text" 
@@ -52,7 +52,7 @@
                     >
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="nombre">Nombre:</label>
                     <input 
                         type="text" 
@@ -64,7 +64,7 @@
                     >
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="apellido">Apellido:</label>
                     <input 
                         type="text" 
@@ -76,7 +76,7 @@
                     >
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="numero_cuenta">Número de cuenta:</label>
                     <input 
                         type="text" 
@@ -88,7 +88,7 @@
                     >
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="tipo_cuenta">Tipo de cuenta:</label>
                     <select id="tipo_cuenta" v-model="filters.tipo_cuenta" class="form-control">
                         <option value="">Todos</option>
@@ -98,7 +98,7 @@
                 </div>
 
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="banco">Banco:</label>
                     <select id="banco" v-model="filters.banco" class="form-control">
                         <option value="">Todos</option>
@@ -114,7 +114,7 @@
                 </div>
 
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="estado">Estado de cuenta:</label>
                     <select id="estado" v-model="filters.estado" class="form-control">
                         <option value="">Todos</option>
@@ -129,12 +129,12 @@
                     </select>
                 </div>
         
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="creadosDesde">Creados Desde:</label>
                     <input type="date" id="creadosDesde" v-model="filters.creadosDesde" class="form-control">
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3 ">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="creadosHasta">Creados Hasta:</label>
                     <input type="date" id="creadosHasta" v-model="filters.creadosHasta" class="form-control">
                 </div>
@@ -712,9 +712,23 @@
                     
                 } catch (err) {
 
-                    console.error('Error al ejecutar la acción:', err);
+                    // Definición de la descripción de error
+                    let mensajeError = 'Error desconocido al procesar la solicitud.';
+
+                    // 1. Manejo de errores de Axios (si existe la respuesta del servidor)
+                    if (err.response) {
+                        // Se usa el mensaje que viene del backend o el estado HTTP
+                        mensajeError = err.response.data.message || `Error ${err.response.status}: ${err.message}`;
+                    } 
+
+                    // 2. Manejo de otros errores (ej. error de red, o si no hay respuesta)
+                    else if (err.message) {
+                        mensajeError = err.message;
+                    }                  
+
+                    console.error('Error al ejecutar la acción:', mensajeError);
                     const apiError = err.response?.data?.message || 'Hubo un error al procesar la solicitud.';
-                    error('Error en la Operación', apiError);
+                    error('Error en la Operación', mensajeError);
                 }
             };
 

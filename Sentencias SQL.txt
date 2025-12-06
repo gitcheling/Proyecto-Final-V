@@ -58,7 +58,7 @@ CREATE TABLE divisa (
 CREATE TABLE tipo_proveedor (
     "id_tipo_proveedor" SERIAL PRIMARY KEY,
     "nombre" VARCHAR(50) NOT NULL,
-    "descripcion" VARCHAR(100)
+    "descripcion" VARCHAR(255)
 );
 
 -- 1.8. TIPO_ENTIDAD
@@ -163,6 +163,14 @@ CREATE TABLE tipo_rol_asociado (
     "descripcion" VARCHAR(255) NOT NULL
 );
 
+
+-- 1.22. ESTADO_PROVEEDOR 
+CREATE TABLE estado_proveedor (
+    id_estado_proveedor SERIAL PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL UNIQUE,
+    descripcion VARCHAR(255),
+    permite_pago BOOLEAN NOT NULL -- Indica si la relación con el proveedor permite pagos
+);
 
 
 
@@ -616,8 +624,8 @@ TRUNCATE TABLE tipo_cuenta_bancaria RESTART IDENTITY CASCADE;
 TRUNCATE TABLE banco RESTART IDENTITY CASCADE;
 TRUNCATE TABLE cuenta_bancaria RESTART IDENTITY CASCADE;
 TRUNCATE TABLE tipo_rol_asociado RESTART IDENTITY CASCADE;
-
-
+TRUNCATE TABLE estado_proveedor RESTART IDENTITY CASCADE;
+TRUNCATE TABLE tipo_proveedor RESTART IDENTITY CASCADE;
 
 
 -- 1.1. NATURALEZA (Naturalezas de las cuentas)
@@ -626,7 +634,6 @@ INSERT INTO naturaleza ("nombre") VALUES ('Deudora'), ('Acreedora');
 
 -- 1.2. CLASIFICACION (Naturalezas de las cuentas)
 INSERT INTO clasificacion ("nombre") VALUES ('Real'), ('Nominal');
-
 
 
 
@@ -826,4 +833,28 @@ INSERT INTO tipo_rol_asociado ("nombre", "descripcion") VALUES
 ('estudiante', 'Contexto para cuentas de donde el Estudiante realiza los pagos (Matrículas/Aranceles).'),
 ('institución propia', 'Contexto para cuentas de la Academia usadas para emitir o recibir pagos.'); -- SI la cuenta bancaria a asociar es para la cuenta de la propia academia, se necesita un cuarto rol
 
+
+
+-- 1.15. ESTADO_PROVEEDOR (¡NUEVO! Estados específicos del ciclo de vida del proveedor)
+INSERT INTO estado_proveedor (nombre, descripcion, permite_pago) VALUES
+('Activo', 'Proveedor con contrato vigente y autorizado para recibir pagos.', TRUE),
+('Inactivo', 'Proveedor marcado como inactivo por: falta de uso prolongado, no renovación de documentos menores, o solicitud de pausa.', FALSE),
+--('En Evaluación', 'Proveedor recién registrado, pendiente de aprobación contractual o documental.', FALSE),
+--('Pre-Registro', 'Proveedor que ha iniciado el registro pero no ha completado los requisitos iniciales.', FALSE),
+('Contrato Vencido', 'Relación vigente, pero el contrato requiere renovación.', FALSE),
+('Bloqueado', 'Proveedor vetado por incumplimiento o motivos legales.', FALSE);
+
+
+-- 1.16. TIPO_PROVEEDOR
+INSERT INTO tipo_proveedor (nombre, descripcion) VALUES
+('Servicios de TI/Software', 'Proveedores de sistemas, licencias, mantenimiento y desarrollo de software.'),
+('Suministros de Oficina', 'Proveedores de papelería, cartuchos, insumos de impresión y material de escritorio.'),
+('Mantenimiento de Infraestructura', 'Proveedores de servicios de plomería, electricidad, A/C, limpieza y reparaciones del edificio.'),
+('Consultoría/Legal/Auditoría', 'Servicios profesionales no recurrentes (asesoría legal, auditorías externas, finanzas).'),
+('Marketing y Publicidad', 'Proveedores para campañas, diseño gráfico, gestión de redes sociales y medios.'),
+('Bancos e Instituciones Financieras', 'Proveedores de servicios de pago, pasarelas de cobro o servicios bancarios específicos.'),
+('Servicios de Transporte y Logística', 'Proveedores de mensajería, paquetería y transporte para eventos o personal.'),
+('Alimentos y Bebidas (Catering)', 'Proveedores para el cafetín, eventos, reuniones o servicios de comida para personal/alumnos.'),
+('Material Didáctico y Bibliografía', 'Proveedores de libros, e-books, licencias de bibliotecas digitales y material específico de enseñanza.'),
+('Servicios de Seguridad y Vigilancia', 'Empresas de seguridad física, alarmas y monitoreo.');
 

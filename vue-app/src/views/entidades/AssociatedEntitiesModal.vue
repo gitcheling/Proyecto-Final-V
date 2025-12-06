@@ -178,7 +178,6 @@
                     associatedEntities.value = response.data.data;
                     
                 } catch (err) {
-                    console.error('Error al cargar entidades asociadas:', err);
                     error('Error de API', 'No se pudieron cargar las entidades asociadas a esta cuenta.');
                 } finally {
                     isModalLoading.value = false;
@@ -213,12 +212,23 @@
                     exito('Éxito', `La asociación de la cuenta ha sido ${action} correctamente.`);
 
                 } catch (err) {
+
+                    // Definición de la descripción de error
+                    let mensajeError = 'Error desconocido al procesar la solicitud.';
+
+                    // 1. Manejo de errores de Axios (si existe la respuesta del servidor)
+                    if (err.response) {
+                        // Se usa el mensaje que viene del backend o el estado HTTP
+                        mensajeError = err.response.data.message || `Error ${err.response.status}: ${err.message}`;
+                    } 
+
+                    // 2. Manejo de otros errores (ej. error de red, o si no hay respuesta)
+                    else if (err.message) {
+                        mensajeError = err.message;
+                    }
+
+                    error('Error al cambiar la asociación', mensajeError);
                     
-                    error(
-                        'Error al cambiar la asociación', 
-                        `No se pudo ${newStatus ? 'activar' : 'desactivar'} la asociación. ${err.response?.data?.message || 'Error de servidor.'}`
-                    );
-                    console.error('Error de API al cambiar estado de asociación:', err);
                 }
 
             }

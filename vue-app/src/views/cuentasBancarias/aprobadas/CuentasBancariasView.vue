@@ -40,7 +40,7 @@
 
             <div class="row">
                 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="prefijo">Prefijo:</label>
                     <select id="prefijo" v-model="filters.prefijo" class="form-control">
                         <option value="">Todos</option>
@@ -52,7 +52,7 @@
                     </select>
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="numero_identificacion">Número de identificación:</label>
                     <input 
                         type="text" 
@@ -64,7 +64,7 @@
                     >
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="nombre">Nombre:</label>
                     <input 
                         type="text" 
@@ -76,7 +76,7 @@
                     >
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="apellido">Apellido:</label>
                     <input 
                         type="text" 
@@ -88,7 +88,7 @@
                     >
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="numero_cuenta">Número de cuenta:</label>
                     <input 
                         type="text" 
@@ -100,7 +100,7 @@
                     >
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="tipo_cuenta">Tipo de cuenta:</label>
                     <select id="tipo_cuenta" v-model="filters.tipo_cuenta" class="form-control">
                         <option value="">Todos</option>
@@ -110,7 +110,7 @@
                 </div>
 
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="banco">Banco:</label>
                     <select id="banco" v-model="filters.banco" class="form-control">
                         <option value="">Todos</option>
@@ -126,7 +126,7 @@
                 </div>
 
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="estado">Estado de cuenta:</label>
                     <select id="estado" v-model="filters.estado" class="form-control">
                         <option value="">Todos</option>
@@ -141,32 +141,32 @@
                     </select>
                 </div>
         
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="creadosDesde">Creados Desde:</label>
                     <input type="date" id="creadosDesde" v-model="filters.creadosDesde" class="form-control">
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3 ">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="creadosHasta">Creados Hasta:</label>
                     <input type="date" id="creadosHasta" v-model="filters.creadosHasta" class="form-control">
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="aprobadosDesde">Aprobados Desde:</label>
                     <input type="date" id="aprobadosDesde" v-model="filters.aprobadosDesde" class="form-control">
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="aprobadosHasta">Aprobados Hasta:</label>
                     <input type="date" id="aprobadosHasta" v-model="filters.aprobadosHasta" class="form-control">
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="modificadosDesde">Modificados Desde:</label>
                     <input type="date" id="modificadosDesde" v-model="filters.modificadosDesde" class="form-control">
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="modificadosHasta">Modificados Hasta:</label>
                     <input type="date" id="modificadosHasta" v-model="filters.modificadosHasta" class="form-control">
                 </div>
@@ -493,7 +493,22 @@
                     closeModal();
 
                 }catch (err) {
-                    error('Error al crear la cuenta bancaria', `${err.response?.data?.message || 'Error de servidor.'}`);
+
+                    // Definición de la descripción de error
+                    let mensajeError = 'Error desconocido al procesar la solicitud.';
+
+                    // 1. Manejo de errores de Axios (si existe la respuesta del servidor)
+                    if (err.response) {
+                        // Se usa el mensaje que viene del backend o el estado HTTP
+                        mensajeError = err.response.data.message || `Error ${err.response.status}: ${err.message}`;
+                    } 
+
+                    // 2. Manejo de otros errores (ej. error de red, o si no hay respuesta)
+                    else if (err.message) {
+                        mensajeError = err.message;
+                    }
+                    
+                    error('Error al crear la cuenta bancaria', mensajeError);
                 }
             };
 
@@ -517,7 +532,22 @@
 
 
                 }catch (err) {
-                    error('Error al modificar la cuenta bancaria', `${err.response?.data?.message || 'Error de servidor.'}`);
+
+                    // Definición de la descripción de error
+                    let mensajeError = 'Error desconocido al procesar la solicitud.';
+
+                    // 1. Manejo de errores de Axios (si existe la respuesta del servidor)
+                    if (err.response) {
+                        // Se usa el mensaje que viene del backend o el estado HTTP
+                        mensajeError = err.response.data.message || `Error ${err.response.status}: ${err.message}`;
+                    } 
+
+                    // 2. Manejo de otros errores (ej. error de red, o si no hay respuesta)
+                    else if (err.message) {
+                        mensajeError = err.message;
+                    }
+
+                    error('Error al modificar la cuenta bancaria', mensajeError);
                 }
             };
 
@@ -540,7 +570,6 @@
 
                 } catch (err) {
                     error('Error al cargar bancos', 'No se pudo obtener la lista de bancos del servidor.');
-                    console.error(err);
                 }
             }
 
@@ -557,7 +586,6 @@
 
                 } catch (err) {
                     error('Error al cargar estados', 'No se pudo obtener la lista de estados de cuenta del servidor.');
-                    console.error(err);
                 }
             }
 

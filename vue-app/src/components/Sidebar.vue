@@ -11,12 +11,11 @@ const menuItems = ref([
   //{ to: '/', icon: 'bi-house-door', text: 'Dashboard' },
   { to: '/Entidades', icon: 'bi-building', text: 'Entidades' },
   { to: '/Estudiantes', icon: 'bi-book', text: 'Estudiantes' },
-  //{ to: '/Docentes', icon: 'bi-mortarboard', text: 'Docentes' },
+  { to: '/Docentes', icon: 'bi-mortarboard', text: 'Docentes' },
+  { to: '/Proveedores', icon: 'bi-truck', text: 'Proveedores' },
   { to: '/CuentasBancariasAprobadas', icon: 'bi-bank', text: 'Cuentas Bancarias' },
   { to: '/CuentasBancariasPorAprobar', icon: 'bi-question-square', text: 'Cuentas Bancarias Por Aprobar' },
   { to: '/PlanCuentas', icon: 'bi-list-task', text: 'Plan de Cuentas' },
-
-  //{ to: '/Proveedores', icon: 'bi-truck', text: 'Proveedores' },
 ])
 
 // Lista centralizada de Herramientas
