@@ -11,12 +11,13 @@ const Curso = sequelize.define('Curso', {
     },
 
     nombre: {
-        type: DataTypes.STRING(100),
-        allowNull: false
+        type: DataTypes.STRING(50),
+        allowNull: false,
+        unique: true
     },
 
     descripcion : {
-        type: DataTypes.STRING(100),
+        type: DataTypes.STRING(255),
         allowNull: false
     },
 
@@ -41,20 +42,22 @@ const Curso = sequelize.define('Curso', {
         allowNull: false, 
     },
 
-    costo_matricula_base_usd : {
-        type: DataTypes.NUMERIC(5, 2), // 5 dígitos en total, 2 decimales
-        allowNull: false
+    // ===============================================
+    // clave foránea para el estado
+    // ===============================================
+    id_estado : {
+        type: DataTypes.INTEGER,
+        allowNull: false, 
+        references: {
+
+            // Nombre exacto de la tabla foránea en la base de datos
+            model: 'estado_curso', 
+
+            // El nombre exacto de la columna en la tabla foránea (model) a la que apunta. Que sería, la clave primaria
+            key: 'id_estado_curso'
+        }
     },
 
-    costo_cuota_base_usd  : {
-        type: DataTypes.NUMERIC(5, 2), 
-    },
-    
-    estado: {
-        type:DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: true
-    },
     createdAt: {
         type: 'TIMESTAMP WITHOUT TIME ZONE'
     },
@@ -74,6 +77,13 @@ Curso.associate = (models) => {
     Curso.belongsTo(models.Categoria_Curso, {
         foreignKey: 'id_categoria', // La FK que está en ESTA MISMA tabla (en este caso que es el lado muchos)
         as: 'categoria' // Usamos éste prefijo para obtener los datos del otro modelo (la categoría de un curso)
+    });
+
+    
+    // Un curso solo puede tener un estado de "estado_curso"
+    Curso.belongsTo(models.Estado_Curso, {
+        foreignKey: 'id_estado', // La FK que está en ESTA MISMA tabla (en este caso que es el lado muchos)
+        as: 'estado' // Usamos éste prefijo para obtener los datos del otro modelo (el estado de un curso)
     });
 
     

@@ -16,6 +16,8 @@ const menuItems = ref([
   { to: '/CuentasBancariasAprobadas', icon: 'bi-bank', text: 'Cuentas Bancarias' },
   { to: '/CuentasBancariasPorAprobar', icon: 'bi-question-square', text: 'Cuentas Bancarias Por Aprobar' },
   { to: '/PlanCuentas', icon: 'bi-list-task', text: 'Plan de Cuentas' },
+  { to: '/Periodos', icon: 'bi bi-calendar3', text: 'Periodos' },
+  { to: '/Cursos', icon: 'bi bi-palette-fill', text: 'Cursos' },
 ])
 
 // Lista centralizada de Herramientas

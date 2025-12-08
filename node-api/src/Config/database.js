@@ -23,7 +23,7 @@ esenciales para que Sequelize sepa a dónde y cómo conectarse:
 const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.DB_PASSWORD, {
     host: 'localhost',
     dialect:'postgres',
-    logging: false, // Depuración, cambiar a "console.log" si se quiere mostrar toda la comprobación en consola
+    logging: false, // Depuración, cambiar a "console.log" (sin comillas) si se quiere mostrar toda la comprobación en consola
     dialectOptions: {
         // Indica a Sequelize que debe trabajar con las fechas en UTC
         useUTC: true, 

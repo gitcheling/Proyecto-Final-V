@@ -15,7 +15,7 @@ const api = axios.create({
                                                                       (como un JWT) con cada petición para verificar la identidad del 
                                                                       usuario en el backend.*/
     },
-    timeout: 5000 /* Tiempo máximo de espera de la petición. Si el servidor de Express no responde dentro de ese tiempo, la petición 
+    timeout: 7000 /* Tiempo máximo de espera de la petición. Si el servidor de Express no responde dentro de ese tiempo, la petición 
                     se cancela automáticamente para evitar que la aplicación se quede colgada.*/
 });
 

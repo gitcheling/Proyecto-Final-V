@@ -143,32 +143,33 @@
         
                 <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="creadosDesde">Creados Desde:</label>
-                    <input type="date" id="creadosDesde" v-model="filters.creadosDesde" class="form-control">
+                    <input type="date" id="creadosDesde" v-model="filters.creadosDesde" class="form-control" :max="filters.creadosHasta || undefined">
                 </div>
 
                 <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="creadosHasta">Creados Hasta:</label>
-                    <input type="date" id="creadosHasta" v-model="filters.creadosHasta" class="form-control">
+                    <input type="date" id="creadosHasta" v-model="filters.creadosHasta" class="form-control" :min="filters.creadosDesde || undefined">
                 </div>
 
+            
                 <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="aprobadosDesde">Aprobados Desde:</label>
-                    <input type="date" id="aprobadosDesde" v-model="filters.aprobadosDesde" class="form-control">
+                    <input type="date" id="aprobadosDesde" v-model="filters.aprobadosDesde" class="form-control" :max="filters.aprobadosHasta || undefined">
                 </div>
 
                 <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="aprobadosHasta">Aprobados Hasta:</label>
-                    <input type="date" id="aprobadosHasta" v-model="filters.aprobadosHasta" class="form-control">
+                    <input type="date" id="aprobadosHasta" v-model="filters.aprobadosHasta" class="form-control" :min="filters.aprobadosDesde || undefined">
                 </div>
 
                 <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="modificadosDesde">Modificados Desde:</label>
-                    <input type="date" id="modificadosDesde" v-model="filters.modificadosDesde" class="form-control">
+                    <input type="date" id="modificadosDesde" v-model="filters.modificadosDesde" class="form-control" :max="filters.modificadosHasta || undefined">
                 </div>
 
                 <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="modificadosHasta">Modificados Hasta:</label>
-                    <input type="date" id="modificadosHasta" v-model="filters.modificadosHasta" class="form-control">
+                    <input type="date" id="modificadosHasta" v-model="filters.modificadosHasta" class="form-control" :min="filters.modificadosDesde || undefined">
                 </div>
 
 

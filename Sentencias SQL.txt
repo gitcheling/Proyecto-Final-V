@@ -87,15 +87,18 @@ CREATE TABLE estado_academico (
 CREATE TABLE categoria_curso (
     "id_categoria_curso" SERIAL PRIMARY KEY,
     "nombre" VARCHAR(50) NOT NULL,
-	"descripcion" VARCHAR(50) NOT NULL,
-	"estado" BOOLEAN NOT NULL
+	"descripcion" VARCHAR(255) NOT NULL,
+    "id_categoria_padre" INT, -- Clave foránea que apunta a esta misma tabla.
+
+    FOREIGN KEY (id_categoria_padre) REFERENCES categoria_curso(id_categoria)
 );
 
 -- 1.12. ESTADO_GRUPO
 CREATE TABLE estado_grupo (
     "id_estado_grupo" SERIAL PRIMARY KEY,
     "nombre" VARCHAR(50) NOT NULL,
-	"descripcion" VARCHAR(50) NOT NULL
+	"descripcion" VARCHAR(150) NOT NULL,
+    "permite_inscripcion" BOOLEAN NOT NULL
 );
 
 -- 1.13. ESTADO_INSCRIPCION
@@ -166,11 +169,24 @@ CREATE TABLE tipo_rol_asociado (
 
 -- 1.22. ESTADO_PROVEEDOR 
 CREATE TABLE estado_proveedor (
-    id_estado_proveedor SERIAL PRIMARY KEY,
-    nombre VARCHAR(50) NOT NULL UNIQUE,
-    descripcion VARCHAR(255),
-    permite_pago BOOLEAN NOT NULL -- Indica si la relación con el proveedor permite pagos
+    "id_estado_proveedor" SERIAL PRIMARY KEY,
+    "nombre" VARCHAR(50) NOT NULL UNIQUE,
+    "descripcion" VARCHAR(255),
+    "permite_pago" BOOLEAN NOT NULL -- Indica si la relación con el proveedor permite pagos
 );
+
+
+-- 1.23. ESTADO_CURSO 
+CREATE TABLE estado_curso (
+    "id_estado_curso" SERIAL PRIMARY KEY,
+    "nombre" VARCHAR(50) NOT NULL,
+    "descripcion" VARCHAR(255),
+    "permite_nuevos_grupos" BOOLEAN NOT NULL, 
+    
+    UNIQUE (nombre)
+); 
+
+
 
 
 
@@ -237,13 +253,11 @@ CREATE TABLE proveedor (
 -- 3.1. CURSO
 CREATE TABLE curso (
     "id_curso" SERIAL PRIMARY KEY,
-    "nombre" VARCHAR(100) NOT NULL,
+    "nombre" VARCHAR(50) UNIQUE NOT NULL,
     "descripcion" VARCHAR(255) NOT NULL,
 	"id_categoria" INT REFERENCES categoria_curso(id_categoria_curso) NOT NULL,
     "total_clases" INT NOT NULL,
-	"costo_matricula_base_usd" NUMERIC(5, 2) NOT NULL,
-	"costo_cuota_base_usd" NUMERIC(5, 2) NOT NULL,
-	"estado" BOOLEAN DEFAULT TRUE,
+    "id_estado" INT REFERENCES estado_curso(id_estado_curso) NOT NULL,
 	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
 	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
 );
@@ -272,13 +286,13 @@ CREATE TABLE bloque_horario (
 CREATE TABLE grupo (
     "id_grupo" SERIAL PRIMARY KEY,
     "id_curso" INT REFERENCES curso(id_curso) NOT NULL,
+    "id_periodo" INT REFERENCES periodo(id_periodo) NOT NULL,
+    "id_docente" INT REFERENCES docente(id_docente) NOT NULL,
+    "cupo_maximo" INT NOT NULL,
     "nombre" VARCHAR(50) NOT NULL,
-    "fecha_inicio" DATE NOT NULL,
-    "fecha_fin" DATE,
-	"cupo_maximo" INT NOT NULL,
 	"id_estado_grupo" INT REFERENCES estado_grupo(id_estado_grupo) NOT NULL,
-	createdAt TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-	updatedAt TIMESTAMP WITHOUT TIME ZONE NOT NULL
+	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
 );
 
 
@@ -601,6 +615,44 @@ CREATE TABLE pagos_proveedores (
 
 
 
+-- #######################################################
+-- # 9. PERIODOS 
+-- #######################################################
+
+
+-- Tabla: PERIODO
+-- Define los ciclos académicos (Ej. '2025-I', 'Verano 2026').
+CREATE TABLE periodo (
+    "id_periodo" SERIAL PRIMARY KEY,
+    "nombre" VARCHAR(20) NOT NULL,
+    "fecha_inicio" DATE NOT NULL, -- Define cuando inicia un nuevo periodo
+    "fecha_fin" DATE NOT NULL,    -- Define cuando termina el periodo
+	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    UNIQUE (nombre),
+
+    -- VALIDACIÓN 1: Asegura que el fin siempre sea posterior al inicio.
+    CHECK (fecha_fin > fecha_inicio),
+
+    -- VALIDACIÓN 2: Regla CRÍTICA de No Solapamiento (Exclusion Constraint).
+    -- Utiliza el tipo DATERANGE para asegurar que el rango [inicio, fin] de un periodo
+    -- no se cruce (&&) con el rango de ningún otro periodo ya existente.
+    EXCLUDE USING gist (DATERANGE(fecha_inicio, fecha_fin, '[)') WITH &&) 
+);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 -- ##############################################################################################################
 -- INSERTAR DATOS
@@ -626,6 +678,7 @@ TRUNCATE TABLE cuenta_bancaria RESTART IDENTITY CASCADE;
 TRUNCATE TABLE tipo_rol_asociado RESTART IDENTITY CASCADE;
 TRUNCATE TABLE estado_proveedor RESTART IDENTITY CASCADE;
 TRUNCATE TABLE tipo_proveedor RESTART IDENTITY CASCADE;
+TRUNCATE TABLE categoria_curso RESTART IDENTITY CASCADE;
 
 
 -- 1.1. NATURALEZA (Naturalezas de las cuentas)
@@ -728,8 +781,8 @@ INSERT INTO entidad (
     "updatedAt"
 ) VALUES
 (3, 3, 4, '20015849', 'academia', null, 'academia@gmail.com', '04268675867', 'barquisimeto', true, NOW(), NOW()),
-(1, 3, 5, '20010014-1', 'corpoelec', null, 'corpoelec@gmail.com', '04127564982', 'barquisimeto', true, NOW(), NOW()),
-(1, 3, 5, '20009014-6', 'hidrolara', null, 'hidrolara@gmail.com', '04269857619', 'barquisimeto', true, NOW(), NOW()),
+(2, 3, 5, '20010014-1', 'corpoelec', null, 'corpoelec@gmail.com', '04127564982', 'barquisimeto', true, NOW(), NOW()),
+(2, 3, 5, '20009014-6', 'hidrolara', null, 'hidrolara@gmail.com', '04269857619', 'barquisimeto', true, NOW(), NOW()),
 (1, 1, 1, '147567458', 'maria', 'lopez', 'ml57@gmail.com', '04145636985', 'el manzano', true, NOW(), NOW()),
 (1, 1, 1, '156987458', 'carlos', 'gomez', 'carlitos54@gmail.com', '02124569878', 'trinitarias', true, NOW(), NOW()),
 (1, 1, 2, '327465458', 'enrique', 'peña', 'enrique46@gmail.com', '04124569874', 'el manzano', true, NOW(), NOW()),
@@ -835,7 +888,7 @@ INSERT INTO tipo_rol_asociado ("nombre", "descripcion") VALUES
 
 
 
--- 1.15. ESTADO_PROVEEDOR (¡NUEVO! Estados específicos del ciclo de vida del proveedor)
+-- 1.15. ESTADO_PROVEEDOR 
 INSERT INTO estado_proveedor (nombre, descripcion, permite_pago) VALUES
 ('Activo', 'Proveedor con contrato vigente y autorizado para recibir pagos.', TRUE),
 ('Inactivo', 'Proveedor marcado como inactivo por: falta de uso prolongado, no renovación de documentos menores, o solicitud de pausa.', FALSE),
@@ -858,3 +911,223 @@ INSERT INTO tipo_proveedor (nombre, descripcion) VALUES
 ('Material Didáctico y Bibliografía', 'Proveedores de libros, e-books, licencias de bibliotecas digitales y material específico de enseñanza.'),
 ('Servicios de Seguridad y Vigilancia', 'Empresas de seguridad física, alarmas y monitoreo.');
 
+
+-- 1.17. ESTADO_CURSO
+INSERT INTO estado_curso (nombre, descripcion, permite_nuevos_grupos) VALUES
+('Activo', 'El curso está disponible y se pueden crear nuevos grupos.', TRUE),
+('En Revisión', 'El contenido está siendo actualizado; no se permiten nuevos grupos.', FALSE),
+('Decontinuado', 'El curso ya no se ofrece, no se permiten nuevos grupos.', FALSE);
+
+
+-- 1.18. CATEGORIA_CURSO
+INSERT INTO categoria_curso (nombre, descripcion, categoria_padre) VALUES
+
+    -- =========================================================================================
+    -- CATEGORÍAS PADRE (NIVEL 1) - Estos IDs serán 1, 2, 3, 4, 5, 6
+    -- =========================================================================================
+    ('Tecnología y Programación', 'Cursos fundamentales de desarrollo de software y sistemas.', NULL),          
+    ('Diseño y Arte Digital', 'Cursos de creatividad, branding y producción multimedia.', NULL),               
+    ('Negocios y Gestión', 'Cursos sobre emprendimiento, finanzas y administración de proyectos.', NULL),      
+    ('Idiomas y Comunicación', 'Cursos de lenguas extranjeras y mejora de habilidades blandas.', NULL),        
+    ('Ciencia de Datos y Analítica', 'Cursos de estadística, bases de datos y machine learning.', NULL),       
+    ('Habilidades Profesionales', 'Cursos transversales para mejorar el rendimiento laboral.', NULL);
+    -- =========================================================================================
+
+
+INSERT INTO categoria_curso (nombre, descripcion, categoria_padre) VALUES
+
+    -- =========================================================================================
+    -- SUBCATEGORÍAS (NIVEL 2) - Referencias a los IDs 1-6
+    -- Se usan los IDs que se espera que se asignen secuencialmente (1, 2, 3, 4, 5, 6)
+    -- Se insertan aparte porque sino todas estarán en "null" para el padre
+    -- =========================================================================================
+
+    -- Subcategorías de TECNOLOGÍA Y PROGRAMACIÓN (Padre ID: 1)
+    ('Desarrollo Web Front-End', 'HTML, CSS, JavaScript y frameworks modernos.', 1),                         
+    ('Desarrollo Web Back-End', 'Python, Node.js, PHP y API REST.', 1),                                     
+    ('Desarrollo Mobile Nativo', 'Swift, Kotlin, Java para iOS y Android.', 1),                                 
+    ('DevOps e Infraestructura', 'Docker, Kubernetes, AWS/Azure/GCP e Infraestructura como Código.', 1), 
+    ('Ciberseguridad y Redes', 'Defensa de sistemas, hacking ético y gestión de redes.', 1),
+
+    -- Subcategorías de DISEÑO Y ARTE DIGITAL (Padre ID: 2)
+    ('Diseño Gráfico y Branding', 'Illustrator, Photoshop, identidad visual y teoría del color.', 2),          
+    ('Diseño UX/UI Avanzado', 'Investigación de usuarios, prototipado y diseño de interacción.', 2),                    
+    ('Modelado 3D', 'Blender, Maya y texturizado.', 2),                                                  
+    ('Animación y Motion Graphics', 'After Effects, principios de animación y producción de gráficos en movimiento.', 2),            
+    ('Fotografía y Retoque', 'Composición, iluminación y postproducción fotográfica.', 2),
+
+    -- Subcategorías de NEGOCIOS Y GESTIÓN (Padre ID: 3)
+    ('Gestión de Proyectos (Agile)', 'Scrum, Kanban y herramientas de gestión de equipos.', 3),                
+    ('Finanzas Corporativas', 'Análisis financiero, valoración de empresas y capital de trabajo.', 3),                
+    ('Contabilidad y Auditoría', 'Normas internacionales, contabilidad básica y auditoría interna.', 3),       
+    ('Marketing Digital Estratégico', 'Estrategia de contenidos, SEO/SEM avanzado y análisis de ROI.', 3),                         
+    ('Emprendimiento y Startups', 'Modelo Canvas, validación de ideas y captación de fondos.', 3),
+
+    -- Subcategorías de IDIOMAS Y COMUNICACIÓN (Padre ID: 4)
+    ('Inglés', 'Todos los niveles y especializaciones (General, Negocios, Técnico).', 4), 
+    ('Francés', 'Todos los niveles y especializaciones (General, Negocios, Técnico).', 4), 
+    ('Alemán', 'Todos los niveles y especializaciones (General, Negocios, Técnico).', 4),
+    ('Ruso', 'Todos los niveles y especializaciones (General, Negocios, Técnico).', 4), 
+    ('Portugués', 'Todos los niveles y especializaciones (General, Negocios, Técnico).', 4), 
+    ('Italiano', 'Todos los niveles y especializaciones (General, Negocios, Técnico).', 4),                             
+    ('Español', 'Gramática, inmersión y cultura (Incluye español para extranjeros).', 4),
+    ('Preparación de Certificaciones', 'Cursos enfocados en TOEFL, IELTS, Cambridge.', 4),
+    ('Lenguas Orientales', 'Mandarín y Japonés para negocios y viajes.', 4),
+
+    -- Subcategorías de CIENCIA DE DATOS Y ANALÍTICA (Padre ID: 5)
+    ('Data Science', 'Herramientas, algoritmos, estadística y machine learning.', 5),
+    ('Business Intelligence', 'Power BI, Tableau y creación de dashboards.', 5),                 
+    ('Machine Learning e IA', 'Modelos predictivos, redes neuronales y Deep Learning.', 5),                      
+    ('Bases de Datos', 'Modelado de datos, optimización de consultas SQL y NoSQL.', 5),
+
+    -- Subcategorías de HABILIDADES PROFESIONALES (Padre ID: 6)
+    ('Liderazgo y Gestión de Equipos', 'Coaching, mentoring y delegación efectiva.', 6),
+    ('Productividad y Herramientas', 'Automatización, Excel avanzado y gestión del tiempo.', 6),
+    ('Negociación y Resolución de Conflictos', 'Técnicas de negociación y manejo de objeciones.', 6)
+;
+
+
+
+-- 1.19. ESTADO_GRUPO
+INSERT INTO estado_grupo (nombre, descripcion, permite_inscripcion) VALUES
+('Planificado', 'El grupo ha sido creado y está listo para la oferta. Esperando inicio de clases. Acepta inscripciones.', TRUE),
+('En curso', 'Las clases han comenzado. No se permiten nuevas inscripciones.', FALSE),
+('Finalizado', 'El grupo terminó oficialmente todas sus sesiones de clase.', FALSE),
+('Cancelado', 'El grupo fue cancelado antes o durante su ejecución (ej. por baja demanda o fuerza mayor).', FALSE);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+------------------------------------------------------------------------------
+
+
+
+
+
+-- Tabla: GRUPO (Oferta de un Curso en un Período con Docente, Estado Y TARIFA)
+CREATE TABLE GRUPO (
+    id_grupo INT PRIMARY KEY,
+    id_curso INT NOT NULL,
+    id_periodo INT NOT NULL,
+    nombre VARCHAR(100) NOT NULL, -- ¡NUEVA COLUMNA! Nombre descriptivo del grupo (Ej: Mañana, Intensivo 1)
+    id_docente INT, 
+    id_modalidad INT NOT NULL,
+    id_estado_actual INT NOT NULL, -- FK a ESTADO_GRUPO
+    
+    cupo_maximo INT NOT NULL,
+
+    -- CAMPOS DE TARIFA
+    costo_inscripcion DECIMAL(10, 2) NOT NULL,
+    costo_clase_unitario DECIMAL(10, 2) NOT NULL,
+
+    FOREIGN KEY (id_curso) REFERENCES CURSO(id_curso),
+    FOREIGN KEY (id_periodo) REFERENCES PERIODO(id_periodo),
+    FOREIGN KEY (id_docente) REFERENCES DOCENTE(id_docente),
+    FOREIGN KEY (id_modalidad) REFERENCES MODALIDAD_CLASE(id_modalidad),
+    FOREIGN KEY (id_estado_actual) REFERENCES ESTADO_GRUPO(id_estado_grupo),
+
+    -- RESTRICCIÓN DE UNICIDAD AJUSTADA: 
+    -- Un curso solo puede tener un único grupo con un nombre dado en un período específico.
+    UNIQUE (id_curso, id_periodo, nombre)
+);
+
+
+
+--CALENDARIO_CLASE (Padre): Almacena todo lo que está planificado (la intención: la clase 5 del grupo X con el Docente Y, el día Z).
+ 
+--REGISTRO_SESION_CLASE (Hija): Almacena todo lo que fue ejecutado y verificado (la realidad: la clase 5 realmente ocurrió, el docente efectivo fue W y se le pagan 2 horas).
+
+-- **NUEVA ESTRUCTURA Y RESTRICCIONES**
+CREATE TABLE CALENDARIO_CLASE (
+    id_clase_planificada INT PRIMARY KEY,
+    id_grupo INT NOT NULL,
+    id_docente INT NOT NULL,        -- NUEVO: Docente planificado para esta sesión
+    id_bloque INT NOT NULL,         -- El bloque de 2 horas (Ej: 9am-11am)
+    id_aula INT NOT NULL,
+    fecha_planificada DATE NOT NULL,
+    
+    numero_sesion INT NOT NULL,     -- MANTENIDO: Por rendimiento y reportes.
+
+    FOREIGN KEY (id_grupo) REFERENCES GRUPO(id_grupo),
+    FOREIGN KEY (id_docente) REFERENCES DOCENTE(id_docente), -- Nueva FK
+    FOREIGN KEY (id_bloque) REFERENCES BLOQUE_HORARIO(id_bloque),
+    FOREIGN KEY (id_aula) REFERENCES AULA(id_aula),
+
+    -- RESTRICCIÓN 1 (AULA/INFRAESTRUCTURA): No dos clases pueden usar la misma Aula/Bloque/Día.
+    UNIQUE (id_bloque, id_aula, fecha_planificada), 
+
+    -- RESTRICCIÓN 2 (DOCENTE/RECURSO): No dos clases pueden usar el mismo Docente/Bloque/Día.
+    UNIQUE (id_docente, id_bloque, fecha_planificada)
+    
+    -- NOTA: Se ha removido la restricción de unicidad para (id_grupo, fecha_planificada) 
+    --       para permitir múltiples sesiones por grupo en un mismo día.
+);
+
+
+
+
+-- Tabla: REGISTRO_CLASE (Clases Dadas - EJECUCIÓN/BASE PARA NÓMINA)
+-- Simplificada: se asume que la duración pagable es igual a la duración del bloque horario asociado.
+CREATE TABLE REGISTRO_CLASE (
+    id_registro INT PRIMARY KEY,
+    id_clase_planificada INT NOT NULL, 
+    id_docente_efectivo INT NOT NULL, -- Docente que realmente impartió la clase
+    
+    -- Eliminado: horas_pagables (se calcula a partir de BLOQUE_HORARIO)
+    
+    FOREIGN KEY (id_clase_planificada) REFERENCES CALENDARIO_CLASE(id_clase_planificada),
+    FOREIGN KEY (id_docente_efectivo) REFERENCES DOCENTE(id_docente),
+
+    -- RESTRICCIÓN CLAVE: Máximo un registro de ejecución por clase planificada.
+    UNIQUE (id_clase_planificada)
+);
+
+
+
+
+
+
+
+--La razón por la que usamos el id_inscripcion en ASISTENCIA_CLASE en lugar del id_estudiante es para asegurar la integridad referencial y la validez de las reglas de negocio.
+
+--La función crucial de INSCRIPCION
+--La tabla INSCRIPCION no es solo un registro del estudiante, sino que representa la membresía activa de un estudiante en un grupo específico durante un periodo específico.
+
+--1. Evitar Registros Inválidos (Regla de Negocio)
+--La asistencia solo tiene sentido si el estudiante está inscrito en el grupo al que pertenece la clase.
+
+--ASISTENCIA_CLASE necesita saber: ¿Qué estudiante asistió a qué clase y cómo estaba ese estudiante en el momento del registro?
+
+--Si usáramos solo id_estudiante, el sistema permitiría registrar la asistencia de cualquier estudiante a cualquier clase, incluso si ese estudiante no estaba inscrito en el grupo que impartió esa clase.
+
+--2. Herencia de Contexto y Estado
+--El id_inscripcion lleva consigo el contexto y el estado del estudiante en ese grupo (ej. ACTIVO, RETIRADO, COMPLETADO).
+
+--Si un estudiante se retira de un grupo (cambia el estado de la inscripción a 'RETIRADO'), la inscripción permanece en la base de datos. Si intentas registrar una nueva asistencia usando ese id_inscripcion, el sistema podría (a través de lógica de aplicación) verificar el estado de esa inscripción antes de permitir el registro.
+
+--Al usar id_inscripcion, la ruta para verificar todos los datos de la asistencia es limpia y directa:
+-- Tabla: ASISTENCIA_CLASE (Asistencia de un Estudiante a una Sesión Registrada)
+CREATE TABLE ASISTENCIA_CLASE (
+    id_asistencia INT PRIMARY KEY,
+    id_inscripcion INT NOT NULL,
+    id_registro_clase INT NOT NULL,
+    id_estado_asistencia INT NOT NULL, 
+    
+    FOREIGN KEY (id_inscripcion) REFERENCES INSCRIPCION(id_inscripcion),
+    FOREIGN KEY (id_registro_clase) REFERENCES REGISTRO_SESION_CLASE(id_registro),
+    FOREIGN KEY (id_estado_asistencia) REFERENCES ESTADO_ASISTENCIA(id_estado_asistencia),
+
+    UNIQUE (id_inscripcion, id_registro_clase) 
+);

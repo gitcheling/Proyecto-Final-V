@@ -63,6 +63,20 @@ Docente.associate = (models) => {
     });
 
 
+    // Un docente puede aparecer muchas veces en "grupo"
+    Docente.hasMany(models.Grupo, {
+        foreignKey: 'id_docente', // La FK que está en la tabla 'grupo'
+        as: 'grupos' // Usamos éste prefijo para obtener los datos del otro modelo (todos los grupos de un docente)
+    });
+
+
+
+
+
+
+
+    //----------------------- revision--------------------
+
     // Un docente puede aparecer muchas veces en "asignacion_docente"
     Docente.hasMany(models.Asignacion_Docente, {
         foreignKey: 'id_docente', // La FK que está en la tabla 'asignacion_docente'

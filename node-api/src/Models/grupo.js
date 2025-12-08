@@ -25,19 +25,42 @@ const Grupo = sequelize.define('Grupo', {
         }
     },
 
+    // ===============================================
+    // clave foránea para el periodo
+    // ===============================================
+    id_periodo : {
+        type: DataTypes.INTEGER,
+        allowNull: false, 
+        references: {
+
+            // Nombre exacto de la tabla foránea en la base de datos
+            model: 'periodo', 
+
+            // El nombre exacto de la columna en la tabla foránea (model) a la que apunta. Que sería, la clave primaria
+            key: 'id_periodo'
+        }
+    },
+
+
+    // ===============================================
+    // clave foránea para el docente
+    // ===============================================
+    id_docente : {
+        type: DataTypes.INTEGER,
+        allowNull: false, 
+        references: {
+
+            // Nombre exacto de la tabla foránea en la base de datos
+            model: 'docente', 
+
+            // El nombre exacto de la columna en la tabla foránea (model) a la que apunta. Que sería, la clave primaria
+            key: 'id_docente'
+        }
+    },
+
     nombre: {
         type: DataTypes.STRING(50),
         allowNull: false
-    },
-
-    fecha_inicio: {
-        type: DataTypes.DATEONLY, 
-        allowNull: false
-    },
-
-    fecha_fin: {
-        type: DataTypes.DATEONLY, 
-        allowNull: true //Permite nulos
     },
 
     cupo_maximo  : {
@@ -79,16 +102,44 @@ Grupo.associate = (models) => {
     // Un grupo solo puede tener un estado de grupo
     Grupo.belongsTo(models.Estado_Grupo, {
         foreignKey: 'id_estado_grupo', // La FK que está en ESTA MISMA tabla (en este caso que es el lado muchos)
-        as: 'estado_grupo' // Usamos éste prefijo para obtener los datos del otro modelo (el estado de grupo de un grupo)
+        as: 'estado_grupo' // Usamos éste prefijo para obtener los datos del otro modelo (el estado de un grupo)
     });
 
 
     // Un grupo solo puede tener un curso de "curso"
-    Grupo.belongsTo(models.Tipo_Identificacion, {
+    Grupo.belongsTo(models.Curso, {
         foreignKey: 'id_curso', // La FK que está en ESTA MISMA tabla (en este caso que es el lado muchos)
         as: 'curso' // Usamos éste prefijo para obtener los datos del otro modelo (el curso de un grupo)
     });
 
+
+    // Un grupo solo puede tener un periodo de "periodo"
+    Grupo.belongsTo(models.Periodo, {
+        foreignKey: 'id_periodo', // La FK que está en ESTA MISMA tabla (en este caso que es el lado muchos)
+        as: 'periodo' // Usamos éste prefijo para obtener los datos del otro modelo (el periodo de un grupo)
+    });
+
+
+    // Un grupo solo puede tener un docente de "docente"
+    Grupo.belongsTo(models.Docente, {
+        foreignKey: 'id_docente', // La FK que está en ESTA MISMA tabla (en este caso que es el lado muchos)
+        as: 'docente' // Usamos éste prefijo para obtener los datos del otro modelo (el docente de un curso)
+    });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // --------------------------- Revision ------------------------
 
     // Un grupo puede aparecer muchas veces en "asignacion_horario_grupo"
     Grupo.hasMany(models.Asignacion_Horario_Grupo, {

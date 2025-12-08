@@ -199,6 +199,31 @@ const parseAndValidateDate = (dateString) => {
 };
 
 
+/**
+ * Valida que la fecha de inicio sea estrictamente anterior (menor) a la fecha de fin.
+ * Lanza un error si alguna de las fechas no es válida o si la de inicio es igual o posterior a la de fin.
+ * @param {string} startDateString - La fecha de inicio.
+ * @param {string} endDateString - La fecha de fin.
+ * @throws {Error} Si alguna de las fechas no es válida o si la fecha de inicio no es anterior a la de fin.
+ */
+const validarInicioAntesDeFin = (startDateString, endDateString) => {
+
+    if (!startDateString) {
+            throw new Error("La fecha de inicio debe ser proporcionada y tener un formato válido.");
+    }
+    
+    if (!endDateString) {
+            throw new Error("La fecha de finalización debe ser proporcionada y tener un formato válido.");
+    }
+    
+    // Comprobar que la fecha de inicio es estrictamente menor que la de fin.
+    if (startDateString >= endDateString) {
+        throw new Error("La fecha de inicio debe ser anterior a la fecha de finalización.");
+    }
+}
+
+
+
 
 /**
  * Valida si la longitud de una cadena está dentro de un rango especificado.
@@ -270,6 +295,7 @@ exports.validarSoloTextoPermisivo = validarSoloTextoPermisivo;
 exports.validarSoloNumerosYGuion = validarSoloNumerosYGuion;
 exports.validarBooleano = validarBooleano;
 exports.parseAndValidateDate = parseAndValidateDate;
+exports.validarInicioAntesDeFin = validarInicioAntesDeFin;
 exports.validarLongitudCadena = validarLongitudCadena;
 exports.validarEmail = validarEmail;
 exports.validarTelefonoVenezolano = validarTelefonoVenezolano;

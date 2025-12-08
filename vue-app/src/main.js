@@ -5,6 +5,8 @@ import { setupToastProvider } from './composables/toastProvider';
 import App from './App.vue'
 import router from './router' // Importa la configuración de rutas
 import axios from 'axios' // Importa Axios
+import VCalendar from 'v-calendar';
+import 'v-calendar/dist/style.css'; // Importa los estilos CSS
 
 
 // 1. Estilos de Bootstrap y Personalizados
@@ -34,6 +36,9 @@ app.use(router) // Usa Vue Router
 
 // Snpe registra Element Plus como plugin
 app.use(ElementPlus);
+
+// Usa V-Calendar con las configuraciones por defecto
+app.use(VCalendar, {})
 
 // 5. Configurar Axios (Cliente HTTP)
 // Esto hace que $http esté disponible en todos los componentes

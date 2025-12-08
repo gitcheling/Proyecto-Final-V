@@ -131,12 +131,12 @@
         
                 <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="creadosDesde">Creados Desde:</label>
-                    <input type="date" id="creadosDesde" v-model="filters.creadosDesde" class="form-control">
+                    <input type="date" id="creadosDesde" v-model="filters.creadosDesde" class="form-control" :max="filters.creadosHasta || undefined">
                 </div>
 
                 <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="creadosHasta">Creados Hasta:</label>
-                    <input type="date" id="creadosHasta" v-model="filters.creadosHasta" class="form-control">
+                    <input type="date" id="creadosHasta" v-model="filters.creadosHasta" class="form-control" :min="filters.creadosDesde || undefined">
                 </div>
          
  

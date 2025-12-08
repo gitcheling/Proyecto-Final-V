@@ -19,6 +19,13 @@ import CuentaBancariaAprobadaView from '../views/cuentasBancarias/aprobadas/Cuen
 import CuentaBancariaPorAprobarView from '../views/cuentasBancarias/porAprobar/CuentasBancariasView.vue'
 
 
+import PeriodosView from '../views/periodos/PeriodosView.vue';
+
+
+import CursosView from '../views/cursos/CursosView.vue'
+import DetallesCursoView from '../views/cursos/DetallesCursoView.vue'
+
+
 
 const routes = [
     { path: '/', component: HomeView },
@@ -67,9 +74,21 @@ const routes = [
 
     // Cuentas Bancarias
     { path: '/CuentasBancariasAprobadas', component: CuentaBancariaAprobadaView },
+    { path: '/CuentasBancariasPorAprobar', component: CuentaBancariaPorAprobarView },
 
-    // Cuentas Bancarias
-    { path: '/CuentasBancariasPorAprobar', component: CuentaBancariaPorAprobarView }
+
+     // Periodos
+    { path: '/Periodos', component: PeriodosView },
+
+
+    // Cursos
+    { path: '/Cursos', name: 'GestionCursos', component: CursosView },
+    {
+      path: '/Cursos/:id',
+      name: 'CourseDetails', 
+      component: DetallesCursoView, 
+      props: true 
+    },
 
 ]
 

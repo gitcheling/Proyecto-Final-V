@@ -526,6 +526,8 @@
 
             // Monitorear los campos clave para validar en tiempo real
             watch([
+                () => newEntity.value.tipo_identificacion, 
+                () => newEntity.value.prefijo,
                 () => newEntity.value.numero_identificacion, 
                 () => newEntity.value.nombre, 
                 () => newEntity.value.apellido, 

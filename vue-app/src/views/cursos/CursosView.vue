@@ -2,11 +2,11 @@
 
   <div class="account-type-manager">
 
-    <h2>Gestión de Tipos de Cuentas</h2>
+    <h2>Gestión de Cursos</h2>
     <div class="mb-3">
-        <!-- Botón para crear una nueva cuenta -->
-        <button @click="openModal" class="btn btn-outline-primary flex-fill py-2 shadow-sm ms-2 mb-2">
-        + Agregar Nueva Cuenta
+        <!-- Botón para crear un nuevo curso -->
+        <button @click="openModal" class="btn btn-outline-pink flex-fill py-2 shadow-sm ms-2 mb-2">
+        + Agregar Nuevo Curso
         </button>
 
         <button @click="toggleFiltersVisibility" class="btn btn-outline-info flex-fill py-2 shadow-sm ms-2 mb-2">
@@ -26,24 +26,12 @@
     </div>
 
     <Transition name="fade-slide">
-        <div class="filters-container" v-if="areFiltersVisible">
+        <div class="filters-container hover-lift" v-if="areFiltersVisible">
             <h3>Filtros</h3>
 
             <div class="row">
-                
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
-                    <label for="codigo">Código:</label>
-                    <input 
-                        type="text" 
-                        id="codigo" 
-                        v-model="filters.codigo" 
-                        placeholder="Buscar por código..."
-                        class="form-control"
-                        @input="validateCodigo"
-                    >
-                </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="nombre">Nombre:</label>
                     <input 
                         type="text" 
@@ -55,98 +43,99 @@
                     >
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
-                    <label for="nivel">Nivel:</label>
-                    <select id="nivel" v-model="filters.nivel" class="form-control">
-                        <option value="">Todos</option>
-                        <option value="1">Nivel 1</option>
-                        <option value="2">Nivel 2</option>
-                        <option value="3">Nivel 3</option>
-                        <option value="4">Nivel 4</option>
-                        <option value="5">Nivel 5</option>
-                        <option value="6">Nivel 6</option>
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
+                    <label for="categoria">Categoría:</label>
+                    <select 
+                        id="categoria" 
+                        v-model="filters.categoria" 
+                        class="form-control"
+                    >
+                        <option value="">Todas</option>
+                        <option 
+                            v-for="categoria in categories" 
+                            :key="categoria.id" 
+                            :value="categoria.id"
+                        >
+                            {{ categoria.nombre }}
+                        </option>
                     </select>
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
-                    <label for="naturaleza">Naturaleza:</label>
-                    <select id="naturaleza" v-model="filters.naturaleza" class="form-control">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
+                    <label for="subcategoria">Sub-Categoría:</label>
+                    <select 
+                        id="subcategoria" 
+                        v-model="filters.subcategoria" 
+                        class="form-control"
+                        :disabled="!filters.categoria"
+                    >
                         <option value="">Todas</option>
-                        <option value="1">Deudora</option>
-                        <option value="2">Acreedora</option>
+                        <option 
+                            v-for="subcategoria in subcategories" 
+                            :key="subcategoria.id" 
+                            :value="subcategoria.id"
+                        >
+                            {{ subcategoria.nombre }}
+                        </option>
                     </select>
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
-                    <label for="clasificacion">Clasificación:</label>
-                    <select id="clasificacion" v-model="filters.clasificacion" class="form-control">
-                        <option value="">Todas</option>
-                        <option value="1">Real</option>
-                        <option value="2">Nominal</option>
-                    </select>
+
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
+                    <label for="cantidad_clases_minima">Cantidad de clases mínima:</label>
+                    <input 
+                        type="text" 
+                        id="cantidad_clases_minima" 
+                        v-model="filters.cantidad_clases_minima" 
+                        placeholder="Buscar por cantidad de clases mínimas..."
+                        class="form-control"
+                        @input="validateClasesMinimas"
+                    >
                 </div>
-                
+
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
+                    <label for="cantidad_clases_maxima">Cantidad de clases máxima:</label>
+                    <input 
+                        type="text" 
+                        id="cantidad_clases_maxima" 
+                        v-model="filters.cantidad_clases_maxima" 
+                        placeholder="Buscar por cantidad de clases máxima..."
+                        class="form-control"
+                        @input="validateClasesMaximas"
+                    >
+                </div>
             
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="creadosDesde">Creados Desde:</label>
-                    <input type="date" id="creadosDesde" v-model="filters.creadosDesde" class="form-control">
+                    <input type="date" id="creadosDesde" v-model="filters.creadosDesde" class="form-control" :max="filters.creadosHasta || undefined">
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3 ">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="creadosHasta">Creados Hasta:</label>
-                    <input type="date" id="creadosHasta" v-model="filters.creadosHasta" class="form-control">
+                    <input type="date" id="creadosHasta" v-model="filters.creadosHasta" class="form-control" :min="filters.creadosDesde || undefined">
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="modificadosDesde">Modificados Desde:</label>
-                    <input type="date" id="modificadosDesde" v-model="filters.modificadosDesde" class="form-control">
+                    <input type="date" id="modificadosDesde" v-model="filters.modificadosDesde" class="form-control" :max="filters.modificadosHasta || undefined">
                 </div>
 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="modificadosHasta">Modificados Hasta:</label>
-                    <input type="date" id="modificadosHasta" v-model="filters.modificadosHasta" class="form-control">
+                    <input type="date" id="modificadosHasta" v-model="filters.modificadosHasta" class="form-control" :min="filters.modificadosDesde || undefined">
                 </div>
                 
-                <div class="filter-group col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
+                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="estado">Estado:</label>
                     <select id="estado" v-model="filters.estado" class="form-control">
                         <option value="">Todos</option>
-                        <option value="true">Activas</option>
-                        <option value="false">Inactivas</option>
+                        <option value="1">Activos</option>
+                        <option value="2">En revisión</option>
+                        <option value="3">Descontinuados</option>
                     </select>
                 </div>
 
-
-                <div class="filter-group filter-parent col-12 col-sm-4 col-md-3 col-lg-2 mb-3">
-                    <label for="parent-search">Cuenta Padre:</label>
-                    <input 
-                        type="text" 
-                        id="parent-search" 
-                        v-model="parentSearchQuery" 
-                        @input="searchParents"
-                        placeholder="Buscar por código o nombre..."
-                        class="form-control"
-                        autocomplete="off"
-                    >
-                    
-                    <ul v-if="parentSearchResults.length > 0" class="autocomplete-results">
-                        <li 
-                            v-for="result in parentSearchResults" 
-                            :key="result.id" 
-                            @click="selectParent(result)"
-                        >
-                            {{ result.codigo }} - {{ result.nombre }}
-                        </li>
-                    </ul>
-
-                    <div v-if="selectedParent.id" class="selected-parent-tag">
-                        <span>
-                            Filtrando por: {{ selectedParent.codigo }} - {{ selectedParent.nombre }}
-                        </span>
-                        <button @click="clearParentFilter" class="btn-clear-parent">X</button>
-                    </div>
-                </div>
-
+ 
             </div>
 
 
@@ -154,81 +143,93 @@
 
     </Transition>
 
-    <!-- Tabla de las cuentas -->
-    <div class="table-responsive">
-        <table class="table table-striped table-hover table-bordered">
-
-        <thead class="header-personalizado">
-            <tr>
-                <th class="text-center">Código</th>
-                <th class="text-center">Nivel</th>
-                <th class="text-center">Nombre</th>
-                <th class="text-center">Naturaleza</th>
-                <th class="text-center">Clasificación</th>
-                <th class="text-center">Fecha de creación</th>
-                <th class="text-center">Ultima modificación</th>
-                <th class="text-center">Estado</th>
-                <th class="text-center">Acciones</th>
-            </tr>
-        </thead>
-
-        
-        <tbody>
-            <tr v-if="isLoadingTable">
-                <td colspan="10" class="text-center">
-                    <span class="loading-message">Cargando datos...</span>
-                </td>
-            </tr>
-            <tr v-else-if="accountTypes.length === 0">
-                <td colspan="10" class="text-center">
-                    <span class="no-results-message">No se encontraron tipos de cuentas. Intenta ajustar los filtros.</span>
-                </td>
-            </tr>
-            <tr v-else v-for="account in accountTypes" :key="account.id">
-                <td>{{ account.codigo }}</td>
-                <td>{{ account.nivel }}</td>
-                <td>{{ account.nombre }}</td>
-                <td>{{ account.naturaleza.nombre }}</td>
-                <td>{{ account.clasificacion.nombre }}</td>
-                <td>{{ formatDateTime(account.fechaCreacion) }}</td>
-                <td>{{ formatDateTime(account.fechaActualizacion) }}</td>
-
-                <td>
-                    {{ account.estado ? 'Activo' : 'Inactivo' }}
-                </td>
-                <td class="text-center">           
-                    <button 
-                    class="btn btn-sm btn-outline-primary me-1" 
-                    @click="toggleStatus(account)"
-                    :disabled="account.nivel === 1" 
-                    :title="account.nivel === 1 ? 'Cuentas de Nivel 1 no se pueden desactivar' : ''"
-                    >
-                    <i :class="account.estado ? 'bi bi-toggle-on' : 'bi bi-toggle-off'"></i> 
-                    </button>
-
-                    <button 
-                    class="btn btn-sm btn-outline-info"
-                    @click="openModal(account)"
-                    :disabled="account.nivel === 1" 
-                    :title="account.nivel === 1 ? 'Cuentas de Nivel 1 no se pueden modificar' : ''"
-                    >
-                    <i class="bi bi-pencil"></i>
-                    </button>               
-                </td>
-            </tr>
-        </tbody>
-        
-
-        </table>
+    <!-- Mensaje de la cantidad de resultados encontrados -->
+    <div 
+    v-if="courseTypes.length > 0 && !isLoadingTable" 
+    class="mb-3 text-start"
+    >
+        <span class="results-summary" v-html="resultsText"></span>
     </div>
 
-    <!-- Modal para crear o editar una cuenta -->
+    <!-- Tabla de los cursos -->
+    <div class="table-card-wrapper hover-lift">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover table-bordered table-custom">
+
+            <thead class="header-personalizado">
+                <tr>
+                    <th class="text-center col-nombre">Nombre</th>
+                    <th class="text-center col-categoria">Categoría</th>
+                    <th class="text-center col-subcategoria">Sub-Categoría</th>
+                    <th class="text-center col-total">Total de Clases</th>
+                    <th class="text-center col-fecha_creacion">Fecha de creación</th>
+                    <th class="text-center col-fecha_actualizacion">Última modificación</th>
+                    <th class="text-center col-estado">Estado</th>
+                    <th class="text-center col-permite_grupos">¿Permite nuevos grupos?</th>
+                    <th class="text-center col-acciones">Acciones</th>
+                </tr>
+            </thead>
+
+            
+            <tbody>
+                <tr v-if="isLoadingTable">
+                    <td colspan="13" class="text-center">
+                        <span class="loading-message">Cargando datos...</span>
+                    </td>
+                </tr>
+
+                <tr v-if="courseTypes.length > 0" v-for="course in courseTypes" :key="course.id">
+                    <td class="">{{ course.nombre }}</td>
+                    <td class="">{{ course.categoria.categoria_padre.nombre }}</td>
+                    <td class="">{{ course.categoria.nombre }}</td>
+                    <td class="">{{ course.total_clases }}</td>
+                    <td class="">{{ formatDateTime(course.fechaCreacion) }}</td>
+                    <td class="">{{ formatDateTime(course.fechaActualizacion) }}</td>
+                    <td class="">{{ course.estado.nombre }}</td>
+                    <td class="">{{ course.estado.permite_grupos }}</td>
+
+
+                    <td class=" text-center">
+                        <div class="d-flex flex-row flex-nowrap justify-content-center">
+
+                            <router-link 
+                                :to="{ 
+                                    name: 'CourseDetails', 
+                                    params: { id: course.id } 
+                                }" 
+                                class="btn btn-sm btn-outline-primary me-1" 
+                                title="Ver detalles del Curso"
+                            >
+                                <i class="bi bi-eye-fill"></i> 
+                            </router-link> 
+
+                        </div>           
+                    </td>
+                </tr>
+            </tbody>
+            
+
+            </table>
+        </div>
+    </div>
+
+    <!-- Mensaje de que no se encontraron resultados -->
+    <div 
+        v-if="!isLoadingTable && courseTypes.length === 0" 
+        class="text-center py-5 mb-5"
+    >
+        <div class="no-results-center-badge">
+            <i class="bi bi-x-circle-fill me-2"></i> No se encontraron cursos con los filtros aplicados.
+            <p class="mt-2 mb-0 text-muted">Intenta ajustando o limpiando los filtros para ver la lista completa.</p>
+        </div>
+    </div>
+
+    <!-- Modal para crear un curso -->
     <AccountFormModal
       :isVisible="isModalVisible"
-      :initialData="accountToEdit" 
+      :initialData="courseToEdit" 
       @close="closeModal"
-      @add-account="addAccount"
-      @update-account="updateAccount" 
+      @add-course="addCourse"
     />
 
   </div>
@@ -239,63 +240,100 @@
 
 <script setup>
 
-  // ----------------------------------- Importaciones ----------------------------------------
-  import { ref, computed, onMounted, watch } from 'vue';
-  import AccountFormModal from './FormularioCursoView.vue';
+    // ----------------------------------- Importaciones ----------------------------------------
+       
+        import { ref, watch, computed, onMounted} from 'vue';
 
-  // Se importa el objeto axios que permitirá la conexión con la api
-  import api from '../../services/api'; 
+        // Se importa el hook de las notificaciones toast
+        import { useToast } from '../../services/notificacionesService';
 
-  // ----------------------------------- Variables ----------------------------------------
+        // Se llama a la función "useToast()" y desestructura los métodos que se necesitan (exito, error, etc.):
+        const { exito, error, info, warning } = useToast();
 
-    // Se inicializa como array vacío. Los datos se cargarán de la API al montar el componente.
-    const accountTypes = ref([]);
+        import AccountFormModal from './FormularioCursosView.vue';
 
-    // Ésta variable reactiva permitirá controlar la visibilidad del modal
-    const isModalVisible = ref(false);
+        // Se importa el objeto axios que permitirá la conexión con la api
+        import api from '../../services/api'; 
 
-    // Almacena el objeto de la cuenta que se está editando. Es 'null' en el modo creación y se pasa como argumento a la función respectiva
-    // para que el modal se muestre en ése modo.
-    const accountToEdit = ref(null); 
+    // ----------------------------------- Variables ----------------------------------------
 
-    // Indicador de carga para la tabla
-    const isLoadingTable = ref(false);
+        // Rutas
+            // Ruta base
+            const rutaBase = "/Curso/"
 
+            // Buscar cursos
+            const rutaBuscar = `${rutaBase}Buscar`
 
-    // Este objeto es la plantilla para el reset (para reiniciar los filtros)
-    const initialFilters = {
-        nombre: '', 
-        codigo: '',
-        nivel: '',
-        estado: '',
-        naturaleza: '',
-        clasificacion: '',
-        padre: '',
-        creadosDesde: '',
-        creadosHasta: '',
-        modificadosDesde: '',
-        modificadosHasta: '',
-    };
+            // Crear curso
+            const rutaCrear = `${rutaBase}CrearCurso`
 
-     // Utiliza ese estado inicial para el objeto reactivo
-    const filters = ref({ ...initialFilters });
-
-    // Variable reactiva para controlar la visibilidad del contenedor de filtros
-    const areFiltersVisible = ref(false);
-
-   
-
-    // Variables que almacenan el último valor de filtro que fue válido (para nombre y código)
-    const lastValidCodigo = ref('');
-    const lastValidNombre = ref('');
+            // Rutas de Categoría 
+            const rutaCategoriasBase = "/CategoriaCurso/"
+            const rutaBuscarCategorias = `${rutaCategoriasBase}BuscarCategorias` 
 
 
-    // Variables para la funcionalidad de filtrar por Cuenta Padre
-    const parentSearchQuery = ref(''); // Lo que se escribe en el input
-    const parentSearchResults = ref([]); // Resultados que se muestran en el dropdown
-    const selectedParent = ref({ id: null, codigo: '', nombre: '' }); // Cuenta padre seleccionada
+        // Se inicializa como array vacío. Los datos se cargarán de la API al montar el componente.
+        const courseTypes = ref([]);
 
-    let searchTimeout = null; // Para manejar el debouncing de la búsqueda
+        // Propiedad computada para saber que mensaje se pondrá en la cantidad de resultados encontrados
+        const resultsText = computed(() => {
+            const count = courseTypes.value.length;
+            if (count === 1) {
+                return `🔍 Se encontró ${count} curso con los filtros aplicados.`;
+            } else {
+                return `🔍 Se encontraron ${count} cursos con los filtros aplicados.`;
+            }
+        });
+
+        // Ésta variable reactiva permitirá controlar la visibilidad del modal
+        const isModalVisible = ref(false);
+
+
+        // Almacena el objeto de la cuenta que se está editando. Es 'null' en el modo creación y se pasa como argumento a la función respectiva
+        // para que el modal se muestre en ése modo.
+        const courseToEdit = ref(null); 
+
+        /* Indicador de carga para la tabla
+
+        Nota: Se inicializa en "true" para que no salga el aviso de que no se encontraron cuentas nada mas se abre la pagina, la función de búsqueda será quien la ponga
+        en "false" cuando se ejecute */
+        const isLoadingTable = ref(true);
+
+        // Este objeto es la plantilla para el reset (para reiniciar los filtros)
+        const initialFilters = {
+            nombre: '',
+            categoria: '',
+            subcategoria: '',
+            cantidad_clases_minima: '',
+            cantidad_clases_maxima: '',
+            estado: '',
+            creadosDesde: '',
+            creadosHasta: '',
+            modificadosDesde: '',
+            modificadosHasta: '',
+        };
+
+        // Utiliza ese estado inicial para el objeto reactivo
+        const filters = ref({ ...initialFilters });
+
+        // Variable reactiva para controlar la visibilidad del contenedor de filtros
+        const areFiltersVisible = ref(false);
+
+    
+
+        // Variables que almacenan el último valor de filtro que fue válido (para el número de identificación, el nombre y el apellido)
+        const lastValidNombre = ref('');
+        const lastValidCantidadClasesMinima = ref('');
+        const lastValidCantidadClasesMaxima = ref('');
+
+
+        let searchTimeout = null; // Para manejar el debouncing de la búsqueda
+
+
+        // Almacena la lista completa de categorías principales
+        const categories = ref([]); 
+        // Almacena la lista de subcategorías (dependientes del select de categoría)
+        const subcategories = ref([]);
 
 
   // ----------------------------------- Funciones ----------------------------------------
@@ -306,7 +344,7 @@
              * Carga los datos desde la API, AHORA aceptando filtros.
              * @param {object} currentFilters - Objeto con los filtros a aplicar.
              */
-            const loadAccounts = async (currentFilters = {}) => {
+            const loadCourses = async (currentFilters = {}) => {
                 isLoadingTable.value = true;
                 try {
                     // Eliminar filtros con valores vacíos para que la URL sea más limpia
@@ -315,42 +353,109 @@
                     );
                     
                     // Se envía el objeto validFilters como 'params' en la petición GET
-                    const response = await api.get('/cuentas/buscar', { 
+                    const response = await api.get(rutaBuscar, { 
                         params: validFilters 
                     }); 
 
-                    accountTypes.value = response.data.data; 
+                    courseTypes.value = response.data.data; 
 
-                } catch (error) {
-                    console.error("Error al cargar las cuentas:", error);
-                    alert('Fallo al cargar las cuentas desde el servidor.');
+                } catch (err) {
+                    error('Error de Servidor', 'No se pudieron obtener los datos de los cursos. Intente de nuevo.');
                 } finally {
                     isLoadingTable.value = false;
                 }
             };
 
 
+
+            /**
+            * Maneja el evento 'add-course' del modal llamando a la API.
+            */   
+            const addCourse = async (newData) => {
+                try {
+
+                    // 1. Llama a la API (POST) para creación
+                    const response = await api.post(rutaCrear, newData);
+
+                    exito('Éxito', 'Curso creado correctamente.');
+
+                    await loadCourses(); 
+
+                    // 4. Cerrar el modal.
+                    closeModal();
+
+                }catch (err) {
+
+                    // Definición de la descripción de error
+                    let mensajeError = 'Error desconocido al procesar la solicitud.';
+
+                    // 1. Manejo de errores de Axios (si existe la respuesta del servidor)
+                    if (err.response) {
+                        // Se usa el mensaje que viene del backend o el estado HTTP
+                        mensajeError = err.response.data.message || `Error ${err.response.status}: ${err.message}`;
+                    } 
+
+                    // 2. Manejo de otros errores (ej. error de red, o si no hay respuesta)
+                    else if (err.message) {
+                        mensajeError = err.message;
+                    }
+
+                    error('Error al crear el curso', mensajeError);
+                }
+            };
+
+
+
             watch(
                 filters, // Monitorea la referencia ref directamente
                 (newFilters) => {
                 
-                // El Código debe ser vacío o contener SOLO números (^\d+$).
-                // (El .trim() maneja la validación de solo espacios, convirtiéndolos en '')
-                const codigoValido = newFilters.codigo.trim() === '' || /^\d+$/.test(newFilters.codigo);
+                // El Nombre debe ser vacío o contener SOLO caracteres permitidos (letras o espacios)
+                const nombreValido = newFilters.nombre.trim() === '' || newFilters.nombre.length > 30;
+                
+                const clasesMinimasValidas = newFilters.cantidad_clases_minima.trim() === '' || /^\d+$/.test(newFilters.cantidad_clases_minima);
+                
+                const clasesMaximasValidas = newFilters.cantidad_clases_maxima.trim() === '' || /^\d+$/.test(newFilters.cantidad_clases_maxima);
+                
 
-                // El Nombre debe ser vacío o contener SOLO caracteres permitidos (letras, espacios, guiones, etc.)
-                const nombreValido = newFilters.nombre.trim() === '' || /^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s\-/]+$/.test(newFilters.nombre);
-                
-                
                 // 2. Compuerta de seguridad: CANCELAR la búsqueda si algún filtro es inválido
                 // Esto captura el estado intermedio inválido (ej. '1A') y lo ignora.
-                if (!codigoValido || !nombreValido) {
+                if (!nombreValido || !clasesMinimasValidas || !clasesMaximasValidas) {
                     // console.log("Búsqueda cancelada: Filtro con formato inválido.");
                     return; 
                 }
 
-                // Llama a la función de carga de cuentas con el valor (el objeto) de los filtros si todo está correcto
-                loadAccounts(newFilters);
+                // 3. Debounce: Limpia el temporizador anterior y establece uno nuevo
+                clearTimeout(searchTimeout);
+
+                searchTimeout = setTimeout(() => {
+
+                    // VALIDACIÓN CRUZADA: Minima > Maxima
+                    /* Nota: Se debe colocar dentro del setTimeout para garantizar que no se dispare cada vez que el usuario
+                    escribe un número (por ejemplo, que con cada número escrito salga el error de que el número de clases mayor 
+                    debe ser mayor que el número de clases menor, a pesar de que el usuario apenas ha comenzado a escribir el
+                    número y no ha terminado, es horrible, por lo que meterlo dentro del retrase de tiempo le da un margen 
+                    mínimo de tiempo al usuario de escribir el número*/
+                    const minVal = newFilters.cantidad_clases_minima ? parseInt(newFilters.cantidad_clases_minima, 10) : null;
+                    const maxVal = newFilters.cantidad_clases_maxima ? parseInt(newFilters.cantidad_clases_maxima, 10) : null;
+
+                    // Condición: Si ambos tienen un valor Y Mínima es mayor que Máxima
+                    if (minVal !== null && maxVal !== null && minVal > maxVal) {
+
+                        // El error solo se muestra después de los 300ms
+                        error('Error de Rango', `La cantidad de clases mínima (${minVal}) no puede ser mayor que la máxima (${maxVal}).`);
+                        return; // Detiene la acción de búsqueda
+
+                    
+                    }else if(minVal > 160 || maxVal > 160){ // No se puede buscar mas de 160 clases
+                        return;
+                    }
+
+
+                    // Llama a la función de carga de cuentas con el valor (el objeto) de los filtros si todo está correcto
+                    loadCourses(newFilters);
+                }, 300); // 300ms de espera para estabilizar los inputs de texto
+                
                 }, 
                 { 
                     deep: true, 
@@ -360,52 +465,63 @@
 
 
             /**
-            * Maneja el evento 'add-account' del modal llamando a la API.
-            */   
-            const addAccount = async (newAccountData) => {
+             * Carga la lista de categorías principales para el select.
+             */
+            const loadCategories = async () => {
                 try {
-                    // 1. Llama a la API (POST) para crear la cuenta.
-                    const response = await api.post('/cuentas/crearCuenta', newAccountData);
-
-                    // Mostrar alerta de éxito al usuario
-                    alert('✅ ¡Cuenta creada con éxito!');
-
-                    await loadAccounts(); 
-
-                    // 4. Cerrar el modal.
-                    closeModal();
-
-                } catch (error) {
-                    console.error("Error al crear la cuenta:", error);
-                    alert(`Fallo al crear la cuenta. Causa: ${error.response?.data?.message || 'Error de servidor.'}`);
+                    const response = await api.get(rutaBuscarCategorias); 
+                    categories.value = response.data.data;
+                } catch (err) {
+                    // En un entorno real, es mejor usar un toast de advertencia/info si esto falla.
+                    error('Error de Servidor', 'No se pudieron cargar las categorías. Intente de nuevo.');
                 }
             };
-
 
             /**
-             * Maneja el evento 'update-account' del modal llamando a la API.
+             * Carga las subcategorías basadas en el ID de la categoría padre.
+             * @param {string|number} parentId - ID de la categoría principal seleccionada.
              */
-            const updateAccount = async (updatedData) => {
+            const loadSubcategories = async (parentId) => {
+                // 1. Resetear el array de subcategorías y el filtro actual
+                subcategories.value = [];
+                filters.value.subcategoria = ''; 
+
+                if (!parentId) {
+                    return;
+                }
+
                 try {
-                // 1. Llama a la API (PUT) para actualizar la cuenta.
-                // La ruta incluye el ID: /api/accounts/:id
-                const response = await api.put(`/cuentas/modificar/${updatedData.id}`, updatedData);
-
-                // Mostrar alerta de éxito al usuario
-                alert('✅ ¡Cuenta modificada con éxito!');
-
-                await loadAccounts(); 
-
-                // 4. Cerrar el modal.
-                closeModal();
-
-
-                } catch (error) {
-                console.error("Error al actualizar la cuenta:", error);
-                alert(`Fallo al actualizar la cuenta. Causa: ${error.response?.data?.message || 'Error de servidor.'}`);
+                    // 2. Llamar a la API con el ID de la categoría padre
+                    const response = await api.get(rutaBuscarCategorias, {
+                        params: { 
+                            padre: parentId // Aquí se envía el ID a la URL como ?padre=X
+                        }
+                    });
+                    subcategories.value = response.data.data;
+                } catch (err) {
+                    error('Error de Servidor', 'No se pudieron cargar las subcategorías.');
                 }
             };
+            
 
+
+            // WATCH para la dependencia Categoría -> Subcategoría
+            // Este watch solo se ejecuta cuando cambia el 'filters.categoria'
+            watch(() => filters.value.categoria, (newCategoryId) => {
+                // Nota: El nombre del filtro es 'categoria' en tu template y filters, no 'categoria_id'
+                loadSubcategories(newCategoryId);
+                
+                // La búsqueda general (loadCourses) se disparará automáticamente 
+                // gracias al watch principal con deep: true, después de 300ms.
+            });
+
+            onMounted(() => {
+                // 1. Cargar la lista inicial de categorías principales (para llenar el primer select)
+                loadCategories(); 
+                
+                // 2. La función loadCourses se llama automáticamente gracias a { immediate: true } 
+                // en el watch principal, por lo que no es necesario llamarla aquí.
+            });
 
 
         // ----------------------------------- Bloque de los filtros ----------------------------------------
@@ -418,195 +534,121 @@
 
 
         // ----------------------------------- Validaciones de los filtros ----------------------------------------
-            /**
-             * Valida que el campo 'Código' solo contenga números (0-9).
-             */
-            const validateCodigo = () => {
-            let value = filters.value.codigo;
-
-            // 1. Manejar solo espacios
-            if (value.trim() === '') {
-            // Si el valor es solo espacios o está vacío, lo forzamos a vacío.
-            filters.value.codigo = '';
-            lastValidCodigo.value = ''; // Resetear el estado válido
-            return; 
-            }
-
-            // El patrón /[^0-9]/ busca cualquier carácter que NO sea un número.
-            const hasInvalidChar = /[^0-9]/.test(value); 
-
-            if (hasInvalidChar) {
-            // 1. Mostrar la alerta
-            alert('Error en Código: Sólo puedes ingresar números.');
-
-            // 2. Revertir el valor del filtro al último estado válido conocido.
-            // Esto hace que el carácter inválido parezca "borrarse" del input al instante, 
-            // pero la búsqueda no se dispara con el valor incorrecto.
-            filters.value.codigo = lastValidCodigo.value;
-
-            } else {
-            // 3. Si es válido, actualizar la variable de estado válido.
-            lastValidCodigo.value = value;
-            }
-            };
 
 
             /**
-             * Valida que el campo 'Nombre' solo contenga letras, espacios, guiones y barras.
+             * Valida que el campo 'nombre' solo contenga letras y espacios.
              */
             const validateNombre = () => {
+
             let value = filters.value.nombre;
 
             // 1. Manejar solo espacios
             if (value.trim() === '') {
-            // Si el valor es solo espacios o está vacío, lo forzamos a vacío.
-            filters.value.nombre = '';
-            lastValidNombre.value = ''; // Resetear el estado válido
-            return; 
+                // Si el valor es solo espacios o está vacío, lo forzamos a vacío.
+                filters.value.nombre = '';
+                lastValidNombre.value = ''; // Resetear el estado válido
+                return; 
             }
 
-            // Patrón: Si contiene algo que NO es una letra (con acentos/ñ), espacio, guión o barra.
-            const hasInvalidChar = /[^a-zA-ZñÑáéíóúÁÉÍÓÚ\s\-/]/.test(value);
+            // Patrón: Si contiene algo que NO es una letra (con acentos/ñ) O espacio.
+            const hasInvalidChar = value.trim().length > 50;
 
-            if (hasInvalidChar) {
-            // 1. Mostrar la alerta
-            alert('Error en Nombre: Sólo puedes ingresar letras, espacios, guiones y barras.');
+                if (hasInvalidChar) {
+                    // 1. Mostrar la alerta
+                    error('Error en el nombre', `Puede ser de hasta 50 caracteres.`);
 
-            // 2. Revertir el valor del filtro al último estado válido conocido.
-            filters.value.nombre = lastValidNombre.value;
+                    // 2. Revertir el valor del filtro al último estado válido conocido.
+                    filters.value.nombre = lastValidNombre.value;
 
-            } else {
-            // 3. Si es válido, actualizar la variable de estado válido.
-            lastValidNombre.value = value;
-            }
+                } else {
+                    // 3. Si es válido, actualizar la variable de estado válido.
+                    lastValidNombre.value = value;
+                }
             };
 
-            // ----------------------------------- Filtro de búsqueda de la cuenta padre ----------------------------------------
-
+        
             /**
-             * Busca cuentas padre en el servidor con debouncing.
-             */
-            const searchParents = () => {
-            /* Se limpiar el timeout anterior para evitar llamadas excesivas (por ejemplo, si escribimos "1" en vez de que se vaya
-            a buscarlo, espera un momento ya que puede escribirse "11" y sólo buscará el texto final que ingresemos */
-            clearTimeout(searchTimeout);
-            parentSearchResults.value = []; // limpiar resultados anteriores
+             * Valida que el campo 'cantidad_clases_minima' solo contenga números (0-9). 
+            */            
+            const validateClasesMinimas = () => {
 
+                let valueMin = filters.value.cantidad_clases_minima;
 
-            // Limpia los espacios al inicio y final, pero mantiene los internos
-            const query = parentSearchQuery.value.trim(); 
-
-            // Si la caja de búsqueda está vacía después de limpiar el trim, salimos.
-            if (query.length < 1) {
-            return;
-            }
-
-
-            // Establecer un nuevo timeout
-            searchTimeout = setTimeout(async () => {
-            try {
-                const query = parentSearchQuery.value;
-                let params = {};
-                
-                // Regex para verificar si SOLO contiene números el input (ej: "123")
-                const isOnlyNumber = /^\d+$/.test(query);
-
-                // Regex para verificar si SOLO contiene letras y espacios (ej: "Activo Corriente")
-                // Incluye letras, espacios y acentos.
-                const isOnlyLettersSpaces = /^[a-zA-Z\sñÑáéíóúÁÉÍÓÚ]+$/.test(query);
-
-                if (isOnlyNumber) {
-                    // Caso 1: Solo Números -> Buscar por Código
-                    params.codigo = query;
-                } else if (isOnlyLettersSpaces) {
-                    // Caso 2: Solo Letras -> Buscar por Nombre
-                    params.nombre = query;
-                } else {
-                    // Caso 3: Alfanumérico o Símbolos -> BUSCAR NADA
-                    console.warn("Búsqueda bloqueada: Se requieren solo números o solo letras.");
-                    parentSearchResults.value = [];
-                    return; // Detiene la ejecución aquí
+                // 1. Manejar solo espacios
+                if (valueMin.trim() === '') {
+                    // Si el valor es solo espacios o está vacío, lo forzamos a vacío.
+                    filters.value.cantidad_clases_minima = '';
+                    lastValidCantidadClasesMinima.value = ''; // Resetear el estado válido
+                    return; 
                 }
 
-                //  Llamada a la API 
-                // Si el backend tiene un endpoint más específico para búsqueda de padres (ej: /BuscarPadres), usarlo.
-                const response = await api.get('/Cuentas/Buscar', { params }); 
+                // El patrón /[^0-9]/ busca cualquier carácter que NO sea un número.
+                const hasInvalidChar = /[^0-9]/.test(valueMin); 
 
-                // Asumiendo que la respuesta es response.data.data
-                parentSearchResults.value = response.data.data;
+                    if (hasInvalidChar) {
+                        // 1. Mostrar la alerta
+
+                        error('Error en la cantidad de clases mínima', `Sólo puedes ingresar números.`);
+
+                        // 2. Revertir el valor del filtro al último estado válido conocido.
+                        // Esto hace que el carácter inválido parezca "borrarse" del input al instante, 
+                        // pero la búsqueda no se dispara con el valor incorrecto.
+                        filters.value.cantidad_clases_minima = lastValidCantidadClasesMinima.value;
+
+                    } else {
+                        // 3. Si es válido, actualizar la variable de estado válido.
+                        lastValidCantidadClasesMinima.value = valueMin;
+                    }
                 
-            } catch (error) {
-                console.error("Error al buscar cuentas padre:", error);
-                parentSearchResults.value = [];
-            }
-            }, 300); // 300ms de retraso (Para lo que se dijo de esperar)
+                // Se valida ahora que no supere la cantidad de clases máxima permitida en el sistema
+                if(valueMin > 160){
+                    error('Error en la cantidad de clases mínima', `La cantidad de clases no puede sobrepasar 160`);
+                    filters.value.cantidad_clases_minima = lastValidCantidadClasesMinima.value;
+                }
+            
             };
 
 
             /**
-            * Selecciona una cuenta de los resultados del autocomplete.
-            * @param {object} account - La cuenta seleccionada (debe tener id, codigo, nombre).
-            */
-            const selectParent = (account) => {
-            // Establecer la cuenta seleccionada para mostrar el tag
-            selectedParent.value = { 
-            id: account.id, 
-            codigo: account.codigo, 
-            nombre: account.nombre 
-            };
+             * Valida que el campo 'cantidad_clases_maxima' solo contenga números (0-9). 
+            */            
+            const validateClasesMaximas = () => {
 
-            // Limpiar el input y los resultados del autocomplete
-            parentSearchQuery.value = '';
-            parentSearchResults.value = [];
+                let valueMax = filters.value.cantidad_clases_maxima;
 
-            // Actualizar el filtro 'padre' que está siendo monitoreado por el watcher principal
-            filters.value.padre = account.id;
+                // 1. Manejar solo espacios
+                if (valueMax.trim() === '') {
+                    // Si el valor es solo espacios o está vacío, lo forzamos a vacío.
+                    filters.value.cantidad_clases_maxima = '';
+                    lastValidCantidadClasesMaxima.value = ''; // Resetear el estado válido
+                    return; 
+                }
 
-            // El watcher de 'filters' se encargará de llamar a loadAccounts
-            };
+                // El patrón /[^0-9]/ busca cualquier carácter que NO sea un número.
+                const hasInvalidChar = /[^0-9]/.test(valueMax); 
 
+                if (hasInvalidChar) {
+                    // 1. Mostrar la alerta
 
-            /**
-             * Limpia el filtro de cuenta padre.
-             */
-            const clearParentFilter = () => {
-            selectedParent.value = { id: null, codigo: '', nombre: '' };
-            filters.value.padre = '';
-            };
+                    error('Error en la cantidad de clases máxima', `Sólo puedes ingresar números.`);
 
+                    // 2. Revertir el valor del filtro al último estado válido conocido.
+                    // Esto hace que el carácter inválido parezca "borrarse" del input al instante, 
+                    // pero la búsqueda no se dispara con el valor incorrecto.
+                    filters.value.cantidad_clases_maxima = lastValidCantidadClasesMaxima.value;
 
+                } else {
+                    // 3. Si es válido, actualizar la variable de estado válido.
+                    lastValidCantidadClasesMaxima.value = valueMax;
+                }
 
-            /**
-             * Cambia el estado de una cuenta (activo/inactivo) llamando a la API.
-             * @param {object} account - El objeto de cuenta a modificar.
-             */
-            const toggleStatus = async (account) => {
+                // Se valida ahora que no supere la cantidad de clases máxima permitida en el sistema
+                if(valueMax > 160){
+                    error('Error en la cantidad de clases máxima', `La cantidad de clases no puede sobrepasar 160`);
+                    filters.value.cantidad_clases_maxima = lastValidCantidadClasesMaxima.value;
+                }
 
-            // Revisar en el frontend que la cuenta no sea de nivel 1, aunque el botón esté deshabilitado.
-            if (account.nivel === 1) {
-
-            console.warn("Intento de modificar una cuenta de Nivel 1 bloqueado");          
-            alert("Las cuentas de Nivel 1 no pueden ser activadas/desactivadas.");
-            return; // Detiene la ejecución si es Nivel 1
-            }
-
-            const newStatus = !account.estado;
-
-            try {
-
-            await api.put(`/Cuentas/CambiarEstado/${account.id}`, { estado: newStatus });
-
-            // Si la llamada es exitosa, actualiza la variable local para que Vue refresque el DOM.
-            account.estado = newStatus;
-
-            console.log(`Estado de cuenta ID ${account.id} cambiado a: ${newStatus ? 'Activo' : 'Inactivo'}`);
-
-            } catch (error) {
-            console.error("Error al cambiar el estado:", error);
-            // Mostrar un mensaje de error más específico si es posible
-            const errorMessage = error.response?.data?.message || 'Fallo al cambiar el estado de la cuenta. Intente de nuevo.';
-            alert(errorMessage);
-            }
             };
 
 
@@ -616,30 +658,31 @@
              * @returns {string} La fecha y hora formateadas.
              */
             const formatDateTime = (isoString) => {
-            if (!isoString) return ''; // Manejar valores nulos o vacíos
 
-            try {
-            const date = new Date(isoString);
+                if (!isoString) return ''; // Manejar valores nulos o vacíos
 
-            // Opciones de formato: Día/Mes/Año y Hora:Minutos:Segundos
-            const options = {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false // Formato 24 horas
-            };
+                try {
+                    const date = new Date(isoString);
 
-            // Se puede usar 'es-ES' (España) o 'es-MX' (México)
-            // También se puede usar "undefined" para usar la configuración regional del navegador.
-            return date.toLocaleString('es-ES', options); 
+                    // Opciones de formato: Día/Mes/Año y Hora:Minutos:Segundos
+                    const options = {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false // Formato 24 horas
+                    };
 
-            } catch (e) {
-            console.error("Error al formatear la fecha:", e);
-            return 'Fecha Inválida';
-            }
+                    // Se puede usar 'es-ES' (España) o 'es-MX' (México)
+                    // También se puede usar "undefined" para usar la configuración regional del navegador.
+                    return date.toLocaleString('es-ES', options); 
+
+                } catch (err) {
+                    error('Error al formatear la fecha', `${err}`);
+                    return 'Fecha Inválida';
+                }
             };
 
 
@@ -649,76 +692,45 @@
                 // RESTABLECER FILTROS: Asigna una COPIA del estado inicial al valor del ref
                 filters.value = { ...initialFilters }; 
 
-                clearParentFilter();
-
                 // RECARGAR TABLA
-                loadAccounts();
+                loadCourses();
             };
 
 
 
 
 
-      // ----------------------------------- Modal ----------------------------------------
-        /**
-        * Abre el modal y lo configura en modo Creación o Edición.
-        * @param {object|null} account - El objeto de cuenta para editar, o null para crear.
-        */
-        const openModal = (account = null) => {
+      // ----------------------------------- Modals ----------------------------------------
 
-          /* En modo edición se tendría el objeto de la cuenta (es decir, el objeto del array), y se usará para crear una copia
-          y usar ésa copia en el modal (ya que asi, cualquier cosa que se modifique afecta a los inputs, si enviamos el bjeto
-          original significa que cualquier cambio sobre este se vería reflejado en la tabla, y solamente debe hacerse los cambios
-          cuando el usuario de click en el botón de "Guardar cambios") */
-          if (account) { 
-              
-              // Buscar y adjuntar la información del padre
-              let parentData = {};
+            // ----------------------------------- Creación ----------------------------------------
 
-              if (account.padreId) {
-                  // Buscar el objeto completo de la cuenta padre en la lista completa (accountTypes)
-                  const parentAccount = accountTypes.value.find(a => a.id === account.padreId);
+                /**
+                * Abre el modal y lo configura en modo Creación.
+                * @param {object|null} account - El objeto de cuenta para editar, o null para crear.
+                */
+                const openModal = () => {
 
-                  if (parentAccount) {
-                      // Si se encuentra, crear un objeto con la información del padre
-                      parentData = {
-                          parentCode: parentAccount.codigo,
-                          parentName: parentAccount.nombre,
-  
-                      };
-                  }
-              }
+                    // Modo Creación
+                    courseToEdit.value = null;
 
-              // Crear el objeto que se enviará al modal.
-              // Contiene los datos de la cuenta hija, MÁS la data del padre.
-              accountToEdit.value = { 
-                  ...account, 
-                  ...parentData // Adjunta parentCode, parentName, parentType (si existen)
-              };
+                    // En cualquier caso, el modal debe hacerse visible
+                    isModalVisible.value = true;
 
-          } else { // En modo creación el valor del objeto de la cuenta es null, ya que no hay un objeto a editar
-
-              // Modo Creación
-              accountToEdit.value = null;
-          }
-
-          // En cualquier caso, el modal debe hacerse visible
-          isModalVisible.value = true;
-
-        };
+                };
 
 
-        /**
-        * Cierra el modal y resetea el estado de edición.
-        */
-        const closeModal = () => {
+                /**
+                * Cierra el modal y resetea el estado de edición.
+                */
+                const closeModal = () => {
 
-          // Modal oculto
-          isModalVisible.value = false;
+                    // Modal oculto
+                    isModalVisible.value = false;
 
-          // Sin objeto a editar
-          accountToEdit.value = null;
-        };
+                    // Sin objeto a editar
+                    courseToEdit.value = null;
+                };
+
 
 
 </script>
@@ -727,18 +739,116 @@
 
 
 <style scoped>
-.account-type-manager {
-  padding: 20px;
-}
+
+    .account-type-manager {
+    padding: 20px;
+    }
+    
+
+/* ------------------------- Botón de agregar ------------------------*/
+
+    .btn-outline-pink {
+        /* Color de borde y texto por defecto */
+        color: #e24cd6; /* Un rosa oscuro para el texto */
+        border-color: #e24cd6; /* El borde de color rosa */
+    }
+
+    .btn-outline-pink:hover,
+    .btn-outline-pink:focus,
+    .btn-outline-pink:active {
+        /* Color de fondo y borde al pasar el ratón o hacer clic */
+        background-color: #db5cd1;
+        border-color: #d348c7;
+        color: #ffffff; /* Texto blanco para contraste */
+        box-shadow: 0 0 0 0.25rem rgba(255, 105, 180, 0.5); /* Sombra de enfoque rosa */
+    }
 
 
 
+/* ------------------------- Mensajes ------------------------*/
 
-/* La tabla*/
+
+    /* --- Estilo para el contador de resultados (Discreto y a la izquierda) --- */
+    .results-summary {
+        /* Muestra como un bloque pero que solo ocupa el ancho del contenido */
+        display: inline-block;
+        
+        /* Fondo: Un verde muy claro, sutil */
+        background-color: #f2c4fc; 
+        /* Texto: Un verde más oscuro para legibilidad */
+        color: #7426bd; 
+
+        /* Borde */
+        border: 1px solid #8001c9;
+        border-radius: 4px;
+        
+        /* Relleno interno para que se vea como un "tag" o pastilla */
+        padding: 5px 10px; 
+        
+        font-size: 0.9rem; /* Letra un poco más pequeña */
+        font-weight: 500; /* Hace que el texto resalte ligeramente */
+    }
+
+
+    /* --- Estilo para el mensaje de "Sin Resultados" (Badge Central) --- */
+    .no-results-center-badge {
+        /* Estilos base de una pastilla o badge */
+        display: inline-block;
+        padding: 15px 30px;
+        border-radius: 12px;
+        
+        /* Colores llamativos de advertencia */
+        background-color: #ffedcc; /* Naranja/Amarillo muy claro */
+        color: #cc8400; /* Texto naranja oscuro */
+        border: 1px solid #ffdc9c; 
+        
+        /* Fuente */
+        font-size: 1.15rem; /* Más grande */
+        font-weight: 600; /* Seminegrita */
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Sombra sutil para destacarse */
+    }
+
+    /* Estilo para el texto de sugerencia dentro del badge */
+    .no-results-center-badge p {
+        font-size: 0.9rem;
+        font-weight: 400;
+    }
+
+
+
+/* ------------------------- La tabla ------------------------*/
+
+    /* --- Estilos para la Tarjeta Contenedora de la Tabla --- */
+    .table-card-wrapper {
+        /* Darle apariencia de tarjeta */
+        border: 1px solid #e9ecef; /* Borde muy claro */
+        border-radius: 8px; /* Bordes redondeados */
+        background-color: #fff; /* Fondo blanco */
+        margin-bottom: 20px; /* Margen debajo */
+        
+        /* Muy importante: el overflow debe estar visible para que el box-shadow no se recorte */
+        overflow: visible;
+    }
+
+    /* El table-responsive puede necesitar un ligero ajuste */
+    .table-card-wrapper .table-responsive {
+        /* El table-responsive ya tiene el overflow-x: auto, pero debe estar dentro del wrapper */
+        border-radius: 8px;
+        overflow-x: auto; 
+    }
+
+
+    .table-custom {
+        margin-bottom: 0; 
+    }
+
+    .table-custom td, th  {
+        vertical-align: middle; /* Centrar el contenido verticalmente de cada celda*/
+    }
 
     .header-personalizado th{
         /* Color de fondo personalizado (ej. un tono de morado) */
-        background-color: #4e4bf7; 
+        background-color: #7b19a8; 
         /* Color del texto */
         color: #ffffff; 
     }
@@ -762,67 +872,71 @@
     }
 
 
+    /* Estilos para el control de ancho de las columnas */
+    /* Nota: Asegurarse de que el total de anchos sea 100% o la suma de min-width no exceda el ancho de la pantalla */
 
-/* Estilos para el filtro de búsqueda de la cuenta padre */
+        /* Columna Nombre */
+        .col-nombre {
+            width: 10%;
+            min-width: 130px; 
+            max-width: 250px;
+        }
 
-    /* Contenedor relativo para el dropdown de autocomplete */
-    .filter-parent {
-        position: relative;
-    }
+        /* Columna Categoría */
+        .col-categoria {
+            width: 24%;
+            min-width: 140px; /* Asegura que el nombre sea legible */
+            max-width: 250px; /* Evita que ocupe todo el ancho en pantallas gigantes */
+        }
 
-/* Estilos para el dropdown de resultados */
-    .autocomplete-results {
-        position: absolute;
-        z-index: 10; /* Asegura que esté por encima de otros elementos */
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        border: 1px solid #ccc;
-        background: white;
-        max-height: 200px;
-        overflow-y: auto;
-        width: 100%;
-        left: 0;
-        top: 100%; /* Justo debajo del input */
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        border-top: none;
-    }
+        /* Columna Sub-Categoría */
+        .col-subcategoria {
+            width: 18%;
+            min-width: 100px;
+            max-width: 250px; /* Evita que ocupe todo el ancho en pantallas gigantes */
+        }
 
-    .autocomplete-results li {
-        padding: 8px 10px;
-        cursor: pointer;
-        border-bottom: 1px solid #eee;
-    }
+        /* Columna Total */
+        .col-total {
+            width: 10%;
+            min-width: 130px; /* Asegura que el nombre sea legible */
+            max-width: 250px; /* Evita que ocupe todo el ancho en pantallas gigantes */
+        }
 
-    .autocomplete-results li:hover {
-        background-color: #f0f0f0;
-    }
+    
+        /* Columna Fecha creación */
+        .col-fecha_creacion {
+            width: 10%;
+            min-width: 170px; /* Asegura que el nombre sea legible */
+            max-width: 250px; /* Evita que ocupe todo el ancho en pantallas gigantes */
+        }
 
-/* Estilos para la etiqueta de la cuenta seleccionada */
-    .selected-parent-tag {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 5px 10px;
-        margin-top: 5px;
-        background-color: #e9ecef; /* Color gris claro */
-        border-radius: 4px;
-        font-size: 0.9em;
-        border: 1px solid #dee2e6;
-    }
+        /* Columna Ultima fecha de actualización */
+        .col-fecha_actualizacion {
+            width: 10%;
+            min-width: 170px; /* Asegura que el nombre sea legible */
+            max-width: 250px; /* Evita que ocupe todo el ancho en pantallas gigantes */
+        }
 
-    .btn-clear-parent {
-        background: none;
-        border: none;
-        color: #dc3545; /* Color rojo de Bootstrap */
-        font-weight: bold;
-        cursor: pointer;
-        margin-left: 10px;
-        padding: 0 5px;
-    }
-    .btn-clear-parent:hover {
-        color: #c82333;
-    }
+        /* Columna Permite grupos */
+        .col-permite_grupos {
+            width: 6%;
+            min-width: 140px; /* Asegura que el nombre sea legible */
+            max-width: 250px; /* Evita que ocupe todo el ancho en pantallas gigantes */
+        }
+
+        /* Columna Estado */
+        .col-estado {
+            width: 6%;
+            min-width: 100px; /* Asegura que el nombre sea legible */
+            max-width: 200px; /* Evita que ocupe todo el ancho en pantallas gigantes */
+        }
+
+        /* 4. Columna Acciones */
+        .col-acciones {
+            width: 6%; 
+            min-width: 100px; /* CLAVE: El ancho mínimo debe ser suficiente para tus 3 botones */
+        }
 
 
 /* Estilos para el contenedor de filtros */

@@ -174,6 +174,21 @@ const Plan_Cuenta = sequelize.define('Plan_Cuenta',{
 // Asociaciones (para relacionar las claves foráneas con sus tablas, y asi obtener también datos de esas tablas)
 Plan_Cuenta.associate = (models) => {
 
+    /* La Relación "Hijo a Padre" (belongsTo). Una cuenta pertenece a su cuenta padre. Es el lado del hijo y le dice a
+    Sequelize como encontrar al padre */
+    Plan_Cuenta.belongsTo(Plan_Cuenta, {
+        foreignKey: 'id_padre',
+        as: 'cuentaPadre', // (La cuenta padre)
+    });
+
+    /* La Relación "Padre a Hijo" (hasMany). Una cuenta padre tiene muchas cuentas hijas. Es el lado del padre y le dice a 
+    Sequelize como encontrar a los hijos */
+    Plan_Cuenta.hasMany(Plan_Cuenta, {
+        foreignKey: 'id_padre',
+        as: 'cuentasHijas', // (las cuentas hijas de una cuenta)
+    });
+
+
     // Una cuenta solo puede tener una naturaleza de "naturaleza"
     Plan_Cuenta.belongsTo(models.Naturaleza, {
         foreignKey: 'id_naturaleza', // La FK que está en ESTA MISMA tabla (en este caso que es el lado muchos)
@@ -185,14 +200,6 @@ Plan_Cuenta.associate = (models) => {
     Plan_Cuenta.belongsTo(models.Clasificacion, {
         foreignKey: 'id_clasificacion', // La FK que está en ESTA MISMA tabla (en este caso que es el lado muchos)
         as: 'clasificacion' // Usamos éste prefijo para obtener los datos del otro modelo (la clasificación de una cuenta)
-    });
-
-
-    // Relación de Jerarquía (Recursividad)
-    // Una Cuenta pertenece a una Cuenta Padre (que también es una Cuenta)
-    Plan_Cuenta.belongsTo(models.Plan_Cuenta, {
-        foreignKey: 'id_padre', // La FK que está en ESTA MISMA tabla (en este caso que es el lado muchos)
-        as: 'cuentaPadre'// Usamos éste prefijo para obtener los datos del otro modelo (la cuenta padre de una cuenta)
     });
 
 
