@@ -11,14 +11,15 @@ const Estado_Docente_Model = require('../Models/estado_docente');
 const { validarExistencia, validarIdNumerico, validarSoloTexto, validarSoloNumeros, parseAndValidateDate} = require('../Utils/validators');
 
 // Se importan las funciones comúnes
-const { capitalizeFirstLetter} = require('../Utils/funciones');
+const { capitalizeFirstLetter, traducirMes} = require('../Utils/funciones');
 
 
 // Se importa la clase "Op" que es necesaria para las operaciones de las clausulas WHERE de las consultas
-const { Op } = require('sequelize'); 
+const { Op, fn, col } = require('sequelize'); 
 
 class DocenteService {
 
+// -------------------------- Creación ------------------------------------
 
     // Se crea un nuevo docente
     async crearDocente({id}) {
@@ -71,6 +72,7 @@ class DocenteService {
                 
     }
 
+// -------------------------- Modificación ------------------------------------
 
     async cambiarEstadoDocente(id, nuevoEstado) {
 
@@ -116,6 +118,8 @@ class DocenteService {
     }
 
 
+// -------------------------- Obtención ------------------------------------
+
     // Se obtiene un solo docente por el id
     async obtenerDocentePorId(id) {
 
@@ -155,8 +159,296 @@ class DocenteService {
     }
 
 
-    // Permite buscar cuentas basandose en filtros
+    // Permite buscar docentes basandose en filtros
     async buscarDocentes(criteriosBusqueda = {}) {
+        
+
+        const {docenteWhere, entidadWhere} = this.generarWhereClause(criteriosBusqueda);
+
+
+        // --- 3. Ejecutar la Consulta con Cláusulas WHERE separadas ---
+        const docentes = await Docente_Model.findAll({
+            // Aplicamos los filtros directos de la tabla Estudiante
+            where: docenteWhere, 
+            
+            include: [ // Define qué otras tablas deben unirse a la consulta y qué campos de esas tablas deben traerse.
+                { 
+                    association: 'entidad', // Realiza el JOIN desde "estudiante" a "entidad", basándose en la asociación Estudiante.belongsTo(Entidad, { as: 'entidad' }).
+
+                    // APLICAMOS LOS FILTROS DE ENTIDAD AQUÍ
+                    where: entidadWhere, // Usa el objeto where creado dinámicamente (es decir, se aplican los filtros de la tabla "entidad")
+                    required: Object.keys(entidadWhere).length > 0, /* Sequelize por defecto realiza un LEFT OUTER JOIN . Trae todos los estudiantes que cumplan los 
+                                                                    filtros de Estudiante, e incluye los datos de la Entidad si existen. El "required: true" hace que
+                                                                    se convierta a "INNER JOIN", haciendo que se traigan solo aquellos datos que cumplan las condiciones
+                                                                    indicadas, por lo que al decir "required: Object.keys(entidadWhere).length > 0", se está diciendo que
+                                                                    si hay filtros de entidad, que se ap´lique un INNER JOIN.*/
+                            
+                    include: [ /* Inclusión Anidada: Le dice a Sequelize que, dentro de la tabla "entidad", debe realizar otro JOIN para traer el 
+                                prefijo asociado (Entidad.belongsTo(Prefijo_Identificacion, { as: 'prefijo' })).
+
+                                Resultado: Los datos del prefijo aparecerán anidados dentro del objeto entidad en el JSON final.*/
+                        { association: 'prefijo', attributes: ['id_prefijo', 'letra_prefijo'] }
+                    ],
+                    // Atributos de la entidad que queremos traer:
+                    attributes: ['numero_identificacion', 'nombre', 'apellido', 'estado', 'telefono', 'email'] 
+                },
+                { 
+                    association: 'estado_docente', 
+                    attributes: ['id_estado_docente', 'nombre', 'descripcion', 'permite_asignacion', 'aplica_pago'] 
+                }
+            ],
+
+            // Mantenemos el orden según las actualizaciones de la tabla "estudiante"
+            order: [ ['updatedAt', 'DESC'] ]
+        });
+
+
+        // --- Se devuelven los resultados formateados ---
+        return docentes.map(instancia => DocenteService.formatearDocente(instancia));
+    }
+
+
+    // Obtiene el conteo por mes de docentes, lo que es necesario para los gráficos
+    async obtenerConteoPorMes(criteriosBusqueda = {}) {
+
+        const concepto = criteriosBusqueda.concepto ?? null;
+
+        // Validamos que existan todos los datos
+        validarExistencia(concepto, "concepto", true);
+
+        const conceptoLimpio = String(concepto).trim().toLowerCase();
+        // Se valida que el concepto sólo tenga texto 
+        validarSoloTexto(concepto, "El concepto debe contener solo texto y espacios en blanco.");
+
+        let columna = "";
+
+        switch (conceptoLimpio) {
+            case "creados":
+                columna = "Docente.createdAt";
+                break;
+            case "modificados":
+                columna = "Docente.updatedAt";
+                break;
+            default:
+                columna = "Docente.createdAt";
+        }
+        
+        const {docenteWhere, entidadWhere} = this.generarWhereClause(criteriosBusqueda);
+
+
+        // Se agregar el filtro de "Realmente Modificados"
+        if (conceptoLimpio === "modificados") {
+        
+            const whereModificado = { [Op.gt]: col('Docente.createdAt') }; 
+            
+            if (docenteWhere.updatedAt) {
+                
+                docenteWhere.updatedAt = {
+                    [Op.and]: [
+                        docenteWhere.updatedAt, 
+                        whereModificado            
+                    ]
+                };
+            } else {
+
+                docenteWhere.updatedAt = whereModificado;
+            }
+        }
+
+        
+        // Definición de las expresiones SQL para Agregación
+        const atributosDeAgregacion = [
+            // A) Conteo: COUNT(Docente.id_estudiante)
+            // Nota: EL nombre de la tabla debe coincidir con el del modelo
+            [fn('COUNT', col('Docente.id_docente')), 'conteo'],
+            
+            // B) Etiqueta de Mes: TO_CHAR("createdAt", 'Month YYYY')
+            [
+                fn('TO_CHAR', col(columna), 'Month YYYY'), 
+                'mes'
+            ],
+            
+            // C) Ordenamiento Técnico: DATE_TRUNC('month', "createdAt")
+            [fn('DATE_TRUNC', 'month', col(columna)), 'fecha_orden']
+        ];
+
+
+        // Ejecutar la Consulta de Agregación
+        const resultadosAgregados = await Docente_Model.findAll({
+            
+            // Aplicamos los filtros directos de la tabla "Docente"
+            where: docenteWhere, 
+            
+            attributes: atributosDeAgregacion,
+            
+            include: [
+                { 
+                    association: 'entidad', // JOIN con la tabla de Entidad
+                    
+                    // Aplicamos los filtros de ENTIDAD generados
+                    where: entidadWhere, 
+                    
+                    // Si hay filtros en la Entidad, forzamos INNER JOIN (required: true).
+                    required: Object.keys(entidadWhere).length > 0, 
+                    
+                    // No necesitamos seleccionar atributos de la entidad ni inclusiones anidadas aquí.
+                    attributes: [] 
+                }
+            ],
+
+            // Agrupar por las expresiones de fecha
+            group: [
+                fn('TO_CHAR', col(columna), 'Month YYYY'),
+                fn('DATE_TRUNC', 'month', col(columna))
+            ],
+            
+            // Ordenar por el valor numérico de la fecha truncada para orden cronológico
+            order: [
+                [fn('DATE_TRUNC', 'month', col(columna)), 'ASC'] 
+            ],
+            
+            // Configuraciones necesarias para consultas con GROUP BY y JOIN:
+            raw: true,
+            subQuery: false,
+            duplicating: false
+        });
+
+        return resultadosAgregados.map(item => ({
+            mes: traducirMes(item.mes), 
+            conteo: parseInt(item.conteo, 10)
+        }));
+    }
+
+    
+
+    // Obtiene la cantidad total de docentes según cada estado para los gráficos
+    async obtenerEstadosTotales(criteriosBusqueda = {}) {
+        
+        const { docenteWhere, entidadWhere } = this.generarWhereClause(criteriosBusqueda);
+
+    
+        const resultadosAgregados = await Docente_Model.findAll({
+    
+            // Aplicamos los filtros directos de la tabla Estudiante
+            where: docenteWhere, 
+            
+            // Atributos a seleccionar
+            attributes: [
+                // A) Conteo total de docentes por grupo (estado)
+                [fn('COUNT', col('Docente.id_docente')), 'conteo']
+                
+            ],
+            
+            // Inclusión de las tablas necesarias (JOINs)
+            include: [
+                { 
+                    // JOIN con la tabla de Entidad (para aplicar filtros de nombre, apellido, etc.)
+                    association: 'entidad', 
+                    where: entidadWhere, 
+                    // Forzamos INNER JOIN si hay filtros de entidad para que el conteo solo incluya los que cumplen
+                    required: Object.keys(entidadWhere).length > 0, 
+                    attributes: [] // No necesitamos datos de Entidad en el resultado final
+                },
+                { 
+                    // JOIN con la tabla Estado_Docente (para obtener el nombre del estado para la agrupación)
+                    association: 'estado_docente', // Usa el alias definido en la asociación ('Estado_Docente')
+                    attributes: ['nombre'] // Solo necesitamos el nombre del estado
+                }
+            ],
+
+            // 3. Agrupación: Agrupamos por el nombre del estado académico
+            group: [
+                // Referenciamos la columna 'nombre' a través de su alias de asociación (es decir, "estado_")
+                col('estado_docente.nombre') 
+            ],
+            
+            // Ordenar por el nombre del estado académico
+            order: [
+                [col('estado_docente.nombre'), 'ASC'] 
+            ],
+            
+            // Configuraciones necesarias para GROUP BY y JOIN:
+            raw: true,
+            subQuery: false,
+            duplicating: false
+        });
+
+        // Formatear y Devolver el resultado
+        // El resultado de la consulta será algo como: 
+        // [{ conteo: '150', estado_entidad: true }, { conteo: '50', estado_entidad: false }]
+        
+        // Mapeamos el resultado a un objeto simple para el gráfico:
+        const estadosTotales = {}; 
+        
+        resultadosAgregados.forEach(item => {
+            // La clave del nombre del estado en el objeto 'raw' de Sequelize se construye con el alias de la asociación
+            const nombreEstado = item['estado_docente.nombre'];
+            const conteoNumerico = parseInt(item.conteo, 10);
+            
+            if (nombreEstado) {
+                // Utilizamos el nombre del estado como clave en el objeto final
+                estadosTotales[nombreEstado] = conteoNumerico;
+            }
+        });
+
+        // Ejemplo de retorno: { 'Activo': 150, 'Retirado': 20, 'Moroso': 5 }
+        return estadosTotales;
+
+    }
+    
+
+// -------------------------- Auxiliar ------------------------------------
+
+    // Esta función complementa a las funciones "buscarDocentes" y "obtenerDocentePorId", y sirve para formatear las claves que le llegará al usuario
+    static formatearDocente(docenteInstance) {
+
+        // Si no existe la entidad se devuelve null
+        if (!docenteInstance) return null;
+
+        const docente = docenteInstance.toJSON(); 
+        
+
+        // Función auxiliar para convertir booleanos a "Si"/"No"
+        // Nota: si recibe "undefined" sería: "undefined === true" es false
+        const boolToText = (value) => value === true ? "Si" : "No";
+
+        return {
+            id: docente.id_docente, 
+
+            entidad: {
+                numero_identificacion: docente.entidad?.numero_identificacion ?? null,
+                nombre: docente.entidad?.nombre ? capitalizeFirstLetter(docente.entidad.nombre.toString()) : null,
+                apellido: docente.entidad?.apellido ? capitalizeFirstLetter(docente.entidad.apellido.toString()) : null,
+                telefono: docente.entidad?.telefono ?? null,
+                email: docente.entidad?.email ?? null,
+                numero_identificacion: docente.entidad?.numero_identificacion ?? null,
+
+                estado: docente.entidad?.estado ?? null,
+
+                prefijo: {
+                    letra_prefijo: docente.entidad.prefijo.letra_prefijo?.toString() ?? null,
+                }
+            },
+
+            estado: {
+                id: docente.estado_docente?.id_estado_docente ?? null,
+                nombre: docente.estado_docente?.nombre ?? null,
+                descripcion: docente.estado_docente?.descripcion ?? null,
+
+                // Si no existe se envía "undefined"
+                permite_asignacion: boolToText(docente.estado_docente?.permite_asignacion),
+                aplica_pago: boolToText(docente.estado_docente?.aplica_pago)
+            },
+       
+            fechaCreacion: docente.createdAt,
+            fechaActualizacion: docente.updatedAt 
+        };
+
+    }
+
+
+    // Función Auxiliar que genera la "whereClause" sin ejecutar la consulta
+    generarWhereClause(criteriosBusqueda = {}) {
         
         // Objeto para condiciones en la tabla docente (base)
         const docenteWhere = {};
@@ -326,95 +618,8 @@ class DocenteService {
             }
 
 
-
-            // --- 3. Ejecutar la Consulta con Cláusulas WHERE separadas ---
-            const docentes = await Docente_Model.findAll({
-                // Aplicamos los filtros directos de la tabla Estudiante
-                where: docenteWhere, 
-                
-                include: [ // Define qué otras tablas deben unirse a la consulta y qué campos de esas tablas deben traerse.
-                    { 
-                        association: 'entidad', // Realiza el JOIN desde "estudiante" a "entidad", basándose en la asociación Estudiante.belongsTo(Entidad, { as: 'entidad' }).
-
-                        // APLICAMOS LOS FILTROS DE ENTIDAD AQUÍ
-                        where: entidadWhere, // Usa el objeto where creado dinámicamente (es decir, se aplican los filtros de la tabla "entidad")
-                        required: Object.keys(entidadWhere).length > 0, /* Sequelize por defecto realiza un LEFT OUTER JOIN . Trae todos los estudiantes que cumplan los 
-                                                                        filtros de Estudiante, e incluye los datos de la Entidad si existen. El "required: true" hace que
-                                                                        se convierta a "INNER JOIN", haciendo que se traigan solo aquellos datos que cumplan las condiciones
-                                                                        indicadas, por lo que al decir "required: Object.keys(entidadWhere).length > 0", se está diciendo que
-                                                                        si hay filtros de entidad, que se ap´lique un INNER JOIN.*/
-                               
-                        include: [ /* Inclusión Anidada: Le dice a Sequelize que, dentro de la tabla "entidad", debe realizar otro JOIN para traer el 
-                                    prefijo asociado (Entidad.belongsTo(Prefijo_Identificacion, { as: 'prefijo' })).
-
-                                    Resultado: Los datos del prefijo aparecerán anidados dentro del objeto entidad en el JSON final.*/
-                            { association: 'prefijo', attributes: ['id_prefijo', 'letra_prefijo'] }
-                        ],
-                        // Atributos de la entidad que queremos traer:
-                        attributes: ['numero_identificacion', 'nombre', 'apellido', 'estado', 'telefono', 'email'] 
-                    },
-                    { 
-                        association: 'estado_docente', 
-                        attributes: ['id_estado_docente', 'nombre', 'descripcion', 'permite_asignacion', 'aplica_pago'] 
-                    }
-                ],
-
-                // Mantenemos el orden según las actualizaciones de la tabla "estudiante"
-                order: [ ['updatedAt', 'DESC'] ]
-            });
-
-
-        // --- Se devuelven los resultados formateados ---
-        return docentes.map(instancia => DocenteService.formatearDocente(instancia));
-    }
-    
-
-    // Esta función complementa a las funciones "buscarDocentes" y "obtenerDocentePorId", y sirve para formatear las claves que le llegará al usuario
-    static formatearDocente(docenteInstance) {
-
-        // Si no existe la entidad se devuelve null
-        if (!docenteInstance) return null;
-
-        const docente = docenteInstance.toJSON(); 
-        
-
-        // Función auxiliar para convertir booleanos a "Si"/"No"
-        // Nota: si recibe "undefined" sería: "undefined === true" es false
-        const boolToText = (value) => value === true ? "Si" : "No";
-
-        return {
-            id: docente.id_docente, 
-
-            entidad: {
-                numero_identificacion: docente.entidad?.numero_identificacion ?? null,
-                nombre: docente.entidad?.nombre ? capitalizeFirstLetter(docente.entidad.nombre.toString()) : null,
-                apellido: docente.entidad?.apellido ? capitalizeFirstLetter(docente.entidad.apellido.toString()) : null,
-                telefono: docente.entidad?.telefono ?? null,
-                email: docente.entidad?.email ?? null,
-                numero_identificacion: docente.entidad?.numero_identificacion ?? null,
-
-                estado: docente.entidad?.estado ?? null,
-
-                prefijo: {
-                    letra_prefijo: docente.entidad.prefijo.letra_prefijo?.toString() ?? null,
-                }
-            },
-
-            estado: {
-                id: docente.estado_docente?.id_estado_docente ?? null,
-                nombre: docente.estado_docente?.nombre ?? null,
-                descripcion: docente.estado_docente?.descripcion ?? null,
-
-                // Si no existe se envía "undefined"
-                permite_asignacion: boolToText(docente.estado_docente?.permite_asignacion),
-                aplica_pago: boolToText(docente.estado_docente?.aplica_pago)
-            },
-       
-            fechaCreacion: docente.createdAt,
-            fechaActualizacion: docente.updatedAt 
-        };
-
-    }
+        return {docenteWhere, entidadWhere};
+    }   
 
 
 }

@@ -187,6 +187,15 @@ CREATE TABLE estado_curso (
 ); 
 
 
+-- 1.24. MODALIDAD_CLASE
+CREATE TABLE modalidad_clase (
+    id_modalidad SERIAL PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL,
+    descripcion VARCHAR(100) NOT NULL,
+    UNIQUE (nombre)
+);
+
+
 
 
 
@@ -239,7 +248,7 @@ CREATE TABLE docente (
 CREATE TABLE proveedor (
     "id_proveedor" INT PRIMARY KEY REFERENCES entidad(id_entidad),
     "id_tipo_proveedor" INT REFERENCES tipo_proveedor(id_tipo_proveedor),
-    "estado" BOOLEAN DEFAULT TRUE,
+    "id_estado_proveedor" INT REFERENCES estado_proveedor(id_estado_proveedor),
 	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
 	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
 );
@@ -282,6 +291,28 @@ CREATE TABLE bloque_horario (
 );
 
 
+-- Tabla: PERIODO
+-- Define los ciclos académicos (Ej. '2025-I', 'Verano 2026').
+CREATE TABLE periodo (
+    "id_periodo" SERIAL PRIMARY KEY,
+    "nombre" VARCHAR(20) NOT NULL,
+    "fecha_inicio" DATE NOT NULL, -- Define cuando inicia un nuevo periodo
+    "fecha_fin" DATE NOT NULL,    -- Define cuando termina el periodo
+	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    UNIQUE (nombre),
+
+    -- VALIDACIÓN 1: Asegura que el fin siempre sea posterior al inicio.
+    CHECK (fecha_fin > fecha_inicio),
+
+    -- VALIDACIÓN 2: Regla CRÍTICA de No Solapamiento (Exclusion Constraint).
+    -- Utiliza el tipo DATERANGE para asegurar que el rango [inicio, fin] de un periodo
+    -- no se cruce (&&) con el rango de ningún otro periodo ya existente.
+    EXCLUDE USING gist (DATERANGE(fecha_inicio, fecha_fin, '[)') WITH &&) 
+);
+
+
+
 -- 3.4. GRUPO (Instancia de un curso)
 CREATE TABLE grupo (
     "id_grupo" SERIAL PRIMARY KEY,
@@ -305,16 +336,6 @@ CREATE TABLE asignacion_horario_grupo (
 );
 
 
--- 3.6. ASIGNACION_DOCENTE
-CREATE TABLE asignacion_docente (
-    "id_asignacion" SERIAL PRIMARY KEY,
-    "id_grupo" INT REFERENCES grupo(id_grupo) NOT NULL,
-	"id_docente" INT REFERENCES docente(id_docente),
-	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
-);
-
-
 -- 3.7. inscripcion (Estudiante inscrito en un grupo)
 CREATE TABLE inscripcion (
     "id_inscripcion" SERIAL PRIMARY KEY,
@@ -327,20 +348,6 @@ CREATE TABLE inscripcion (
 
     UNIQUE (id_estudiante, id_grupo)
 );
-
-
-
--- 3.8. TARIFA_DOCENTE_GRUPO (Tarifa específica por docente/grupo)
-CREATE TABLE tarifa_docente_grupo (
-    "id_tarifa" SERIAL PRIMARY KEY,
-    "id_asignacion" INT REFERENCES asignacion_docente(id_asignacion) NOT NULL,
-    "tarifa_hora_usd" NUMERIC(8, 2) NOT NULL,
-	"fecha_vigencia_desde" DATE NOT NULL,
-	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
-);
-
-
 
 
 
@@ -615,35 +622,6 @@ CREATE TABLE pagos_proveedores (
 
 
 
--- #######################################################
--- # 9. PERIODOS 
--- #######################################################
-
-
--- Tabla: PERIODO
--- Define los ciclos académicos (Ej. '2025-I', 'Verano 2026').
-CREATE TABLE periodo (
-    "id_periodo" SERIAL PRIMARY KEY,
-    "nombre" VARCHAR(20) NOT NULL,
-    "fecha_inicio" DATE NOT NULL, -- Define cuando inicia un nuevo periodo
-    "fecha_fin" DATE NOT NULL,    -- Define cuando termina el periodo
-	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-    UNIQUE (nombre),
-
-    -- VALIDACIÓN 1: Asegura que el fin siempre sea posterior al inicio.
-    CHECK (fecha_fin > fecha_inicio),
-
-    -- VALIDACIÓN 2: Regla CRÍTICA de No Solapamiento (Exclusion Constraint).
-    -- Utiliza el tipo DATERANGE para asegurar que el rango [inicio, fin] de un periodo
-    -- no se cruce (&&) con el rango de ningún otro periodo ya existente.
-    EXCLUDE USING gist (DATERANGE(fecha_inicio, fecha_fin, '[)') WITH &&) 
-);
-
-
-
-
-
 
 
 
@@ -679,7 +657,7 @@ TRUNCATE TABLE tipo_rol_asociado RESTART IDENTITY CASCADE;
 TRUNCATE TABLE estado_proveedor RESTART IDENTITY CASCADE;
 TRUNCATE TABLE tipo_proveedor RESTART IDENTITY CASCADE;
 TRUNCATE TABLE categoria_curso RESTART IDENTITY CASCADE;
-
+TRUNCATE TABLE estado_curso RESTART IDENTITY CASCADE;
 
 -- 1.1. NATURALEZA (Naturalezas de las cuentas)
 INSERT INTO naturaleza ("nombre") VALUES ('Deudora'), ('Acreedora');
@@ -700,7 +678,7 @@ INSERT INTO plan_cuenta ("nombre", "codigo", "nivel", "id_naturaleza", "id_clasi
     ('patrimonio', '3', 1, 2, 1, true, null, NOW(), NOW()),
     ('ingreso', '4', 1, 2, 2, true, null, NOW(), NOW()),
     ('costo', '5', 1, 1, 2, true, null, NOW(), NOW()),
-    ('gasto', '6', 1, 1, 2, true, null, NOW(), NOW());
+    ('gasto', '6', 1, 1, 2, true, null, NOW(), NOW()),
 
     -- Cuentas de nivel 2
 
@@ -787,7 +765,14 @@ INSERT INTO entidad (
 (1, 1, 1, '156987458', 'carlos', 'gomez', 'carlitos54@gmail.com', '02124569878', 'trinitarias', true, NOW(), NOW()),
 (1, 1, 2, '327465458', 'enrique', 'peña', 'enrique46@gmail.com', '04124569874', 'el manzano', true, NOW(), NOW()),
 (1, 2, 3, '145647849', 'vladimir', 'putin', 'vladimir66@hotmail.com', '04245847968', 'rusia', true, NOW(), NOW()),
-(1, 1, 1, '145647849', 'petra', 'ribas', 'petra77@gmail.com', '04165897458', 'cabudare', true, NOW(), NOW());
+(1, 1, 1, '145647849', 'petra', 'ribas', 'petra77@gmail.com', '04165897458', 'cabudare', true, NOW(), NOW()),
+
+
+(1, 1, 1, '132684578', 'ana', 'lopez', 'anita57@gmail.com', '04124587989', 'trujillo', true, '2024-05-15 09:30:00', '2024-05-15 09:30:00'),
+(1, 1, 1, '121254678', 'alberto', 'alvarado', 'albertito46@gmail.com', '02124467878', 'valencia', true, '2025-06-15 09:38:00', '2025-08-18 10:30:00'),
+(1, 1, 2, '327446788', 'john', 'correa', 'jonh333@gmail.com', '041241302074', 'altamira', true, '2025-07-11 09:30:00', '2024-08-26 11:50:00'),
+(1, 2, 3, '149188849', 'nicolas', 'rodriguez', 'nico4366@hotmail.com', '04265877968', 'colombia', true, '2025-07-19 09:30:00', '2025-07-22 09:30:00'),
+(1, 1, 1, '197685449', 'ricardo', 'fernandez', 'fernan89@gmail.com', '04141243458', 'tucupita', true, '2024-10-20 09:30:00', '2024-11-18 09:30:00');
 
 
 
@@ -920,7 +905,7 @@ INSERT INTO estado_curso (nombre, descripcion, permite_nuevos_grupos) VALUES
 
 
 -- 1.18. CATEGORIA_CURSO
-INSERT INTO categoria_curso (nombre, descripcion, categoria_padre) VALUES
+INSERT INTO categoria_curso (nombre, descripcion, id_categoria_padre) VALUES
 
     -- =========================================================================================
     -- CATEGORÍAS PADRE (NIVEL 1) - Estos IDs serán 1, 2, 3, 4, 5, 6
@@ -934,7 +919,7 @@ INSERT INTO categoria_curso (nombre, descripcion, categoria_padre) VALUES
     -- =========================================================================================
 
 
-INSERT INTO categoria_curso (nombre, descripcion, categoria_padre) VALUES
+INSERT INTO categoria_curso (nombre, descripcion, id_categoria_padre) VALUES
 
     -- =========================================================================================
     -- SUBCATEGORÍAS (NIVEL 2) - Referencias a los IDs 1-6

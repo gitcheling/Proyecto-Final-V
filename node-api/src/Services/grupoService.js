@@ -1,15 +1,13 @@
-/* Se importa el modelo 
+const Grupo_Model = require('../Models/grupo'); 
+const Curso_Model = require('../Models/curso'); 
+const Periodo_Model = require('../Models/periodo');
+const Modalidad_Clase_Model = require('../Models/modalidad_clase');
+const Docente_Model = require('../Models/docente');
+const Estado_Grupo_Model = require('../Models/estado_grupo');
 
-Nota: Sólo necesitamos éste modelo, ya que después de todo establecimos las asociaciones, si queremos hacer una consulta directa sobre
-las tablas "clasificacion_cuenta" o "naturaleza"
-*/
-const Entidad_Model = require('../Models/entidad'); 
-const Regla_Prefijo_Documento_Model = require('../Models/regla_prefijo_documento'); 
-const Tipo_Identificacion_Model = require('../Models/tipo_identificacion'); 
-const Prefijo_Identificacion_Model = require('../Models/prefijo_identificacion'); 
 
 // Se importan las funciones comúnes de validación
-const { validarExistencia, validarIdNumerico, validarSoloTexto, validarSoloNumeros, validarLongitudCadena, validarEmail, validarSoloNumerosYGuion, validarTelefonoVenezolano, validarBooleano, parseAndValidateDate} = require('../Utils/validators');
+const { validarExistencia, validarIdNumerico, validarSoloTexto, validarSoloNumeros, validarLongitudCadena, validarSoloNumerosEnterosYDecimales, validarBooleano, parseAndValidateDate} = require('../Utils/validators');
 
 // Se importan las funciones comúnes
 const { capitalizeFirstLetter, traducirMes} = require('../Utils/funciones');
@@ -17,151 +15,158 @@ const { capitalizeFirstLetter, traducirMes} = require('../Utils/funciones');
 // Se importa la clase "Op" que es necesaria para las operaciones de las clausulas WHERE de las consultas
 const { Op, fn, col } = require('sequelize'); 
 
-class EntidadService {
+class GrupoService {
 
 // -------------------------- Creación ------------------------------------
 
-    // Se crea una entidad
-    async crearEntidad({tipo_identificacion, prefijo, numero_identificacion, nombre, apellido, email, telefono, direccion }) {
+    // Se crea un grupo
+    async crearGrupo({curso, periodo, modalidad, docente, nombre, cupo_maximo, costo_inscripcion, costo_clase }) {
 
-        // Validamos que existan todos los datos
-        validarExistencia(tipo_identificacion, "tipo de identificación", true);
-        validarExistencia(prefijo, "prefijo", true);
-        validarExistencia(numero_identificacion, "número de identificación", true);
-        validarExistencia(nombre, "nombre", true);
-        validarExistencia(email, "email", true);
-        validarExistencia(telefono, "teléfono", true);
-        validarExistencia(direccion, "dirección", true);
+        // ----------------------- Validaciones de existencia ----------------------------
 
-        /* Se valida el tipo de identificación, solo puede ser un número del "1" al "4" (ya que solo se tienen y tendrán esas en la base de datos, y 
-        justo esos son sus ids). A su vez, se comprueba que el valor sea un número entero.
-        */
-        validarSoloNumeros(tipo_identificacion, "El tipo de identificación debe contener solo números (dígitos 0-9).")
-        const tipo_Identificacion_Numerica = parseInt(tipo_identificacion, 10);
-        if (isNaN(tipo_Identificacion_Numerica) || tipo_Identificacion_Numerica < 1 || tipo_Identificacion_Numerica > 4) {
-            throw new Error("El tipo de identificación no es válido.");
-        }
+            validarExistencia(curso, "curso", true);
+            validarExistencia(periodo, "periodo", true);
+            validarExistencia(modalidad, "modalidad", true);
+            validarExistencia(docente, "docente", true);
+            validarExistencia(nombre, "nombre", true);
+            validarExistencia(cupo_maximo, "cupo_maximo", true);
+            validarExistencia(costo_inscripcion, "costo_inscripcion", true);
+            validarExistencia(costo_clase, "costo_clase", true);
 
-        /* Se valida el prefijo, solo puede ser un número del "1" al "5" (ya que solo se tienen y tendrán esas en la base de datos, y 
-        justo esos son sus ids). A su vez, se comprueba que el valor sea un número entero.
-        */
-        validarSoloNumeros(prefijo, "El prefijo debe contener solo números (dígitos 0-9).")
-        const prefijo_Numerico = parseInt(prefijo, 10);
-        if (isNaN(prefijo_Numerico) || prefijo_Numerico < 1 || prefijo_Numerico > 5) {
-            throw new Error("El prefijo no es válido.");
-        }
+        // ----------------------- Validaciones de formato ----------------------------
 
-        // Se valida que el número de identificacion sólo tenga números
-        validarSoloNumerosYGuion(numero_identificacion, "El número de identificación debe contener solo números (dígitos 0-9) o guión (-).")
+            const cursoLimpio = String(curso).trim();   
+            validarIdNumerico(cursoLimpio, "El curso no tiene el formato correcto");
 
-        // Se valida que el nombre sólo tenga texto (enviando el nombre y el error que se lanzará si no es así)
-        validarSoloTexto(nombre, "El nombre debe contener solo texto y espacios en blanco.");
+            const periodoLimpio = String(periodo).trim();   
+            validarIdNumerico(periodoLimpio, "El periodo no tiene el formato correcto");
 
-        if(validarExistencia(apellido, "", false)){
-            // Se valida que el apellido sólo tenga texto (enviando el nombre y el error que se lanzará si no es así)
-            validarSoloTexto(apellido, "El apellido debe contener solo texto y espacios en blanco.")
-        }
+            const modalidadLimpia = String(modalidad).trim();   
+            validarIdNumerico(modalidadLimpia, "La modalidad no tiene el formato correcto");
 
-        // Se valida que el correo sea válido
-        validarEmail(email, "El correo electrónico no tiene un formato válido.");
+            const docenteLimpio = String(docente).trim();   
+            validarIdNumerico(docenteLimpio, "El docente no tiene el formato correcto");
 
-        // Se valida que el número de teléfono sólo tenga números y el formato correcto
-        validarTelefonoVenezolano(telefono, "El número de teléfono debe tener solo números, y 11 digitos exactos")
+            const nombreLimpio = String(nombre).trim().toLowerCase();  
+            validarSoloTexto(nombreLimpio, "El nombre debe contener solo texto y espacios en blanco.");
 
-        // Se valida que la dirección tenga el rango indicado
-        validarLongitudCadena(direccion, 5, 255, "La dirección debe tener entre 5 y 255 caracteres.");
-    
+            const cupoMaximoLimpio = String(cupo_maximo).trim(); 
+            validarIdNumerico(cupoMaximoLimpio, "El cupo máximo no tiene el formato correcto");
 
-        // Se valida que no exista ya el correo en la base de datos
-        const correoEnMinuscula = email.toLowerCase();
-        if(await Entidad_Model.findOne({ where: { email: correoEnMinuscula } })){
-            throw new Error(`El email '${email}' ya está registrado.`);
-        }
+            const costoInscripcionLimpio = String(costo_inscripcion).trim(); 
+            validarSoloNumerosEnterosYDecimales(costoInscripcionLimpio, "El costo de inscripción no tiene el formato correcto");
 
-        // Se valida la restricción UNIQUE del modelo
-        if(await Entidad_Model.findOne({ where: { 
-                                                id_prefijo : prefijo_Numerico,
-                                                id_tipo_identificacion : tipo_Identificacion_Numerica,
-                                                numero_identificacion : numero_identificacion } }))
-        {
-            throw new Error(`La entidad con ese prefijo, tipo de identificación y número de identificación ya está registrado.`);
-        }
+            const costoClaseLimpio = String(costo_clase).trim(); 
+            validarSoloNumerosEnterosYDecimales(costoClaseLimpio, "El costo unitario de clase no tiene el formato correcto");
 
 
-        // Comprobamos que el tipo de documento coincida con el prefijo
-        if(!await Regla_Prefijo_Documento_Model.findOne({ where: { 
-                                                id_tipo_identificacion : tipo_Identificacion_Numerica,
-                                                id_prefijo : prefijo_Numerico } }))
-        {
-            throw new Error(`Debe seleccionar un prefijo que coincida con el tipo de documento.`);
-        }
+
+        // ----------------------- Validaciones de existencia en la base de datos ----------------------------
+
+            // Se valida que exista el curso
+            const cursoObjeto = await Curso_Model.findByPk(cursoLimpio, {
+                include: [ /*Le indica a Sequelize que debe realizar operaciones JOIN para traer datos de las 
+                    tablas relacionadas definidas en las asociaciones del modelo*/
+                    { 
+                        association: 'estado', // Esto debe coincidir exactamente con el alias (as) que se le dió a la relación en el modelo (en este caso "curso")
+                        attributes: ['id_estado_curso', 'nombre', 'permite_nuevos_grupos'] // Estos son los campos que se traerán de la tabla asociada (tipo_entidad)
+                    }
+                ]
+            });
+            if(!cursoObjeto){throw new Error(`El curso especificado no existe.`);}
+
+
+            // Se valida que exista el periodo
+            const periodoObjeto = await Periodo_Model.findByPk(periodoLimpio);
+            if(!periodoObjeto){throw new Error(`El periodo especificado no existe.`);}
         
-        
-        // Calculamos el tipo de entidad según el tipo de documento
-        // Decimos que por defecto es Persona Natural (1)
-        const id_tipo_entidad = 1;
 
-        // Si el tipo de identificación es un RIF la entidad puede ser jurídica
-        if(tipo_Identificacion_Numerica === 4){ 
+            // Se valida que exista la modalidad
+            const modalidadObjeto = await Modalidad_Clase_Model.findByPk(modalidadLimpia);
+            if(!modalidadObjeto){throw new Error(`La modalidad de clase especificado no existe.`);}
 
-            // Si el prefijo no es ni "V" (1) o "E" (2) entonces es Persona Jurídica
-            if(prefijo_Numerico !== 1 && prefijo_Numerico !== 2){
 
-                id_tipo_entidad = 2;
+            // Se valida que exista el docente
+            const docenteObjeto = await Docente_Model.findByPk(docenteLimpio, {
+                include: [
+                    { 
+                        association: 'estado_docente',
+                        attributes: ['id_estado_docente', 'nombre', 'permite_asignacion'] 
+                    }
+                ]
+            });
+            if(!docenteObjeto){throw new Error(`El docente especificado no existe.`);}
+
+
+
+        // ----------------------- Validaciones de si se permite o no crear el curso con esos datos ----------------------------
+
+            if(cursoObjeto.estado.permite_nuevos_grupos == false){throw new Error(`El curso seleccionado no permite la creación de nuevos grupos.`);}
+
+            if(docenteObjeto.estado_docente.permite_asignacion == false){throw new Error(`No se le pueden asignar nuevos grupos al docente seleccionado.`);};
+
+
+            const fechaFinPeriodo = new Date(periodoObjeto.fecha_fin);
+
+            /*Obtener la fecha de HOY, normalizada.
+            Creamos una fecha para hoy y la normalizamos a la medianoche (00:00:00)
+            para que la comparación sea a nivel de día completo y no de hora/minuto. */
+            const hoyNormalizado = new Date();
+            hoyNormalizado.setHours(0, 0, 0, 0);
+
+            // La regla es: Si la fecha de finalización del periodo es *anterior* a la fecha de hoy (medianoche), 
+            // significa que el periodo terminó ayer o antes.
+            if (fechaFinPeriodo < hoyNormalizado) {
+                throw new Error(`El periodo seleccionado ya ha finalizado y no se le pueden asignar nuevos grupos.`);
             }
-            
-        }
-
-        /* Nota: el tipo de entidad "3" es para uso interno, ya que la academia no maneja sucursales sólo se crea una entidad para la
-        academia y se hace a nivel de base de datos, el usuario no puede hacerlo (de esta forma teniendo a la academia como entidad, 
-        si hay un movimiento interno esta saldrá como la entidad que lo produjo) */
-
-
-        //Ponemos los datos en minúscula (para que todo sea consistente) 
-        let nombreEnMinuscula = nombre.toLowerCase().trim();
-        let apellidoEnMinuscula = null;
-
-        if(validarExistencia(apellido, "", false)){
-            apellidoEnMinuscula = apellido.toLowerCase().trim();
-        }
-        
-        let direccionEnMinuscula = direccion.toLowerCase().trim();
 
     
-        const entidadData = {
-            id_tipo_entidad: id_tipo_entidad,
-            id_tipo_identificacion: tipo_Identificacion_Numerica,
-            id_prefijo: prefijo_Numerico,
-            numero_identificacion: numero_identificacion,
-            nombre: nombreEnMinuscula, 
-            apellido: apellidoEnMinuscula,        
-            email: correoEnMinuscula, 
-            telefono: telefono,
-            direccion: direccionEnMinuscula
-        };
+            // Comprobamos que no exista ya un grupo con ese nombre en la base de datos
+            if(await Grupo_Model.findOne({ where: { 
+                                                    id_curso: cursoObjeto.id_curso,
+                                                    id_periodo: periodoObjeto.id_periodo,
+                                                    nombre: nombreLimpio
+            } })){
+                throw new Error(`El grupo con el curso y el nombre especificados ya existen en éste periodo.`);
+            }
 
-        // Se manda a crear la nueva entidad
-        const nuevaEntidad = await Entidad_Model.create(entidadData);
 
-        // Renombramos las propiedades a regresar (para que el cliente no vea los nombres de las columnas de la base de datos)
-        return {
-            id: nuevaEntidad.id_entidad, 
-            tipo_entidad: nuevaEntidad.id_tipo_entidad,
-            tipo_identificacion: nuevaEntidad.id_tipo_identificacion,
-            prefijo: nuevaEntidad.id_prefijo,
-            numero_identificacion: nuevaEntidad.numero_identificacion,
-            nombre: capitalizeFirstLetter(nuevaEntidad.nombre), 
-            apellido: capitalizeFirstLetter(nuevaEntidad.apellido ? nuevaEntidad.apellido : ""),        
-            email: nuevaEntidad.email,
-            telefono: nuevaEntidad.telefono,
-            direccion: nuevaEntidad.direccion,
-            estado: nuevaEntidad.estado,
-            
-            fechaCreacion: nuevaEntidad.createdAt,
-            fechaActualizacion: nuevaEntidad.updatedAt
-            
-        };
+
+        // ----------------------- Creación ----------------------------
+
+            const Data = {
+                id_curso: cursoObjeto.id_curso,
+                id_periodo: periodoObjeto.id_periodo,
+                id_modalidad: modalidadObjeto.id_modalidad,
+                id_docente: docenteObjeto.id_docente,
+                nombre: nombreLimpio,
+                cupo_maximo: cupoMaximoLimpio,
+                costo_inscripcion: costoInscripcionLimpio, 
+                costo_unitario_clase: costoClaseLimpio
+            };
+
+            // Se manda a crear el nuevo grupo
+            const nuevoGrupo= await Grupo_Model.create(Data);
+
+            // Renombramos las propiedades a regresar (para que el cliente no vea los nombres de las columnas de la base de datos)
+            return {
+                id: nuevoGrupo.id_grupo, 
+                curso: nuevoGrupo.id_curso,
+                periodo: nuevoGrupo.id_periodo,
+                modalidad: nuevoGrupo.id_modalidad,
+                docente: nuevoGrupo.id_docente,
+                nombre: capitalizeFirstLetter(nuevoGrupo.nombre), 
+                cupo_maximo: nuevoGrupo.cupo_maximo,        
+                costo_inscripcion: nuevoGrupo.costo_inscripcion,
+                costo_clase: nuevoGrupo.costo_unitario_clase,
+                
+                fechaCreacion: nuevoGrupo.createdAt,
+                fechaActualizacion: nuevoGrupo.updatedAt
+                
+            };
+
     }
+
 
 
 
@@ -170,69 +175,135 @@ class EntidadService {
     // Se manda a actualizar una entidad
     /*Nota: Los campos que no se deben modificar son:
 
-        -id_entidad	Llave Primaria (PK). Identificador único y absoluto. Nunca debe cambiar.
-        -id_tipo_entidad: Naturaleza del sujeto económico (Natural, Jurídica, Interna). Si se cambia, se rompen todas las reglas de inferencia y las posibles restricciones en tablas de rol (Ej: Un id_entidad Jurídico no puede ser Estudiante).
-        -id_prefijo: Componente de la C.I./RIF (V, E, J, G). Es parte de la identidad fiscal única.
-        -id_tipo_identificacion: Tipo de Documento (Cédula, RIF, Pasaporte). Es parte de la identidad fiscal única.
-        -numero_identificacion: Número del documento. Es la parte central de la identidad fiscal. 
+        -id_grupo: Llave Primaria (PK). Identificador único y absoluto. Nunca debe cambiar.
+
+        -id_periodo: No se debe cambiar, por unicidad y consistencia.
+
+        -id_curso: No debe cambiar debido a que en base al curso es que un grupo tendrá su cantidad de clases máxima
+        (y porque afectaría a los reportes de cuantas clases se han dado de X curso por ejemplo.)
+
+        -id_modalidad: No se puede modificar si existe al menos una entrada en la tabla "inscripción", debido a que
+        cambiar la modalidad (Ej. de Presencial a Online) después de la inscripción afecta directamente el servicio contratado 
+        por los estudiantes.
+
+        -"costo_inscripcion" y "costo_clase_unitario": No se pueden modificar si existe al menos una entrada en la tabla
+        "inscripcion".	Una vez que un estudiante se inscribe, el precio queda fijado. Modificarlo podría generar inconsistencias 
+        contables.
+
+        -cupo_maximo: Se puede modificar, pero nunca se puede reducir por debajo del número actual de estudiantes inscritos.	
+        Es una regla operativa simple: se puede ampliar el cupo, pero no se puede forzar la salida de estudiantes ya inscritos.
+
     */
-    async actualizarEntidad(id, nombre, apellido, email, telefono, direccion) {
+    async actualizarCurso(id, modalidad, docente, nombre, cupo_maximo, costo_inscripcion, costo_clase) {
 
-        // Validamos que existan todos los datos
-        validarExistencia(id, "id", true);
-        validarExistencia(nombre, "nombre", true);
-        validarExistencia(email, "email", true);
-        validarExistencia(telefono, "teléfono", true);
-        validarExistencia(direccion, "dirección", true);
+        // ----------------------- Validaciones de existencia ----------------------------
 
-        validarIdNumerico(id, "El id es obligatorio");
+            validarExistencia(id, "id", true);
+            validarExistencia(modalidad, "modalidad", true);
+            validarExistencia(docente, "docente", true);
+            validarExistencia(nombre, "nombre", true);
+            validarExistencia(cupo_maximo, "cupo_maximo", true);
+            validarExistencia(costo_inscripcion, "costo_inscripcion", true);
+            validarExistencia(costo_clase, "costo_clase", true);
 
-        // Se valida que el nombre sólo tenga texto (enviando el nombre y el error que se lanzará si no es así)
-        validarSoloTexto(nombre, "El nombre debe contener solo texto y espacios en blanco.");
+        // ----------------------- Validaciones de formato ----------------------------
 
-        if(validarExistencia(apellido, "", false)){
-            // Se valida que el apellido sólo tenga texto (enviando el nombre y el error que se lanzará si no es así)
-            validarSoloTexto(apellido, "El apellido debe contener solo texto y espacios en blanco.")
-        }
+            const idLimpio = String(id).trim();   
+            validarIdNumerico(idLimpio, "El id no tiene el formato correcto");
 
-        // Se valida que el correo sea válido
-        validarEmail(email, "El correo electrónico no tiene un formato válido.");
+            const modalidadLimpia = String(modalidad).trim();   
+            validarIdNumerico(modalidadLimpia, "La modalidad no tiene el formato correcto");
 
-        // Se valida que el número de teléfono sólo tenga números y el formato correcto
-        validarTelefonoVenezolano(telefono, "El número de teléfono debe tener solo números, y 11 digitos exactos")
+            const docenteLimpio = String(docente).trim();   
+            validarIdNumerico(docenteLimpio, "El docente no tiene el formato correcto");
 
-        // Se valida que la dirección tenga el rango indicado
-        validarLongitudCadena(direccion, 5, 255, "La dirección debe tener entre 5 y 255 caracteres.");
-        
-    
-        
-        // Se busca la entidad existente, y si no existe se regresa null
-        const entidadExistente = await Entidad_Model.findByPk(id)
+            const nombreLimpio = String(nombre).trim().toLowerCase();  
+            validarSoloTexto(nombreLimpio, "El nombre debe contener solo texto y espacios en blanco.");
 
-        if(!entidadExistente){
-            return null;
-        };
+            const cupoMaximoLimpio = String(cupo_maximo).trim(); 
+            validarIdNumerico(cupoMaximoLimpio, "El cupo máximo no tiene el formato correcto");
+
+            const costoInscripcionLimpio = String(costo_inscripcion).trim(); 
+            validarSoloNumerosEnterosYDecimales(costoInscripcionLimpio, "El costo de inscripción no tiene el formato correcto");
+
+            const costoClaseLimpio = String(costo_clase).trim(); 
+            validarSoloNumerosEnterosYDecimales(costoClaseLimpio, "El costo unitario de clase no tiene el formato correcto");
 
 
-        // Se comprueba si el correo es distinto
-        const correoEnMinuscula = email.toLowerCase().trim();
-        if(correoEnMinuscula !== entidadExistente.email){
 
-            if(await Entidad_Model.findOne({ where: { email: correoEnMinuscula } })){
-                throw new Error(`El email '${email}' ya está registrado.`);
+        // ----------------------- Validaciones de existencia en la base de datos ----------------------------
+
+            // Se valida que exista el grupo
+            const grupoObjeto = await Grupo_Model.findByPk(idLimpio);
+            if(!grupoObjeto){throw new Error(`El grupo especificado no existe.`);}
+
+
+            // Se valida que exista la modalidad
+            const modalidadObjeto = await Modalidad_Clase_Model.findByPk(modalidadLimpia);
+            if(!modalidadObjeto){throw new Error(`La modalidad de clase especificado no existe.`);}
+
+
+            // Se valida que exista el docente
+            const docenteObjeto = await Docente_Model.findByPk(docenteLimpio, {
+                include: [
+                    { 
+                        association: 'estado_docente',
+                        attributes: ['id_estado_docente', 'nombre', 'permite_asignacion'] 
+                    }
+                ]
+            });
+            if(!docenteObjeto){throw new Error(`El docente especificado no existe.`);}
+
+
+
+        // ----------------------- Validaciones de diferencia ----------------------------
+
+
+            // Se comprueba si la modalidad es distinta
+            if(modalidadObjeto.id_modalidad !== grupoObjeto.id_modalidad){
+
+                if(await Entidad_Model.findOne({ where: { email: correoEnMinuscula } })){
+                    throw new Error(`El email '${email}' ya está registrado.`);
+                }
+
             }
-        }
 
-        //Ponemos los datos en minúscula (para que todo sea consistente) 
-        let nombreEnMinuscula = nombre.toLowerCase().trim();
-        let direccionEnMinuscula = direccion.toLowerCase().trim();
-        let apellidoEnMinuscula = null;
+            // Se comprueba si el docente es distinto
+            if(docenteObjeto.id_docente !== grupoObjeto.id_docente){
 
-        if(validarExistencia(apellido, "", false)){
-            apellidoEnMinuscula = apellido.toLowerCase().trim();
-        }
+                if(await Entidad_Model.findOne({ where: { email: correoEnMinuscula } })){
+                    throw new Error(`El email '${email}' ya está registrado.`);
+                }
+                
+            }
 
-        
+            // Se comprueba si el nombre es distinto
+            if(nombreLimpio !== grupoObjeto.nombre){
+
+                if(await Grupo_Model.findOne({ where: { 
+                                                    id_curso: Grupo_Model.id_curso,
+                                                    id_periodo: Grupo_Model.id_periodo,
+                                                    nombre: nombreLimpio
+                } })){
+                    throw new Error(`El nombre especificados ya lo tiene asignado otro curso en éste periodo.`);
+                }
+                
+            }
+
+            
+
+            // Se comprueba si el cupo máximo, costo de inscripción o el costo por clase son distintos 
+            if( cupoMaximoLimpio !== grupoObjeto.cupo_maximo || 
+                costoInscripcionLimpio !== grupoObjeto.costo_inscripcion ||
+                costoClaseLimpio !== grupoObjeto.costo_unitario_clase
+            ){
+
+                if(await Entidad_Model.findOne({ where: { email: correoEnMinuscula } })){
+                    throw new Error(`El email '${email}' ya está registrado.`);
+                }
+                
+            }
+
 
 
         const [filasAfectadas] = await Entidad_Model.update(
@@ -1126,4 +1197,4 @@ class EntidadService {
 
 }
 
-module.exports = EntidadService;
+module.exports = GrupoService;

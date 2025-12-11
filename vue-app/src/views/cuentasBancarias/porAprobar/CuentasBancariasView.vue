@@ -113,22 +113,6 @@
                     </select>
                 </div>
 
-
-                <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
-                    <label for="estado">Estado de cuenta:</label>
-                    <select id="estado" v-model="filters.estado" class="form-control">
-                        <option value="">Todos</option>
-                        <option 
-                            v-for="estado in estadosDisponibles" 
-                            :key="estado.id" 
-                            :value="estado.id"
-                            :title="estado.descripcion"
-                        >
-                            {{ estado.nombre }}
-                        </option>
-                    </select>
-                </div>
-        
                 <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <label for="creadosDesde">Creados Desde:</label>
                     <input type="date" id="creadosDesde" v-model="filters.creadosDesde" class="form-control" :max="filters.creadosHasta || undefined">
@@ -257,17 +241,11 @@
             // Ruta base bancos
             const rutaBaseBancos = "/Banco/"
 
-            // Ruta base estados cuenta bancaria
-            const rutaBaseEstados = "/EstadoCuentaBancaria/"
-
-            // Buscar cuentas bancarias aprobadas
+            // Buscar cuentas bancarias por aprobar
             const rutaBuscar = `${rutaBase}Buscar/PorAprobar`
 
             // Buscar bancos
             const rutaBuscarBancos = `${rutaBaseBancos}Buscar`
-
-            // Buscar estados cuenta bancaria
-            const rutaBuscarEstados = `${rutaBaseEstados}Buscar`
 
             const rutaAprobarCuenta = `${rutaBase}Aprobar`
 
@@ -324,7 +302,6 @@
 
         // Variables reactivas para almacenar los datos del servidor
         const bancosDisponibles = ref([]);
-        const estadosDisponibles = ref([]);
 
         // Variables que almacenan el último valor de filtro que fue válido (para el número de identificación, el nombre y el apellido)
         const lastValidNumeroIdentificacion = ref('');
@@ -430,27 +407,9 @@
                 }
             }
 
-            /**
-             * Carga la lista de estados de cuenta disponibles desde el servidor.
-             */
-            async function fetchEstados() {
-                try {
-                    
-                    const response = await api.get(rutaBuscarEstados); 
-                    
-                    // El servidor devuelve un array de objetos en response.data.data
-                    estadosDisponibles.value = response.data.data;
-
-                } catch (err) {
-                    error('Error al cargar estados', 'No se pudo obtener la lista de estados de cuenta del servidor.');
-                    console.error(err);
-                }
-            }
-
             // Cargar los datos al montar el componente (cuando se carga la página)
             onMounted(() => {
                 fetchBancos();
-                fetchEstados();
             });
 
 
@@ -732,8 +691,7 @@
                 }
             };
 
-
-            
+       
 
 
 </script>

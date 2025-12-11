@@ -6,6 +6,10 @@ const proveedorController = require('../Controller/proveedorController');
 
 router.get('/Buscar', proveedorController.buscarProveedores);  
 
+router.get('/ContarProveedores', proveedorController.contarProveedores);  
+
+router.get('/ContarEstados', proveedorController.obtenerEstadosTotales);  
+
 router.get('/:id', proveedorController.obtenerProveedorPorId);
 
 router.post('/CrearProveedor', proveedorController.crearProveedor);     

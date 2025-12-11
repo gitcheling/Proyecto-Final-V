@@ -4,11 +4,9 @@ const cuentaBancariaController = require('../Controller/cuentaBancariaController
 
 // Rutas
 
-// Cuentas bancarias por aprobar
-router.get('/Buscar/PorAprobar', cuentaBancariaController.buscarCuentasPorAprobar);  
-
-// Cuentas bancarias aprobadas
-router.get('/Buscar/Aprobadas', cuentaBancariaController.buscarCuentasAprobadas);  
+// Obtener
+    router.get('/Buscar/PorAprobar', cuentaBancariaController.buscarCuentasPorAprobar);  
+    router.get('/Buscar/Aprobadas', cuentaBancariaController.buscarCuentasAprobadas);  
 
 // Cuentas bancarias aprobadas de un titular
 router.get('/Buscar/Aprobadas/Titular/:id', cuentaBancariaController.obtenerCuentasBancariasDeTitular);  
@@ -18,6 +16,11 @@ router.get('/Buscar/PorRoL', cuentaBancariaController.obtenerCuentasBancariasPor
 
 // Cuentas bancarias según un rol (solo los ids)
 router.get('/Buscar/IdsPorRoL', cuentaBancariaController.obtenerIdsCuentasBancariasPorRol);  
+
+// Contar
+    router.get('/ContarPorAprobar', cuentaBancariaController.contarCuentasBancariasPorAprobar);  
+    router.get('/ContarAprobadas', cuentaBancariaController.contarCuentasBancariasAprobadas); 
+    router.get('/ContarEstados', cuentaBancariaController.obtenerEstadosTotales);   
 
 router.get('/:id', cuentaBancariaController.obtenerCuentaBancariaPorId);
 

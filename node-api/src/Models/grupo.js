@@ -15,6 +15,7 @@ const Grupo = sequelize.define('Grupo', {
     id_curso : {
         type: DataTypes.INTEGER,
         allowNull: false, 
+        unique: 'grupo_unico',
         references: {
 
             // Nombre exacto de la tabla foránea en la base de datos
@@ -31,6 +32,7 @@ const Grupo = sequelize.define('Grupo', {
     id_periodo : {
         type: DataTypes.INTEGER,
         allowNull: false, 
+        unique: 'grupo_unico',
         references: {
 
             // Nombre exacto de la tabla foránea en la base de datos
@@ -41,6 +43,21 @@ const Grupo = sequelize.define('Grupo', {
         }
     },
 
+    // ===============================================
+    // clave foránea para la modalidad
+    // ===============================================
+    id_modalidad : {
+        type: DataTypes.INTEGER,
+        allowNull: false, 
+        references: {
+
+            // Nombre exacto de la tabla foránea en la base de datos
+            model: 'modalidad_clase', 
+
+            // El nombre exacto de la columna en la tabla foránea (model) a la que apunta. Que sería, la clave primaria
+            key: 'id_modalidad'
+        }
+    },
 
     // ===============================================
     // clave foránea para el docente
@@ -60,11 +77,22 @@ const Grupo = sequelize.define('Grupo', {
 
     nombre: {
         type: DataTypes.STRING(50),
-        allowNull: false
+        allowNull: false,
+        unique: 'grupo_unico'
     },
 
     cupo_maximo  : {
         type: DataTypes.INTEGER,
+        allowNull: false
+    },
+
+    costo_inscripcion: {
+        type: DataTypes.NUMERIC(10, 2), // 10 dígitos en total, 2 decimales 
+        allowNull: false
+    },
+
+    costo_unitario_clase: {
+        type: DataTypes.NUMERIC(10, 2), // 10 dígitos en total, 2 decimales 
         allowNull: false
     },
 
@@ -119,6 +147,12 @@ Grupo.associate = (models) => {
         as: 'periodo' // Usamos éste prefijo para obtener los datos del otro modelo (el periodo de un grupo)
     });
 
+    // Un grupo solo puede tener una modalidad de "modalidad_clase"
+    Grupo.belongsTo(models.Modalidad_Clase, {
+        foreignKey: 'id_modalidad', // La FK que está en ESTA MISMA tabla (en este caso que es el lado muchos)
+        as: 'modalidad' // Usamos éste prefijo para obtener los datos del otro modelo (la modalidad de clase de un grupo)
+    });
+
 
     // Un grupo solo puede tener un docente de "docente"
     Grupo.belongsTo(models.Docente, {
@@ -147,12 +181,6 @@ Grupo.associate = (models) => {
         as: 'asignaciones' // Usamos éste prefijo para obtener los datos del otro modelo (todas las asignaciones de un grupo)
     });
 
-
-    // Un grupo solo puede tener una asignación de "asignacion_docente"
-    Grupo.hasOne(models.Asignacion_Docente, {
-        foreignKey: 'id_grupo', // La FK que está en la tabla 'asignacion_docente'
-        as: 'asignacion' // Usamos éste prefijo para obtener los datos del otro modelo (la asignación de un grupo)
-    });
 
 
     // Un grupo puede aparecer muchas veces en "inscripcion"

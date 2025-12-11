@@ -324,11 +324,9 @@
                     if (isIdentification) {
                         params.numero_identificacion = query;
                         params.estado = true;
-                        params.solo_personas_naturales = true;
                     } else if (isOnlyLettersSpaces) {
                         params.nombre = query;
                         params.estado = true;
-                        params.solo_personas_naturales = true;
                     } else {
                         // Alfanumérico o Símbolos: Bloquea la búsqueda y muestra la lista vacía
                         isLoading.value = false;

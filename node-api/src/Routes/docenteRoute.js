@@ -6,6 +6,10 @@ const docenteController = require('../Controller/docenteController');
 
 router.get('/Buscar', docenteController.buscarDocentes);  
 
+router.get('/ContarDocentes', docenteController.contarDocentes);  
+
+router.get('/ContarEstados', docenteController.obtenerEstadosTotales);  
+
 router.get('/:id', docenteController.obtenerDocentePorId);
 
 router.post('/CrearDocente', docenteController.crearDocente);  

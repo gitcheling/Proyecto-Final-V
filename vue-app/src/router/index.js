@@ -26,6 +26,12 @@ import CursosView from '../views/cursos/CursosView.vue'
 import DetallesCursoView from '../views/cursos/DetallesCursoView.vue'
 
 
+import ReportesEntidadesView from '../views/reportes/entidades/ReportesEntidadesView.vue'
+import ReportesEstudiantesView from '../views/reportes/estudiantes/ReportesEstudiantesView.vue'
+import ReportesDocentesView from '../views/reportes/docentes/ReportesDocentesView.vue'
+import ReportesProveedoresView from '../views/reportes/proveedores/ReportesProveedoresView.vue'
+import ReportesCuentasBancariasView from '../views/reportes/cuentasBancarias/ReportesCuentasBancariasView.vue'
+
 
 const routes = [
     { path: '/', component: HomeView },
@@ -89,6 +95,14 @@ const routes = [
       component: DetallesCursoView, 
       props: true 
     },
+
+
+    // Reportes
+    { path: '/ReportesEntidades', name: 'ReportesEntidades', component: ReportesEntidadesView },
+    { path: '/ReportesEstudiantes', name: 'ReportesEstudiantes', component: ReportesEstudiantesView },
+    { path: '/ReportesDocentes', name: 'ReportesDocentes', component: ReportesDocentesView },
+    { path: '/ReportesProveedores', name: 'ReportesProveedores', component: ReportesProveedoresView },
+    { path: '/ReportesCuentasBancarias', name: 'ReportesCuentasBancarias', component: ReportesCuentasBancariasView },
 
 ]
 

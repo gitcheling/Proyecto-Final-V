@@ -110,6 +110,17 @@ const validarSoloNumerosYGuion = (numeros, error) => {
     return true;
 };
 
+const validarSoloNumerosEnterosYDecimales = (numeros, error) => {
+    // Patrón: ^ inicio, $ fin
+    // [0-9]+  al menos un dígito
+    // \.?     opcionalmente un punto (el punto debe escaparse con \.)
+    // [0-9]* cero o más dígitos después del punto
+    if (!/^[0-9]+\.?[0-9]*$/.test(numeros)) {
+        throw new Error(error);
+    }
+    return true;
+};
+
 
 /**
  * Valida si una elemento es un booleano
@@ -293,10 +304,14 @@ exports.validarSoloNumeros = validarSoloNumeros;
 exports.validarSoloTexto = validarSoloTexto;
 exports.validarSoloTextoPermisivo = validarSoloTextoPermisivo;
 exports.validarSoloNumerosYGuion = validarSoloNumerosYGuion;
+exports.validarSoloNumerosEnterosYDecimales = validarSoloNumerosEnterosYDecimales;
 exports.validarBooleano = validarBooleano;
 exports.parseAndValidateDate = parseAndValidateDate;
 exports.validarInicioAntesDeFin = validarInicioAntesDeFin;
 exports.validarLongitudCadena = validarLongitudCadena;
 exports.validarEmail = validarEmail;
 exports.validarTelefonoVenezolano = validarTelefonoVenezolano;
+
+
+
 

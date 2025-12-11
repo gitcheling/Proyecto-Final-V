@@ -18,6 +18,11 @@ const menuItems = ref([
   { to: '/PlanCuentas', icon: 'bi-list-task', text: 'Plan de Cuentas' },
   { to: '/Periodos', icon: 'bi bi-calendar3', text: 'Periodos' },
   { to: '/Cursos', icon: 'bi bi-palette-fill', text: 'Cursos' },
+  { to: '/ReportesEntidades', icon: 'bi bi-bar-chart-line-fill', text: 'Reportes de entidades' },
+  { to: '/ReportesEstudiantes', icon: 'bi bi-bar-chart-line-fill', text: 'Reportes de estudiantes' },
+  { to: '/ReportesDocentes', icon: 'bi bi-bar-chart-line-fill', text: 'Reportes de docentes' },
+  { to: '/ReportesProveedores', icon: 'bi bi-bar-chart-line-fill', text: 'Reportes de proveedores' },
+  { to: '/ReportesCuentasBancarias', icon: 'bi bi-bar-chart-line-fill', text: 'Reportes de cuentas bancarias' }
 ])
 
 // Lista centralizada de Herramientas

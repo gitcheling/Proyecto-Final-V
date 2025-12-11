@@ -11,7 +11,7 @@ const Estado_Academico_Model = require('../Models/estado_academico');
 const { validarExistencia, validarIdNumerico, validarSoloTexto, validarSoloNumeros, parseAndValidateDate} = require('../Utils/validators');
 
 // Se importan las funciones comúnes
-const { capitalizeFirstLetter} = require('../Utils/funciones');
+const { capitalizeFirstLetter, traducirMes} = require('../Utils/funciones');
 
 // Se importa la función del archivo de utilidades
 const { generarCodigoEstudiantil } = require('../Utils/generadorCodigos');
@@ -20,12 +20,12 @@ const { generarCodigoEstudiantil } = require('../Utils/generadorCodigos');
 const { crearEstudianteMutex } = require('../Utils/mutex');
 
 
-
 // Se importa la clase "Op" que es necesaria para las operaciones de las clausulas WHERE de las consultas
-const { Op } = require('sequelize'); 
+const { Op, fn, col } = require('sequelize'); 
 
 class EstudianteService {
 
+// -------------------------- Creación ------------------------------------
 
     // Se crea un nuevo estudiante
     async crearEstudiante({id}) {
@@ -113,6 +113,8 @@ class EstudianteService {
     }
 
 
+// -------------------------- Modificación ------------------------------------
+
     async cambiarEstadoEstudiante(id, nuevoEstado) {
 
         if(!validarExistencia(id, "id", false)){
@@ -155,6 +157,8 @@ class EstudianteService {
     }
 
 
+// -------------------------- Obtención ------------------------------------
+
     // Se obtiene un solo estudiante por el id
     async obtenerEstudiantePorId(id) {
 
@@ -194,8 +198,287 @@ class EstudianteService {
     }
 
 
-    // Permite buscar cuentas basandose en filtros
+    // Permite buscar estudiantes basandose en filtros
     async buscarEstudiantes(criteriosBusqueda = {}) {
+        
+        const {estudianteWhere, entidadWhere} = this.generarWhereClause(criteriosBusqueda);
+
+
+        // --- 3. Ejecutar la Consulta con Cláusulas WHERE separadas ---
+        const estudiantes = await Estudiante_Model.findAll({
+            // Aplicamos los filtros directos de la tabla Estudiante
+            where: estudianteWhere, 
+            
+            include: [ // Define qué otras tablas deben unirse a la consulta y qué campos de esas tablas deben traerse.
+                { 
+                    association: 'entidad', // Realiza el JOIN desde "estudiante" a "entidad", basándose en la asociación Estudiante.belongsTo(Entidad, { as: 'entidad' }).
+
+                    // APLICAMOS LOS FILTROS DE ENTIDAD AQUÍ
+                    where: entidadWhere, // Usa el objeto where creado dinámicamente (es decir, se aplican los filtros de la tabla "entidad")
+                    required: Object.keys(entidadWhere).length > 0, /* Sequelize por defecto realiza un LEFT OUTER JOIN . Trae todos los estudiantes que cumplan los 
+                                                                    filtros de Estudiante, e incluye los datos de la Entidad si existen. El "required: true" hace que
+                                                                    se convierta a "INNER JOIN", haciendo que se traigan solo aquellos datos que cumplan las condiciones
+                                                                    indicadas, por lo que al decir "required: Object.keys(entidadWhere).length > 0", se está diciendo que
+                                                                    si hay filtros de entidad, que se ap´lique un INNER JOIN.*/
+                            
+                    include: [ /* Inclusión Anidada: Le dice a Sequelize que, dentro de la tabla "entidad", debe realizar otro JOIN para traer el 
+                                prefijo asociado (Entidad.belongsTo(Prefijo_Identificacion, { as: 'prefijo' })).
+
+                                Resultado: Los datos del prefijo aparecerán anidados dentro del objeto entidad en el JSON final.*/
+                        { association: 'prefijo', attributes: ['id_prefijo', 'letra_prefijo'] }
+                    ],
+                    // Atributos de la entidad que queremos traer:
+                    attributes: ['numero_identificacion', 'nombre', 'apellido', 'estado', 'telefono', 'email'] 
+                },
+                { 
+                    association: 'estado_academico', 
+                    attributes: ['id_estado_academico', 'nombre', 'permite_inscripcion'] 
+                }
+            ],
+
+            // Mantenemos el orden según las actualizaciones de la tabla "estudiante"
+            order: [ ['updatedAt', 'DESC'] ]
+        });
+
+
+        // --- Se devuelven los resultados formateados ---
+        return estudiantes.map(instancia => EstudianteService.formatearEstudiante(instancia));
+    }
+
+
+
+    // Obtiene el conteo por mes de estudiantes, lo que es necesario para los gráficos
+    async obtenerConteoPorMes(criteriosBusqueda = {}) {
+
+        const concepto = criteriosBusqueda.concepto ?? null;
+        
+        // Validamos que existan todos los datos
+        validarExistencia(concepto, "concepto", true);
+
+        const conceptoLimpio = String(concepto).trim().toLowerCase();
+        // Se valida que el concepto sólo tenga texto 
+        validarSoloTexto(concepto, "El concepto debe contener solo texto y espacios en blanco.");
+
+        let columna = "";
+
+        switch (conceptoLimpio) {
+            case "creados":
+                columna = "Estudiante.createdAt";
+                break;
+            case "modificados":
+                columna = "Estudiante.updatedAt";
+                break;
+            default:
+                columna = "Estudiante.createdAt";
+        }
+
+        const {estudianteWhere, entidadWhere} = this.generarWhereClause(criteriosBusqueda);
+
+        // Se agregar el filtro de "Realmente Modificados"
+        if (conceptoLimpio === "modificados") {
+        
+            // La condición de que la fecha de actualización sea posterior a la de creación
+            // Esto asegura que solo contamos las modificaciones reales, no la creación inicial.
+            const whereModificado = { [Op.gt]: col('Estudiante.createdAt') }; 
+            
+            if (estudianteWhere.updatedAt) {
+                // Si ya hay condiciones de fecha (Desde/Hasta) en updatedAt, las combinamos con Op.and
+                estudianteWhere.updatedAt = {
+                    [Op.and]: [
+                        estudianteWhere.updatedAt, // Conserva los filtros de fecha (Desde/Hasta)
+                        whereModificado            // Agrega la condición de ser posterior a la creación
+                    ]
+                };
+            } else {
+                // Si no hay filtros de fecha, solo agregamos la condición de ser posterior a la creación
+                estudianteWhere.updatedAt = whereModificado;
+            }
+        }
+        
+        // Definición de las expresiones SQL para Agregación
+        const atributosDeAgregacion = [
+            // A) Conteo: COUNT(Estudiante.id_estudiante)
+            // Nota: EL nombre de la tabla debe coincidir con el del modelo
+            [fn('COUNT', col('Estudiante.id_estudiante')), 'conteo'],
+            
+            // B) Etiqueta de Mes: TO_CHAR("createdAt", 'Month YYYY')
+            [
+                fn('TO_CHAR', col(columna), 'Month YYYY'), 
+                'mes'
+            ],
+            
+            // C) Ordenamiento Técnico: DATE_TRUNC('month', "columna")
+            [fn('DATE_TRUNC', 'month', col(columna)), 'fecha_orden']
+        ];
+
+
+        // Ejecutar la Consulta de Agregación
+        const resultadosAgregados = await Estudiante_Model.findAll({
+            
+            // Aplicamos los filtros directos de la tabla "Estudiante"
+            where: estudianteWhere, 
+            
+            attributes: atributosDeAgregacion,
+            
+            include: [
+                { 
+                    association: 'entidad', // JOIN con la tabla de Entidad
+                    
+                    // Aplicamos los filtros de ENTIDAD generados
+                    where: entidadWhere, 
+                    
+                    // Si hay filtros en la Entidad, forzamos INNER JOIN (required: true).
+                    required: Object.keys(entidadWhere).length > 0, 
+                    
+                    // No necesitamos seleccionar atributos de la entidad ni inclusiones anidadas aquí.
+                    attributes: [] 
+                }
+            ],
+
+            // Agrupar por las expresiones de fecha
+            group: [
+                fn('TO_CHAR', col(columna), 'Month YYYY'),
+                fn('DATE_TRUNC', 'month', col(columna))
+            ],
+            
+            // Ordenar por el valor numérico de la fecha truncada para orden cronológico
+            order: [
+                [fn('DATE_TRUNC', 'month', col(columna)), 'ASC'] 
+            ],
+            
+            // Configuraciones necesarias para consultas con GROUP BY y JOIN:
+            raw: true,
+            subQuery: false,
+            duplicating: false
+        });
+
+        return resultadosAgregados.map(item => ({
+            mes: traducirMes(item.mes), 
+            conteo: parseInt(item.conteo, 10)
+        }));
+    }
+
+
+
+    // Obtiene la cantidad total de estudiantes según cada estado para los gráficos
+    async obtenerEstadosTotales(criteriosBusqueda = {}) {
+        
+        const { estudianteWhere, entidadWhere } = this.generarWhereClause(criteriosBusqueda);
+
+    
+        const resultadosAgregados = await Estudiante_Model.findAll({
+    
+            // Aplicamos los filtros directos de la tabla Estudiante
+            where: estudianteWhere, 
+            
+            // Atributos a seleccionar
+            attributes: [
+                // A) Conteo total de estudiantes por grupo (estado)
+                [fn('COUNT', col('Estudiante.id_estudiante')), 'conteo']
+                // NOTA: No seleccionamos la columna id_estado_academico, ya que la agruparemos por el NOMBRE del estado.
+            ],
+            
+            // Inclusión de las tablas necesarias (JOINs)
+            include: [
+                { 
+                    // JOIN con la tabla de Entidad (para aplicar filtros de nombre, apellido, etc.)
+                    association: 'entidad', 
+                    where: entidadWhere, 
+                    // Forzamos INNER JOIN si hay filtros de entidad para que el conteo solo incluya los que cumplen
+                    required: Object.keys(entidadWhere).length > 0, 
+                    attributes: [] // No necesitamos datos de Entidad en el resultado final
+                },
+                { 
+                    // JOIN con la tabla Estado_Academico (para obtener el nombre del estado para la agrupación)
+                    association: 'estado_academico', // Usa el alias definido en la asociación ('estado_academico')
+                    attributes: ['nombre'] // Solo necesitamos el nombre del estado
+                }
+            ],
+
+            // 3. Agrupación: Agrupamos por el nombre del estado académico
+            group: [
+                // Referenciamos la columna 'nombre' a través de su alias de asociación (es decir, "estado_")
+                col('estado_academico.nombre') 
+            ],
+            
+            // Ordenar por el nombre del estado académico
+            order: [
+                [col('estado_academico.nombre'), 'ASC'] 
+            ],
+            
+            // Configuraciones necesarias para GROUP BY y JOIN:
+            raw: true,
+            subQuery: false,
+            duplicating: false
+        });
+
+        // Formatear y Devolver el resultado
+        // El resultado de la consulta será algo como: 
+        // [{ conteo: '150', estado_entidad: true }, { conteo: '50', estado_entidad: false }]
+        
+        // Mapeamos el resultado a un objeto simple para el gráfico:
+        const estadosTotales = {}; 
+        
+        resultadosAgregados.forEach(item => {
+            // La clave del nombre del estado en el objeto 'raw' de Sequelize se construye con el alias de la asociación
+            const nombreEstado = item['estado_academico.nombre'];
+            const conteoNumerico = parseInt(item.conteo, 10);
+            
+            if (nombreEstado) {
+                // Utilizamos el nombre del estado como clave en el objeto final
+                estadosTotales[nombreEstado] = conteoNumerico;
+            }
+        });
+
+        // Ejemplo de retorno: { 'Activo': 150, 'Retirado': 20, 'Moroso': 5 }
+        return estadosTotales;
+
+    }
+    
+
+// -------------------------- Auxiliar ------------------------------------
+
+    // Esta función complementa a las funciones "buscarEstudiantes" y "obtenerEstudiantePorId", y sirve para formatear las claves que le llegará al usuario
+    static formatearEstudiante(estudianteInstance) {
+
+        // Si no existe la entidad se devuelve null
+        if (!estudianteInstance) return null;
+
+        const estudiante = estudianteInstance.toJSON(); 
+
+        return {
+            id: estudiante.id_estudiante, 
+            codigo_estudiantil: estudiante.codigo_estudiantil.toString(),
+
+            entidad: {
+                numero_identificacion: estudiante.entidad.numero_identificacion ? estudiante.entidad.numero_identificacion.toString() : null,
+                nombre: estudiante.entidad.nombre ? capitalizeFirstLetter(estudiante.entidad.nombre.toString()) : null,
+                apellido: estudiante.entidad.apellido ? capitalizeFirstLetter(estudiante.entidad.apellido.toString()) : null,
+                email: estudiante.entidad.email ? estudiante.entidad.email : null,
+                telefono: estudiante.entidad.telefono ? estudiante.entidad.telefono : null,
+                estado: estudiante.entidad.estado ? estudiante.entidad.estado : null,
+
+                prefijo: {
+                    letra_prefijo: estudiante.entidad.prefijo.letra_prefijo ? estudiante.entidad.prefijo.letra_prefijo.toString() : null,
+                }
+            },
+
+            estado: {
+                id: estudiante.estado_academico.id_estado_academico ? estudiante.estado_academico.id_estado_academico : null,
+                nombre: estudiante.estado_academico.nombre ? estudiante.estado_academico.nombre.toString() : null,
+                puede_inscribirse: estudiante.estado_academico.permite_inscripcion == true ? "Si" : "No",
+            },
+    
+            fechaCreacion: estudiante.createdAt,
+            fechaActualizacion: estudiante.updatedAt 
+        };
+
+    }
+
+
+
+    // Función Auxiliar que genera la "whereClause" sin ejecutar la consulta
+    generarWhereClause(criteriosBusqueda = {}) {
         
         // Objeto para condiciones en la tabla Estudiante (base)
         const estudianteWhere = {};
@@ -218,7 +501,7 @@ class EstudianteService {
             modificadosDesde,
             modificadosHasta
         } = criteriosBusqueda;
-      
+    
         // Se validan y parsean las fechas
         const fechaCreacionDesde = parseAndValidateDate(creadosDesde);
         const fechaCreacionHasta = parseAndValidateDate(creadosHasta);
@@ -307,7 +590,7 @@ class EstudianteService {
                         estudianteWhere.id_estado_academico = estado_Numerico;
                     }; 
                 } 
-       
+    
             }
 
 
@@ -376,88 +659,11 @@ class EstudianteService {
                 }
             }
 
+        return {estudianteWhere,entidadWhere};
+    }   
 
 
-            // --- 3. Ejecutar la Consulta con Cláusulas WHERE separadas ---
-            const estudiantes = await Estudiante_Model.findAll({
-                // Aplicamos los filtros directos de la tabla Estudiante
-                where: estudianteWhere, 
-                
-                include: [ // Define qué otras tablas deben unirse a la consulta y qué campos de esas tablas deben traerse.
-                    { 
-                        association: 'entidad', // Realiza el JOIN desde "estudiante" a "entidad", basándose en la asociación Estudiante.belongsTo(Entidad, { as: 'entidad' }).
-
-                        // APLICAMOS LOS FILTROS DE ENTIDAD AQUÍ
-                        where: entidadWhere, // Usa el objeto where creado dinámicamente (es decir, se aplican los filtros de la tabla "entidad")
-                        required: Object.keys(entidadWhere).length > 0, /* Sequelize por defecto realiza un LEFT OUTER JOIN . Trae todos los estudiantes que cumplan los 
-                                                                        filtros de Estudiante, e incluye los datos de la Entidad si existen. El "required: true" hace que
-                                                                        se convierta a "INNER JOIN", haciendo que se traigan solo aquellos datos que cumplan las condiciones
-                                                                        indicadas, por lo que al decir "required: Object.keys(entidadWhere).length > 0", se está diciendo que
-                                                                        si hay filtros de entidad, que se ap´lique un INNER JOIN.*/
-                               
-                        include: [ /* Inclusión Anidada: Le dice a Sequelize que, dentro de la tabla "entidad", debe realizar otro JOIN para traer el 
-                                    prefijo asociado (Entidad.belongsTo(Prefijo_Identificacion, { as: 'prefijo' })).
-
-                                    Resultado: Los datos del prefijo aparecerán anidados dentro del objeto entidad en el JSON final.*/
-                            { association: 'prefijo', attributes: ['id_prefijo', 'letra_prefijo'] }
-                        ],
-                        // Atributos de la entidad que queremos traer:
-                        attributes: ['numero_identificacion', 'nombre', 'apellido', 'estado', 'telefono', 'email'] 
-                    },
-                    { 
-                        association: 'estado_academico', 
-                        attributes: ['id_estado_academico', 'nombre', 'permite_inscripcion'] 
-                    }
-                ],
-
-                // Mantenemos el orden según las actualizaciones de la tabla "estudiante"
-                order: [ ['updatedAt', 'DESC'] ]
-            });
-
-
-        // --- Se devuelven los resultados formateados ---
-        return estudiantes.map(instancia => EstudianteService.formatearEstudiante(instancia));
-    }
-    
-
-    // Esta función complementa a las funciones "buscarEstudiantes" y "obtenerEstudiantePorId", y sirve para formatear las claves que le llegará al usuario
-    static formatearEstudiante(estudianteInstance) {
-
-        // Si no existe la entidad se devuelve null
-        if (!estudianteInstance) return null;
-
-        const estudiante = estudianteInstance.toJSON(); 
-
-        return {
-            id: estudiante.id_estudiante, 
-            codigo_estudiantil: estudiante.codigo_estudiantil.toString(),
-
-            entidad: {
-                numero_identificacion: estudiante.entidad.numero_identificacion ? estudiante.entidad.numero_identificacion.toString() : null,
-                nombre: estudiante.entidad.nombre ? capitalizeFirstLetter(estudiante.entidad.nombre.toString()) : null,
-                apellido: estudiante.entidad.apellido ? capitalizeFirstLetter(estudiante.entidad.apellido.toString()) : null,
-                email: estudiante.entidad.email ? estudiante.entidad.email : null,
-                telefono: estudiante.entidad.telefono ? estudiante.entidad.telefono : null,
-                estado: estudiante.entidad.estado ? estudiante.entidad.estado : null,
-
-                prefijo: {
-                    letra_prefijo: estudiante.entidad.prefijo.letra_prefijo ? estudiante.entidad.prefijo.letra_prefijo.toString() : null,
-                }
-            },
-
-            estado: {
-                id: estudiante.estado_academico.id_estado_academico ? estudiante.estado_academico.id_estado_academico : null,
-                nombre: estudiante.estado_academico.nombre ? estudiante.estado_academico.nombre.toString() : null,
-                puede_inscribirse: estudiante.estado_academico.permite_inscripcion == true ? "Si" : "No",
-            },
-       
-            fechaCreacion: estudiante.createdAt,
-            fechaActualizacion: estudiante.updatedAt 
-        };
-
-    }
-
-
+ 
 }
 
 module.exports = EstudianteService;

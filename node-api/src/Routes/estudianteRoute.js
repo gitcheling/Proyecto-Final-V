@@ -6,6 +6,10 @@ const estudianteController = require('../Controller/estudianteController');
 
 router.get('/Buscar', estudianteController.buscarEstudiantes);  
 
+router.get('/ContarEstudiantes', estudianteController.contarEstudiantes);  
+
+router.get('/ContarEstados', estudianteController.obtenerEstadosTotales);  
+
 router.get('/:id', estudianteController.obtenerEstudiantePorId);
 
 router.post('/CrearEstudiante', estudianteController.crearEstudiante);     

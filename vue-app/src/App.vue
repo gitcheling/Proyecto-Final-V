@@ -3,6 +3,7 @@ import { RouterView } from 'vue-router'
 import Sidebar from './components/Sidebar.vue'
 import Navbar from './components/Navbar.vue' 
 import ToastContainer from './components/ToastContainer.vue';
+import 'bootstrap';
 
 </script>
 

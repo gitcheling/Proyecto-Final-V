@@ -849,6 +849,7 @@
 
 
 /* Estilos para el contenedor de filtros */
+
     .filters-container {
         /* Define el estado visible final */
         padding: 15px; /* Un padding base que animaremos */

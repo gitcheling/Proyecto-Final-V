@@ -6,6 +6,10 @@ const entidadController = require('../Controller/entidadController');
 
 router.get('/Buscar', entidadController.buscarEntidades);  
 
+router.get('/ContarEntidades', entidadController.contarEntidades);  
+
+router.get('/ContarEstados', entidadController.obtenerEstadosTotales);  
+
 router.get('/BuscarPrefijos/:id', entidadController.obtenerPrefijos);   
 
 router.get('/:id', entidadController.obtenerEntidadPorId);

@@ -3,7 +3,7 @@ const CuentaBancariaService = require('../Services/cuentaBancariaService');
 
 const cuentaBancariaService = new CuentaBancariaService();
 
-// Registro
+// -------------------------- Creación ------------------------------------
 
     exports.crearCuentaBancaria = async (req, res) => {
         try {
@@ -33,7 +33,7 @@ const cuentaBancariaService = new CuentaBancariaService();
 
 
 
-// Modificación
+// -------------------------- Modificación ------------------------------------
 
     exports.cambiarEstadoCuentaBancaria = async (req, res) => {
 
@@ -133,7 +133,7 @@ const cuentaBancariaService = new CuentaBancariaService();
 
 
 
-// Obtención
+// -------------------------- Obtención ------------------------------------
 
     exports.obtenerCuentaBancariaPorId = async (req, res) => {
         // 1. Capturar el parámetro de la ruta
@@ -167,7 +167,6 @@ const cuentaBancariaService = new CuentaBancariaService();
     };
 
 
-
     exports.obtenerCuentasBancariasPorRol = async (req, res) => {
         
         const { id, rol } = req.query || {}; 
@@ -190,7 +189,6 @@ const cuentaBancariaService = new CuentaBancariaService();
             });
         }
     };
-
 
      
     exports.obtenerIdsCuentasBancariasPorRol = async (req, res) => {
@@ -241,7 +239,9 @@ const cuentaBancariaService = new CuentaBancariaService();
     };
 
 
-
+    /* Nota: Por seguridad lo mejor (de momento) es tener un controlador por separado para saber si se quieren cuentas aprobadas
+    o por aprobar, ya que reduciría el código si se envía desde el front, pero es menos seguro ya que alguien que no debe puede 
+    obtener las cuentas no aprobadas */
     exports.buscarCuentasAprobadas = async (req, res) => {
 
         const criteriosBusqueda = req.query || {};
@@ -249,7 +249,7 @@ const cuentaBancariaService = new CuentaBancariaService();
         try {
             // Se llama al servicio con los criterios
             // La función del servicio ya se encarga de limpiar, validar y construir el WHERE.
-            const cuentasBancariasEncontradas = await cuentaBancariaService.buscarCuentasBancarias(criteriosBusqueda);
+            const cuentasBancariasEncontradas = await cuentaBancariaService.buscarCuentasBancarias(criteriosBusqueda, "aprobadas");
 
             // Se devuelve la respuesta
             if (cuentasBancariasEncontradas.length === 0) {
@@ -282,7 +282,6 @@ const cuentaBancariaService = new CuentaBancariaService();
             });
         }
     }
-
 
 
     exports.buscarCuentasPorAprobar = async (req, res) => {
@@ -292,7 +291,7 @@ const cuentaBancariaService = new CuentaBancariaService();
         try {
             // Se llama al servicio con los criterios
             // La función del servicio ya se encarga de limpiar, validar y construir el WHERE.
-            const cuentasBancariasEncontradas = await cuentaBancariaService.buscarCuentasBancarias(criteriosBusqueda, true);
+            const cuentasBancariasEncontradas = await cuentaBancariaService.buscarCuentasBancarias(criteriosBusqueda, "por_aprobar");
 
             // Se devuelve la respuesta
             if (cuentasBancariasEncontradas.length === 0) {
@@ -327,8 +326,128 @@ const cuentaBancariaService = new CuentaBancariaService();
     }
 
 
+    exports.contarCuentasBancariasPorAprobar = async (req, res) => {
 
-// Comprobación
+        const criteriosBusqueda = req.query || {};
+
+        try {
+            const cuentasEncontradas = await cuentaBancariaService.obtenerConteoPorMes(criteriosBusqueda, "por_aprobar");
+
+            // Se devuelve la respuesta
+            if (cuentasEncontradas.length === 0) {
+                return res.status(200).json({ 
+                    message: "No se encontraron cuentas bancarias que coincidan con los filtros.", 
+                    data: [] 
+                });
+            }
+
+            return res.status(200).json({ 
+                message: "Búsqueda de cuentas bancarias completada exitosamente.", 
+                data: cuentasEncontradas 
+            });
+
+        } catch (error) {
+            console.error("Error de Validación/Lógica en la búsqueda:", error.message);
+
+            // Si tiene un mensaje (y no es un error de sistema), lo asumimos como validación (400)
+            if (error.message) {
+                return res.status(400).json({ 
+                    error: true, 
+                    message: error.message 
+                });
+            }
+            
+            // Si no, devolvemos 500
+            return res.status(500).json({ 
+                error: true, 
+                message: "Error interno del servidor al procesar la búsqueda." 
+            });
+        }
+    }
+
+
+    exports.contarCuentasBancariasAprobadas = async (req, res) => {
+
+        const criteriosBusqueda = req.query || {};
+
+        try {
+            const cuentasEncontradas = await cuentaBancariaService.obtenerConteoPorMes(criteriosBusqueda, "aprobadas");
+
+            // Se devuelve la respuesta
+            if (cuentasEncontradas.length === 0) {
+                return res.status(200).json({ 
+                    message: "No se encontraron cuentas bancarias que coincidan con los filtros.", 
+                    data: [] 
+                });
+            }
+
+            return res.status(200).json({ 
+                message: "Búsqueda de cuentas bancarias completada exitosamente.", 
+                data: cuentasEncontradas 
+            });
+
+        } catch (error) {
+            console.error("Error de Validación/Lógica en la búsqueda:", error.message);
+
+            // Si tiene un mensaje (y no es un error de sistema), lo asumimos como validación (400)
+            if (error.message) {
+                return res.status(400).json({ 
+                    error: true, 
+                    message: error.message 
+                });
+            }
+            
+            // Si no, devolvemos 500
+            return res.status(500).json({ 
+                error: true, 
+                message: "Error interno del servidor al procesar la búsqueda." 
+            });
+        }
+    }
+
+
+    exports.obtenerEstadosTotales = async (req, res) => {
+
+        const criteriosBusqueda = req.query || {};
+
+        try {
+            const cuentasEncontradas = await cuentaBancariaService.obtenerEstadosTotales(criteriosBusqueda, "todas");
+
+            // Se devuelve la respuesta
+            if (cuentasEncontradas.length === 0) {
+                return res.status(200).json({ 
+                    message: "No se encontraron cuentas bancarias que coincidan con los filtros.", 
+                    data: [] 
+                });
+            }
+
+            return res.status(200).json({ 
+                message: "Búsqueda de  cuentas bancarias completada exitosamente.", 
+                data: cuentasEncontradas 
+            });
+
+        } catch (error) {
+            console.error("Error de Validación/Lógica en la búsqueda:", error.message);
+
+            // Si tiene un mensaje (y no es un error de sistema), lo asumimos como validación (400)
+            if (error.message) {
+                return res.status(400).json({ 
+                    error: true, 
+                    message: error.message 
+                });
+            }
+            
+            // Si no, devolvemos 500
+            return res.status(500).json({ 
+                error: true, 
+                message: "Error interno del servidor al procesar la búsqueda." 
+            });
+        }
+    }
+
+
+// -------------------------- Comprobación ------------------------------------
+
     exports.comprobarCuentaBancariaExistente = async (req, res) => {
 
         const { numero_cuenta, banco} = req.body || {}; 

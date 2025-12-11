@@ -24,15 +24,15 @@ const Proveedor_Model = require('../Models/proveedor');
 const { validarExistencia, validarIdNumerico, validarSoloTexto, validarSoloNumeros, parseAndValidateDate} = require('../Utils/validators');
 
 // Se importan las funciones comúnes
-const { capitalizeFirstLetter} = require('../Utils/funciones');
+const { capitalizeFirstLetter, traducirMes} = require('../Utils/funciones');
 
 // Se importa la clase "Op" que es necesaria para las operaciones de las clausulas WHERE de las consultas
-const { Op } = require('sequelize'); 
+const { Op, fn, col } = require('sequelize');  
 
 
 class CuentaBancariaService {
 
-// Registro
+// -------------------------- Creación ------------------------------------
 
     // Se crea una nueva cuenta bancaria
     async crearCuentaBancaria({numero_cuenta, tipo_cuenta, banco, entidad_titular }) {
@@ -144,8 +144,8 @@ class CuentaBancariaService {
     }
 
 
+// -------------------------- Modificación ------------------------------------
 
-// Modificación
 
     /* Ésta función simula el borrado de una entidad al desactivarla o activarla (ya que permitir borrados sería desastroso)
     Nota: no se puede permitir el modificar cualquier otro dato ya que no es correcto, el hecho de que se modifique algún dato significa
@@ -243,8 +243,7 @@ class CuentaBancariaService {
     }
     
 
-
-// Obtención
+// -------------------------- Obtención ------------------------------------
 
     // Se obtiene una sola cuenta bancaria por el id
     async obtenerCuentaBancariaPorId(id) {
@@ -481,17 +480,470 @@ class CuentaBancariaService {
     }
 
 
-
     /**
      * Permite buscar cuentas basandose en filtros
      * y no creando una cuenta).
      * @param {object} criteriosBusqueda - Un objeto con los criterios de búsqueda.
-     * @param {bool} porAprobar - Un booleano que nos indica si debe traer sólo las cuentas por aprobar (true)
+     * @param {String} tipo_busqueda - Un texto que nos dice si se traen las cuentas bancarias aprobadas, por aprobar, o todas
      * @returns {bool} Retorna "true", o "false" si no hay duplicados.
      */
-    async buscarCuentasBancarias(criteriosBusqueda = {}, porAprobar = false) {
+    async buscarCuentasBancarias(criteriosBusqueda = {}, tipo_busqueda) {
         
-        // Objeto para condiciones en la tabla cuenta_bancaria (base)
+        const {cuentaBancariaWhere, entidadWhere} = this.generarWhereClause(criteriosBusqueda, tipo_busqueda);
+
+
+        // --- 3. Ejecutar la Consulta con Cláusulas WHERE separadas ---
+        const cuentasBancarias = await Cuenta_Bancaria_Model.findAll({
+            // Aplicamos los filtros directos de la tabla Estudiante
+            where: cuentaBancariaWhere, 
+            
+            include: [ // Define qué otras tablas deben unirse a la consulta y qué campos de esas tablas deben traerse.
+                { 
+                    association: 'entidad', // Realiza el JOIN desde "estudiante" a "entidad", basándose en la asociación Estudiante.belongsTo(Entidad, { as: 'entidad' }).
+
+                    // APLICAMOS LOS FILTROS DE ENTIDAD AQUÍ
+                    where: entidadWhere, // Usa el objeto where creado dinámicamente (es decir, se aplican los filtros de la tabla "entidad")
+                    required: Object.keys(entidadWhere).length > 0, /* Sequelize por defecto realiza un LEFT OUTER JOIN . Trae todos los estudiantes que cumplan los 
+                                                                    filtros de Estudiante, e incluye los datos de la Entidad si existen. El "required: true" hace que
+                                                                    se convierta a "INNER JOIN", haciendo que se traigan solo aquellos datos que cumplan las condiciones
+                                                                    indicadas, por lo que al decir "required: Object.keys(entidadWhere).length > 0", se está diciendo que
+                                                                    si hay filtros de entidad, que se ap´lique un INNER JOIN.*/
+                            
+                    include: [ /* Inclusión Anidada: Le dice a Sequelize que, dentro de la tabla "entidad", debe realizar otro JOIN para traer el 
+                                prefijo asociado (Entidad.belongsTo(Prefijo_Identificacion, { as: 'prefijo' })).
+
+                                Resultado: Los datos del prefijo aparecerán anidados dentro del objeto entidad en el JSON final.*/
+                        { association: 'prefijo', attributes: ['id_prefijo', 'letra_prefijo'] }
+                    ],
+                    // Atributos de la entidad que queremos traer:
+                    attributes: ['numero_identificacion', 'nombre', 'apellido', 'estado'] 
+                },
+                { 
+                    association: 'estado_cuenta', 
+                    attributes: ['id_estado_cuenta', 'nombre', 'descripcion', 'permite_operacion'] 
+                },
+                { 
+                    association: 'banco', 
+                    attributes: ['id_banco', 'nombre'] 
+                },
+                { 
+                    association: 'tipo_cuenta', 
+                    attributes: ['id_tipo_cuenta', 'nombre', 'descripcion'] 
+                }
+            ],
+
+            // Mantenemos el orden según las actualizaciones de la tabla "cuenta_bancaria"
+            order: [ ['updatedAt', 'DESC'] ]
+        });
+
+
+        // --- Se devuelven los resultados formateados ---
+        return cuentasBancarias.map(instancia => CuentaBancariaService.formatearCuentaBancaria(instancia));
+    }
+
+
+
+    // Obtiene el conteo por mes de cuentas bancarias, lo que es necesario para los gráficos
+    async obtenerConteoPorMes(criteriosBusqueda = {}, tipo_busqueda) {
+
+        const concepto = criteriosBusqueda.concepto ?? null;
+
+        // Validamos que existan todos los datos
+        validarExistencia(concepto, "concepto", true);
+
+        const conceptoLimpio = String(concepto).trim().toLowerCase();
+        // Se valida que el concepto sólo tenga texto 
+        validarSoloTexto(concepto, "El concepto debe contener solo texto y espacios en blanco.");
+
+        let columna = "";
+
+        switch (conceptoLimpio) {
+            case "creados":
+                columna = "Cuenta_Bancaria.createdAt";
+                break;
+            case "aprobados":
+                columna = "Cuenta_Bancaria.approvedAt";
+                break;
+            case "modificados":
+                columna = "Cuenta_Bancaria.updatedAt";
+                break;
+            default:
+                columna = "Cuenta_Bancaria.createdAt";
+        }
+        
+        const {cuentaBancariaWhere, entidadWhere} = this.generarWhereClause(criteriosBusqueda, tipo_busqueda);
+
+
+        // Se agregar el filtro de "Realmente Modificados"
+        if (conceptoLimpio === "modificados") {
+        
+            const whereModificado = { [Op.gt]: col('Cuenta_Bancaria.createdAt') }; 
+            
+            if (cuentaBancariaWhere.updatedAt) {
+                
+                cuentaBancariaWhere.updatedAt = {
+                    [Op.and]: [
+                        cuentaBancariaWhere.updatedAt, 
+                        whereModificado            
+                    ]
+                };
+            } else {
+
+                cuentaBancariaWhere.updatedAt = whereModificado;
+            }
+        }
+
+        
+        // Definición de las expresiones SQL para Agregación
+        const atributosDeAgregacion = [
+
+            [fn('COUNT', col('Cuenta_Bancaria.id_cuenta_bancaria')), 'conteo'],
+            
+            // B) Etiqueta de Mes: TO_CHAR("createdAt", 'Month YYYY')
+            [
+                fn('TO_CHAR', col(columna), 'Month YYYY'), 
+                'mes'
+            ],
+            
+            // C) Ordenamiento Técnico: DATE_TRUNC('month', "createdAt")
+            [fn('DATE_TRUNC', 'month', col(columna)), 'fecha_orden']
+        ];
+
+
+        // Ejecutar la Consulta de Agregación
+        const resultadosAgregados = await Cuenta_Bancaria_Model.findAll({
+            
+            // Aplicamos los filtros directos de la tabla "cuenta_bancaria"
+            where: cuentaBancariaWhere, 
+            
+            attributes: atributosDeAgregacion,
+            
+            include: [
+                { 
+                    association: 'entidad', // JOIN con la tabla de Entidad
+                    
+                    // Aplicamos los filtros de ENTIDAD generados
+                    where: entidadWhere, 
+                    
+                    // Si hay filtros en la Entidad, forzamos INNER JOIN (required: true).
+                    required: Object.keys(entidadWhere).length > 0, 
+                    
+                    // No necesitamos seleccionar atributos de la entidad ni inclusiones anidadas aquí.
+                    attributes: [] 
+                }
+            ],
+
+            // Agrupar por las expresiones de fecha
+            group: [
+                fn('TO_CHAR', col(columna), 'Month YYYY'),
+                fn('DATE_TRUNC', 'month', col(columna))
+            ],
+            
+            // Ordenar por el valor numérico de la fecha truncada para orden cronológico
+            order: [
+                [fn('DATE_TRUNC', 'month', col(columna)), 'ASC'] 
+            ],
+            
+            // Configuraciones necesarias para consultas con GROUP BY y JOIN:
+            raw: true,
+            subQuery: false,
+            duplicating: false
+        });
+
+        return resultadosAgregados.map(item => ({
+            mes: traducirMes(item.mes), 
+            conteo: parseInt(item.conteo, 10)
+        }));
+    }
+
+    
+
+    // Obtiene la cantidad total de docentes según cada estado para los gráficos
+    async obtenerEstadosTotales(criteriosBusqueda = {}, tipo_busqueda) {
+        
+        const { cuentaBancariaWhere, entidadWhere } = this.generarWhereClause(criteriosBusqueda, tipo_busqueda);
+
+    
+        const resultadosAgregados = await Cuenta_Bancaria_Model.findAll({
+    
+            // Aplicamos los filtros directos de la tabla Estudiante
+            where: cuentaBancariaWhere, 
+            
+            // Atributos a seleccionar
+            attributes: [
+                // A) Conteo total de docentes por grupo (estado)
+                [fn('COUNT', col('Cuenta_Bancaria.id_cuenta_bancaria')), 'conteo']
+                
+            ],
+            
+            // Inclusión de las tablas necesarias (JOINs)
+            include: [
+                { 
+                    // JOIN con la tabla de Entidad (para aplicar filtros de nombre, apellido, etc.)
+                    association: 'entidad', 
+                    where: entidadWhere, 
+                    // Forzamos INNER JOIN si hay filtros de entidad para que el conteo solo incluya los que cumplen
+                    required: Object.keys(entidadWhere).length > 0, 
+                    attributes: [] // No necesitamos datos de Entidad en el resultado final
+                },
+                { 
+                    // JOIN con la tabla Estado_Cuenta (para obtener el nombre del estado para la agrupación)
+                    association: 'estado_cuenta', // Usa el alias definido en la asociación ('Estado_Cuenta')
+                    attributes: ['nombre'] // Solo necesitamos el nombre del estado
+                }
+            ],
+
+            // 3. Agrupación: Agrupamos por el nombre del estado académico
+            group: [
+                // Referenciamos la columna 'nombre' a través de su alias de asociación (es decir, "estado_")
+                col('estado_cuenta.nombre') 
+            ],
+            
+            // Ordenar por el nombre del estado académico
+            order: [
+                [col('estado_cuenta.nombre'), 'ASC'] 
+            ],
+            
+            // Configuraciones necesarias para GROUP BY y JOIN:
+            raw: true,
+            subQuery: false,
+            duplicating: false
+        });
+
+        // Formatear y Devolver el resultado
+        // El resultado de la consulta será algo como: 
+        // [{ conteo: '150', estado_entidad: true }, { conteo: '50', estado_entidad: false }]
+        
+        // Mapeamos el resultado a un objeto simple para el gráfico:
+        const estadosTotales = {}; 
+        
+        resultadosAgregados.forEach(item => {
+            // La clave del nombre del estado en el objeto 'raw' de Sequelize se construye con el alias de la asociación
+            const nombreEstado = item['estado_cuenta.nombre'];
+            const conteoNumerico = parseInt(item.conteo, 10);
+            
+            if (nombreEstado) {
+                // Utilizamos el nombre del estado como clave en el objeto final
+                estadosTotales[nombreEstado] = conteoNumerico;
+            }
+        });
+
+        // Ejemplo de retorno: { 'Activo': 150, 'Retirado': 20, 'Moroso': 5 }
+        return estadosTotales;
+
+    }
+    
+
+
+
+
+// -------------------------- Eliminación ------------------------------------
+    /* Ésta función borra una cuenta bancaria (que no haya sido aprobada, ojo)*/
+    async eliminarCuentaBancaria(id) {
+
+        console.log("id: ", id)
+        if(!validarExistencia(id, "", false)){
+            throw new Error(`Debe proporcionar el id de la cuenta bancaria.`);
+        }
+
+        // Se valida el id
+        validarIdNumerico(id, "El id no tiene el formato correcto");
+
+        // Se valida la existencia de la cuenta, si no existe se regresa null
+        const cuenta_bancaria = await Cuenta_Bancaria_Model.findByPk(id)
+
+        if(!cuenta_bancaria){
+            return null;
+        };
+
+        if(cuenta_bancaria.id_estado_cuenta !== 5){
+             throw new Error(`No se puede eliminar una cuenta que ya ha sido aprobada.`);
+        }
+
+        const filasEliminadas = await Cuenta_Bancaria_Model.destroy({
+            where: {
+                id_cuenta_bancaria: cuenta_bancaria.id_cuenta_bancaria
+            }
+        });
+
+        if (filasEliminadas === 0) {       
+            return null;      
+        }
+ 
+        return true;
+    }
+
+
+
+// -------------------------- Verificación ------------------------------------
+    /**
+     * Verifica si ya existe una cuenta bancaria con el número de cuenta y el banco proporcionado
+     * y no creando una cuenta).
+     * @param {string} numero_cuenta - El número de cuenta a buscar
+     * @param {string} banco - El banco a buscar
+     * @returns {bool} Retorna "true", o "false" si no hay duplicados.
+     */
+    async verificarCuentaBancariaExistente(numero_cuenta, banco) {
+        
+        let whereClause = {};
+
+        validarExistencia(numero_cuenta, "número de cuenta", true);
+        validarExistencia(banco, "banco", true);
+
+        // Validamos primero el banco ya que necesitaremos los datos más adelante
+        validarIdNumerico(banco, "El banco no tiene el formato correcto");
+        // Se comprueba que exista un banco con ese id
+        const banco_objeto = await Banco_Model.findByPk(banco.trim());
+
+        if (!banco_objeto) {
+            // EL banco no existe, no se puede crear la cuenta bancaria
+            throw new Error(`El banco seleccionado no está registrado.`);
+        }
+
+        // Validamos ahora el número de cuenta
+        const numero_cuenta_limpio = numero_cuenta.trim();
+        validarSoloNumeros(numero_cuenta_limpio, "El número de cuenta debe contener solo números (dígitos 0-9).");
+        // EL número de cuenta debe tener exactamente 20 dígitos
+        if (numero_cuenta_limpio.length !== 20) {
+            throw new Error(`El número de cuenta debe tener exactamente 20 dígitos. Longitud actual: ${numero_cuenta_limpio.trim().length}.`);
+        }
+
+        // Obtenemos el prefijo del número de cuenta (los primeros 4 dígitos).
+        const prefijoCuenta = numero_cuenta_limpio.substring(0, 4);
+        if (prefijoCuenta !== banco_objeto.codigo_nacional) {
+            throw new Error(`El código del banco en la cuenta (${prefijoCuenta}) no coincide con el banco seleccionado (${banco_objeto.codigo_nacional}).`);
+        }
+
+        const cuentaEncontrada = await Cuenta_Bancaria_Model.findOne({
+            where: {
+
+                numero_cuenta: numero_cuenta_limpio,
+                
+                id_banco: banco_objeto.id_banco 
+            },
+            // Opcional: Solo traer el ID para optimizar la consulta si solo se necesita saber si existe
+            attributes: ['id_cuenta_bancaria'] 
+        });
+
+        if (cuentaEncontrada) {
+            return true; 
+        }else{
+            return false;
+        }
+    }
+
+
+// -------------------------- Auxiliar ------------------------------------
+
+    // Esta función complementa a las funciones "buscarCuentasBancarias", "obtenerCuentaBancariaPorId" y "obtenerCuentasBancariasPorRol", y sirve para formatear las claves que le llegará al usuario
+    static formatearCuentaBancaria(cuentaInstance) {
+
+        // Si no existe la entidad se devuelve null
+        if (!cuentaInstance) return null;
+
+        const cuenta_bancaria = cuentaInstance.toJSON(); 
+
+
+        /* Acceso seguro a la tabla intermedia
+                
+        Nota: al ser muchos a muchos la relación entre entidades y cuentas bancarias, Sequelize por cada cuenta bancaria nos 
+        va a traer un arreglo con todas las entidades asociadas a esa cuenta, dicho arreglo es "entidades_pago", y pude tener N 
+        cantidad de elementos. Cabe aclarar que por cada elemento del array, Sequelize va a adjuntar los datos de la tabla 
+        intermedia correspondientes a esa asociación, por la forma en que traímos los datos de la base de datos. También, los 
+        datos de la tabla intermedia estarán en el objeto llamado "Entidad_Cuenta_Asociacion", y se llama así debido a 
+        que Sequelize utiliza la instancia del Modelo asociado para nombrar la clave que contiene los atributos de la tabla 
+        through (es decir, le pone el nombre del modelo de la tabla intermedia )).*/
+        const entidades_asociadas = cuenta_bancaria.entidades_pago?.map(entidadAsociada => {
+                         
+            // Los datos de la tabla intermedia
+            const asociacionIntermedia = entidadAsociada.Entidad_Cuenta_Asociacion; 
+            
+            return {
+                // Datos de la Entidad asociada
+                entidad: {
+                    id: entidadAsociada.id_entidad ?? null,
+                    nombre: entidadAsociada.nombre ?? null,
+                    apellido: entidadAsociada.apellido ?? null,
+                    numero_identificacion: entidadAsociada.numero_identificacion ?? null,
+                    estado: entidadAsociada.estado ?? null,
+                    prefijo: {letra_prefijo : entidadAsociada.prefijo?.letra_prefijo ?? null}
+                },
+
+                // Datos de la Asociación (de la tabla intermedia)
+                asociacion: {
+                    id:asociacionIntermedia.id_asociacion ?? null,
+                    es_vigente: asociacionIntermedia.es_vigente ?? false,
+                    rol: asociacionIntermedia?.tipo_rol?.nombre ?? null
+                }
+            };
+
+        }) ?? []; // Si "entidades_pago" es null o undefined, devuelve un array vacío
+
+
+        // Si 'entidad' (titular) no existe, devolvemos null para el objeto completo 'entidad_titular'. 
+        const entidad_titular = cuenta_bancaria.entidad ? {
+            numero_identificacion: cuenta_bancaria.entidad.numero_identificacion ?? null,
+            nombre: cuenta_bancaria.entidad.nombre ? capitalizeFirstLetter(cuenta_bancaria.entidad.nombre) : null,
+            apellido: cuenta_bancaria.entidad.apellido ? capitalizeFirstLetter(cuenta_bancaria.entidad.apellido) : null,
+            estado: cuenta_bancaria.entidad.estado ?? null,
+
+            // El objeto prefijo también se devuelve null si la relación falla
+            prefijo: cuenta_bancaria.entidad.prefijo ? {
+                letra_prefijo: cuenta_bancaria.entidad.prefijo.letra_prefijo ?? null,
+            } : null
+        } : null;
+
+        // Si 'banco' no existe o no tiene ID, devolvemos null para el objeto completo.
+        const banco = cuenta_bancaria.banco && cuenta_bancaria.banco.id_banco ? {
+            id: cuenta_bancaria.banco.id_banco,
+            nombre: cuenta_bancaria.banco.nombre ? cuenta_bancaria.banco.nombre.toString() : null
+        } : null;
+
+        // Si 'tipo_cuenta' no existe o no tiene ID, devolvemos null para el objeto completo.
+        const tipo_cuenta = cuenta_bancaria.tipo_cuenta && cuenta_bancaria.tipo_cuenta.id_tipo_cuenta ? {
+            id: cuenta_bancaria.tipo_cuenta.id_tipo_cuenta,
+            nombre: cuenta_bancaria.tipo_cuenta.nombre ? cuenta_bancaria.tipo_cuenta.nombre.toString() : null,
+            descripcion: cuenta_bancaria.tipo_cuenta.descripcion ? cuenta_bancaria.tipo_cuenta.descripcion.toString() : null
+        } : null;
+
+        // Si 'estado_cuenta' no existe o no tiene ID, devolvemos null para el objeto completo.
+        const estado = cuenta_bancaria.estado_cuenta && cuenta_bancaria.estado_cuenta.id_estado_cuenta ? {
+            id: cuenta_bancaria.estado_cuenta.id_estado_cuenta,
+            nombre: cuenta_bancaria.estado_cuenta.nombre ? cuenta_bancaria.estado_cuenta.nombre.toString() : null,
+            descripcion: cuenta_bancaria.estado_cuenta.descripcion ? cuenta_bancaria.estado_cuenta.descripcion.toString() : null,
+            // Mantener la lógica de si/no
+            permite_operacion: (cuenta_bancaria.estado_cuenta.permite_operacion === true) ? "Si" : "No",
+        } : null;
+
+
+        // --- 3. Construcción del Objeto Final ---
+        const datosBase = {
+            id: cuenta_bancaria.id_cuenta_bancaria, 
+            numero_cuenta: cuenta_bancaria.numero_cuenta.toString(),
+
+            // Usamos los objetos formateados, que ahora pueden ser null
+            entidad_titular: entidad_titular,
+            banco: banco,
+            tipo_cuenta: tipo_cuenta,
+            estado: estado,
+        
+            fechaCreacion: cuenta_bancaria.createdAt,
+            fechaActualizacion: cuenta_bancaria.updatedAt,
+            fechaAprobacion: cuenta_bancaria.approvedAt,
+        };
+
+        return {
+            ...datosBase,
+            entidades_asociadas: entidades_asociadas
+        };
+
+    }
+
+
+    // Función Auxiliar que genera la "whereClause" sin ejecutar la consulta
+    generarWhereClause(criteriosBusqueda, tipo_busqueda) {
+        
+       // Objeto para condiciones en la tabla cuenta_bancaria (base)
         const cuentaBancariaWhere = {};
 
         // Objeto para condiciones en la tabla Entidad (asociada)
@@ -619,49 +1071,9 @@ class CuentaBancariaService {
 
 
             // Filtro 8: Estado
-
-                // 1. Caso: Si solo se quieren las cuentas POR APROBAR (id_estado_cuenta = 5)
-                if (porAprobar) { 
-                    // Usamos la igualdad exacta
-                    cuentaBancariaWhere.id_estado_cuenta = 5;
-
-                } else { 
-                    // 2. Caso: NO se quieren las cuentas por aprobar ("porAprobar" es "false")
-
-                    // Inicializar la condición de WHERE con un array para usar Op.and
-                    // Esto asegura que podemos combinar múltiples requisitos.
-                    let condicionesEstado = [
-                        // REGLA OBLIGATORIA: Siempre debe ser diferente de 5 si no se está buscando el estado de aprobación.
-                        { id_estado_cuenta: { [Op.ne]: 5 } }
-                    ];
-
-
-                    // 2.1. Revisar si el usuario proporcionó un ID de estado específico
-                    if (validarExistencia(estado, "", false)) { 
-                        
-                        const valorLimpio = String(estado).trim();
-
-                        if (valorLimpio) {
-                            validarIdNumerico(valorLimpio, "El estado de cuenta no tiene el formato correcto.");
-                            const idEstadoBuscado = parseInt(valorLimpio, 10);
-                            
-                            // Verificación de seguridad: Evitar que el usuario fuerce el ID 5.
-                            if (idEstadoBuscado === 5) {
-                                throw new Error("El estado solicitado no es válido.");
-                            }
-                            
-                            // Añadir la condición específica al array (ej. AND id_estado_cuenta = 3)
-                            condicionesEstado.push({ id_estado_cuenta: idEstadoBuscado });
-                        }
-                    }
-                    
-                    // Aplicar las condiciones combinadas con AND
-                    // Si solo existe el Op.ne, el WHERE será: WHERE "id_estado_cuenta" != 5
-                    // Si se añade otro estado, el WHERE será: WHERE ("id_estado_cuenta" != 5 AND "id_estado_cuenta" = X)
-                    cuentaBancariaWhere[Op.and] = condicionesEstado;
-
-                }
-
+            const estadoEspecifico = validarExistencia(estado, "", false) ? parseInt(estado, 10) : null;
+            const filtroEstado = this.generarFiltroEstadoCuenta(tipo_busqueda, estadoEspecifico);
+            Object.assign(cuentaBancariaWhere, filtroEstado)
 
 
             //Filtro 9: Se verifica si el usuario ha proporcionado al menos una de las fechas de creación
@@ -763,259 +1175,45 @@ class CuentaBancariaService {
             }
 
 
-            // --- 3. Ejecutar la Consulta con Cláusulas WHERE separadas ---
-            const cuentasBancarias = await Cuenta_Bancaria_Model.findAll({
-                // Aplicamos los filtros directos de la tabla Estudiante
-                where: cuentaBancariaWhere, 
-                
-                include: [ // Define qué otras tablas deben unirse a la consulta y qué campos de esas tablas deben traerse.
-                    { 
-                        association: 'entidad', // Realiza el JOIN desde "estudiante" a "entidad", basándose en la asociación Estudiante.belongsTo(Entidad, { as: 'entidad' }).
+        return {cuentaBancariaWhere, entidadWhere};
 
-                        // APLICAMOS LOS FILTROS DE ENTIDAD AQUÍ
-                        where: entidadWhere, // Usa el objeto where creado dinámicamente (es decir, se aplican los filtros de la tabla "entidad")
-                        required: Object.keys(entidadWhere).length > 0, /* Sequelize por defecto realiza un LEFT OUTER JOIN . Trae todos los estudiantes que cumplan los 
-                                                                        filtros de Estudiante, e incluye los datos de la Entidad si existen. El "required: true" hace que
-                                                                        se convierta a "INNER JOIN", haciendo que se traigan solo aquellos datos que cumplan las condiciones
-                                                                        indicadas, por lo que al decir "required: Object.keys(entidadWhere).length > 0", se está diciendo que
-                                                                        si hay filtros de entidad, que se ap´lique un INNER JOIN.*/
-                               
-                        include: [ /* Inclusión Anidada: Le dice a Sequelize que, dentro de la tabla "entidad", debe realizar otro JOIN para traer el 
-                                    prefijo asociado (Entidad.belongsTo(Prefijo_Identificacion, { as: 'prefijo' })).
+    }   
 
-                                    Resultado: Los datos del prefijo aparecerán anidados dentro del objeto entidad en el JSON final.*/
-                            { association: 'prefijo', attributes: ['id_prefijo', 'letra_prefijo'] }
-                        ],
-                        // Atributos de la entidad que queremos traer:
-                        attributes: ['numero_identificacion', 'nombre', 'apellido', 'estado'] 
-                    },
-                    { 
-                        association: 'estado_cuenta', 
-                        attributes: ['id_estado_cuenta', 'nombre', 'descripcion', 'permite_operacion'] 
-                    },
-                    { 
-                        association: 'banco', 
-                        attributes: ['id_banco', 'nombre'] 
-                    },
-                    { 
-                        association: 'tipo_cuenta', 
-                        attributes: ['id_tipo_cuenta', 'nombre', 'descripcion'] 
-                    }
-                ],
-
-                // Mantenemos el orden según las actualizaciones de la tabla "cuenta_bancaria"
-                order: [ ['updatedAt', 'DESC'] ]
-            });
-
-
-        // --- Se devuelven los resultados formateados ---
-        return cuentasBancarias.map(instancia => CuentaBancariaService.formatearCuentaBancaria(instancia));
-    }
-
-
-
-
-// Eliminación
-
-    /* Ésta función borra una cuenta bancaria (que no haya sido aprobada, ojo)*/
-    async eliminarCuentaBancaria(id) {
-
-        console.log("id: ", id)
-        if(!validarExistencia(id, "", false)){
-            throw new Error(`Debe proporcionar el id de la cuenta bancaria.`);
-        }
-
-        // Se valida el id
-        validarIdNumerico(id, "El id no tiene el formato correcto");
-
-        // Se valida la existencia de la cuenta, si no existe se regresa null
-        const cuenta_bancaria = await Cuenta_Bancaria_Model.findByPk(id)
-
-        if(!cuenta_bancaria){
-            return null;
-        };
-
-        if(cuenta_bancaria.id_estado_cuenta !== 5){
-             throw new Error(`No se puede eliminar una cuenta que ya ha sido aprobada.`);
-        }
-
-        const filasEliminadas = await Cuenta_Bancaria_Model.destroy({
-            where: {
-                id_cuenta_bancaria: cuenta_bancaria.id_cuenta_bancaria
-            }
-        });
-
-        if (filasEliminadas === 0) {       
-            return null;      
-        }
- 
-        return true;
-    }
-
-
-// Verificación
 
     /**
-     * Verifica si ya existe una cuenta bancaria con el número de cuenta y el banco proporcionado
-     * y no creando una cuenta).
-     * @param {string} numero_cuenta - El número de cuenta a buscar
-     * @param {string} banco - El banco a buscar
-     * @returns {bool} Retorna "true", o "false" si no hay duplicados.
+     * Genera el objeto where para id_estado_cuenta basado en el concepto de filtro.
+     * @param {string} tipo_busqueda - 'por_aprobar', 'aprobadas', 'todas'.
+     * @param {number|null} idEstadoEspecifico - El ID de estado que el usuario busca (si aplica).
+     * @returns {object} Objeto WHERE para id_estado_cuenta, o vacío si es 'todas'.
      */
-    async verificarCuentaBancariaExistente(numero_cuenta, banco) {
+    generarFiltroEstadoCuenta(tipo_busqueda, idEstadoEspecifico) {
+    
+        /* Si el usuario especificó un ID de estado, se aplica ese (y se anula el concepto general, siempre y cuando no se esté
+        en la sección de cuentas bancarias por aprobar */
+        if (idEstadoEspecifico && idEstadoEspecifico !== 5 && tipo_busqueda != "por_aprobar") {
+            // Si hay un estado específico válido, se usa ese (ej: id_estado_cuenta: 3)
+            return { id_estado_cuenta: idEstadoEspecifico };
+        }
         
-        let whereClause = {};
-
-        validarExistencia(numero_cuenta, "número de cuenta", true);
-        validarExistencia(banco, "banco", true);
-
-        // Validamos primero el banco ya que necesitaremos los datos más adelante
-        validarIdNumerico(banco, "El banco no tiene el formato correcto");
-        // Se comprueba que exista un banco con ese id
-        const banco_objeto = await Banco_Model.findByPk(banco.trim());
-
-        if (!banco_objeto) {
-            // EL banco no existe, no se puede crear la cuenta bancaria
-            throw new Error(`El banco seleccionado no está registrado.`);
+        // Si el usuario busca el ID 5 directamente, lanzamos error (debe usar 'por_aprobar')
+        if (idEstadoEspecifico === 5) {
+            throw new Error("No se puede realizar búsquedas con el estado 'Pendiente de Validación'.");
         }
 
-        // Validamos ahora el número de cuenta
-        const numero_cuenta_limpio = numero_cuenta.trim();
-        validarSoloNumeros(numero_cuenta_limpio, "El número de cuenta debe contener solo números (dígitos 0-9).");
-        // EL número de cuenta debe tener exactamente 20 dígitos
-        if (numero_cuenta_limpio.length !== 20) {
-            throw new Error(`El número de cuenta debe tener exactamente 20 dígitos. Longitud actual: ${numero_cuenta_limpio.trim().length}.`);
-        }
-
-        // Obtenemos el prefijo del número de cuenta (los primeros 4 dígitos).
-        const prefijoCuenta = numero_cuenta_limpio.substring(0, 4);
-        if (prefijoCuenta !== banco_objeto.codigo_nacional) {
-            throw new Error(`El código del banco en la cuenta (${prefijoCuenta}) no coincide con el banco seleccionado (${banco_objeto.codigo_nacional}).`);
-        }
-
-        const cuentaEncontrada = await Cuenta_Bancaria_Model.findOne({
-            where: {
-
-                numero_cuenta: numero_cuenta_limpio,
+        switch (tipo_busqueda) {
+            case 'por_aprobar':
+                // Solo ID 5
+                return { id_estado_cuenta: 5 };
                 
-                id_banco: banco_objeto.id_banco 
-            },
-            // Opcional: Solo traer el ID para optimizar la consulta si solo se necesita saber si existe
-            attributes: ['id_cuenta_bancaria'] 
-        });
-
-        if (cuentaEncontrada) {
-            return true; 
-        }else{
-            return false;
-        }
-    }
-
-
-// Formateo
-
-    // Esta función complementa a las funciones "buscarCuentasBancarias", "obtenerCuentaBancariaPorId" y "obtenerCuentasBancariasPorRol", y sirve para formatear las claves que le llegará al usuario
-    static formatearCuentaBancaria(cuentaInstance) {
-
-        // Si no existe la entidad se devuelve null
-        if (!cuentaInstance) return null;
-
-        const cuenta_bancaria = cuentaInstance.toJSON(); 
-
-
-        /* Acceso seguro a la tabla intermedia
+            case 'aprobadas':
+                // Todos los estados EXCEPTO el ID 5
+                return { id_estado_cuenta: { [Op.ne]: 5 } };
                 
-        Nota: al ser muchos a muchos la relación entre entidades y cuentas bancarias, Sequelize por cada cuenta bancaria nos 
-        va a traer un arreglo con todas las entidades asociadas a esa cuenta, dicho arreglo es "entidades_pago", y pude tener N 
-        cantidad de elementos. Cabe aclarar que por cada elemento del array, Sequelize va a adjuntar los datos de la tabla 
-        intermedia correspondientes a esa asociación, por la forma en que traímos los datos de la base de datos. También, los 
-        datos de la tabla intermedia estarán en el objeto llamado "Entidad_Cuenta_Asociacion", y se llama así debido a 
-        que Sequelize utiliza la instancia del Modelo asociado para nombrar la clave que contiene los atributos de la tabla 
-        through (es decir, le pone el nombre del modelo de la tabla intermedia )).*/
-        const entidades_asociadas = cuenta_bancaria.entidades_pago?.map(entidadAsociada => {
-                         
-            // Los datos de la tabla intermedia
-            const asociacionIntermedia = entidadAsociada.Entidad_Cuenta_Asociacion; 
-            
-            return {
-                // Datos de la Entidad asociada
-                entidad: {
-                    id: entidadAsociada.id_entidad ?? null,
-                    nombre: entidadAsociada.nombre ?? null,
-                    apellido: entidadAsociada.apellido ?? null,
-                    numero_identificacion: entidadAsociada.numero_identificacion ?? null,
-                    estado: entidadAsociada.estado ?? null,
-                    prefijo: {letra_prefijo : entidadAsociada.prefijo?.letra_prefijo ?? null}
-                },
-
-                // Datos de la Asociación (de la tabla intermedia)
-                asociacion: {
-                    id:asociacionIntermedia.id_asociacion ?? null,
-                    es_vigente: asociacionIntermedia.es_vigente ?? false,
-                    rol: asociacionIntermedia?.tipo_rol?.nombre ?? null
-                }
-            };
-
-        }) ?? []; // Si "entidades_pago" es null o undefined, devuelve un array vacío
-
-
-        // Si 'entidad' (titular) no existe, devolvemos null para el objeto completo 'entidad_titular'. 
-        const entidad_titular = cuenta_bancaria.entidad ? {
-            numero_identificacion: cuenta_bancaria.entidad.numero_identificacion ?? null,
-            nombre: cuenta_bancaria.entidad.nombre ? capitalizeFirstLetter(cuenta_bancaria.entidad.nombre) : null,
-            apellido: cuenta_bancaria.entidad.apellido ? capitalizeFirstLetter(cuenta_bancaria.entidad.apellido) : null,
-            estado: cuenta_bancaria.entidad.estado ?? null,
-
-            // El objeto prefijo también se devuelve null si la relación falla
-            prefijo: cuenta_bancaria.entidad.prefijo ? {
-                letra_prefijo: cuenta_bancaria.entidad.prefijo.letra_prefijo ?? null,
-            } : null
-        } : null;
-
-        // Si 'banco' no existe o no tiene ID, devolvemos null para el objeto completo.
-        const banco = cuenta_bancaria.banco && cuenta_bancaria.banco.id_banco ? {
-            id: cuenta_bancaria.banco.id_banco,
-            nombre: cuenta_bancaria.banco.nombre ? cuenta_bancaria.banco.nombre.toString() : null
-        } : null;
-
-        // Si 'tipo_cuenta' no existe o no tiene ID, devolvemos null para el objeto completo.
-        const tipo_cuenta = cuenta_bancaria.tipo_cuenta && cuenta_bancaria.tipo_cuenta.id_tipo_cuenta ? {
-            id: cuenta_bancaria.tipo_cuenta.id_tipo_cuenta,
-            nombre: cuenta_bancaria.tipo_cuenta.nombre ? cuenta_bancaria.tipo_cuenta.nombre.toString() : null,
-            descripcion: cuenta_bancaria.tipo_cuenta.descripcion ? cuenta_bancaria.tipo_cuenta.descripcion.toString() : null
-        } : null;
-
-        // Si 'estado_cuenta' no existe o no tiene ID, devolvemos null para el objeto completo.
-        const estado = cuenta_bancaria.estado_cuenta && cuenta_bancaria.estado_cuenta.id_estado_cuenta ? {
-            id: cuenta_bancaria.estado_cuenta.id_estado_cuenta,
-            nombre: cuenta_bancaria.estado_cuenta.nombre ? cuenta_bancaria.estado_cuenta.nombre.toString() : null,
-            descripcion: cuenta_bancaria.estado_cuenta.descripcion ? cuenta_bancaria.estado_cuenta.descripcion.toString() : null,
-            // Mantener la lógica de si/no
-            permite_operacion: (cuenta_bancaria.estado_cuenta.permite_operacion === true) ? "Si" : "No",
-        } : null;
-
-
-        // --- 3. Construcción del Objeto Final ---
-        const datosBase = {
-            id: cuenta_bancaria.id_cuenta_bancaria, 
-            numero_cuenta: cuenta_bancaria.numero_cuenta.toString(),
-
-            // Usamos los objetos formateados, que ahora pueden ser null
-            entidad_titular: entidad_titular,
-            banco: banco,
-            tipo_cuenta: tipo_cuenta,
-            estado: estado,
-        
-            fechaCreacion: cuenta_bancaria.createdAt,
-            fechaActualizacion: cuenta_bancaria.updatedAt,
-            fechaAprobacion: cuenta_bancaria.approvedAt,
-        };
-
-        return {
-            ...datosBase,
-            entidades_asociadas: entidades_asociadas
-        };
-
+            case 'todas':
+            default:
+                // No aplica ninguna restricción de estado, se traen todos.
+                return {}; 
+        }
     }
 
 

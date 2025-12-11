@@ -347,7 +347,6 @@
             
                     const numeroIdentificacionValido = newFilters.numero_identificacion.trim() === '' || /^\d+$/.test(newFilters.numero_identificacion);
 
-                    // El Nombre debe ser vacío o contener SOLO números o guiones
                     const codigoEstudiantilValido = newFilters.codigo_estudiantil.trim() === '' || /[^0-9-]/.test(newFilters.codigo_estudiantil); 
 
                     // El Nombre debe ser vacío o contener SOLO caracteres permitidos (letras, espacios, guiones, etc.)

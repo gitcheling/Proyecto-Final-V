@@ -142,33 +142,33 @@
                 </div>
         
                 <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
-                    <label for="creadosDesde">Creados Desde:</label>
+                    <label for="creadosDesde">Creadas Desde:</label>
                     <input type="date" id="creadosDesde" v-model="filters.creadosDesde" class="form-control" :max="filters.creadosHasta || undefined">
                 </div>
 
                 <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
-                    <label for="creadosHasta">Creados Hasta:</label>
+                    <label for="creadosHasta">Creadas Hasta:</label>
                     <input type="date" id="creadosHasta" v-model="filters.creadosHasta" class="form-control" :min="filters.creadosDesde || undefined">
                 </div>
 
             
                 <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
-                    <label for="aprobadosDesde">Aprobados Desde:</label>
+                    <label for="aprobadosDesde">Aprobadas Desde:</label>
                     <input type="date" id="aprobadosDesde" v-model="filters.aprobadosDesde" class="form-control" :max="filters.aprobadosHasta || undefined">
                 </div>
 
                 <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
-                    <label for="aprobadosHasta">Aprobados Hasta:</label>
+                    <label for="aprobadosHasta">Aprobadas Hasta:</label>
                     <input type="date" id="aprobadosHasta" v-model="filters.aprobadosHasta" class="form-control" :min="filters.aprobadosDesde || undefined">
                 </div>
 
                 <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
-                    <label for="modificadosDesde">Modificados Desde:</label>
+                    <label for="modificadosDesde">Modificadas Desde:</label>
                     <input type="date" id="modificadosDesde" v-model="filters.modificadosDesde" class="form-control" :max="filters.modificadosHasta || undefined">
                 </div>
 
                 <div class="filter-group col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
-                    <label for="modificadosHasta">Modificados Hasta:</label>
+                    <label for="modificadosHasta">Modificadas Hasta:</label>
                     <input type="date" id="modificadosHasta" v-model="filters.modificadosHasta" class="form-control" :min="filters.modificadosDesde || undefined">
                 </div>
 
@@ -459,7 +459,7 @@
                     // console.log("Búsqueda cancelada: Filtro con formato inválido.");
                     return; 
                 }
-                    
+
                 // 3. Debounce: Limpia el temporizador anterior y establece uno nuevo
                 clearTimeout(searchTimeout);
 
