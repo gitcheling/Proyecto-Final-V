@@ -79,6 +79,7 @@
             :isLoading="isLoadingChart"
             initial-chart-type="bar"
             componentTitle="Estado de Docentes"
+            y-axis-label="Cantidad de Docentes"
             :allowedChartTypes="['bar', 'pie', 'doughnut', 'polarArea']"
             :multiColorBars="true"
         />

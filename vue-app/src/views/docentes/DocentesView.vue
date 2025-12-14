@@ -136,7 +136,7 @@
                     <th class="text-center col-nombre">Nombre</th>
                     <th class="text-center col-apellido">Apellido</th>
                     <th class="text-center col-estado">Estado</th>
-                    <th class="text-center col-permite_asignacion">¿Puede asignársele nuevos cursos?</th>
+                    <th class="text-center col-permite_asignacion">¿Puede asignársele nuevos grupos?</th>
                     <th class="text-center col-aplica_pago">¿Aplica para recibir pagos?</th>
                     <th class="text-center col-fecha_creacion">Fecha de registro como docente</th>
                     <th class="text-center col-fecha_actualizacion">Última modificación</th>

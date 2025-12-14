@@ -8,17 +8,17 @@ const Tipo_Comprobante = sequelize.define('Tipo_Comprobante', {
         primaryKey: true, // Indica que este es el campo de la clave primaria
         autoIncrement: true // Asumiendo que es autoincremental
     },
-    nombre_comprobante: {
+    nombre: {
         type: DataTypes.STRING(50),
         allowNull: false
     },
-    es_egreso: {
-        type:DataTypes.BOOLEAN,
-        allowNull: false // asegura que este campo siempre debe tener un valor; la base de datos no permitirá nulos.
+    nombre: {
+        type: DataTypes.STRING(255),
+        allowNull: false
     },
-    es_ingreso: {
+    es_legal: {
         type:DataTypes.BOOLEAN,
-        allowNull: false // asegura que este campo siempre debe tener un valor; la base de datos no permitirá nulos.
+        allowNull: false 
     },
 }, {
     // Configuraciones de Sequelize:
@@ -35,11 +35,10 @@ Tipo_Comprobante.associate = (models) => {
         as: 'asientos_encabezados' // Usamos éste prefijo para obtener los datos del otro modelo (todos los encabezados de asientos de un tipo de comprobante)
     });
 
-
-    // Un tipo de comprobante puede aparecer muchas veces en "facturas_gasto"
-    Tipo_Comprobante.hasMany(models.Facturas_Gasto, {
-        foreignKey: 'id_tipo_comprobante', // La FK que está en la tabla 'facturas_gasto'
-        as: 'facturas_gasto' // Usamos éste prefijo para obtener los datos del otro modelo (todas las facturas de gasto de un tipo de comprobante)
+    // Un tipo de comprobante puede aparecer muchas veces en "obligacion_financiera"
+    Tipo_Comprobante.hasMany(models.Obligacion_Financiera, {
+        foreignKey: 'id_tipo_comprobante', // La FK que está en la tabla 'obligacion_financiera'
+        as: 'obligaciones_financieras' // Usamos éste prefijo para obtener los datos del otro modelo (todas las obligaciones financieras de un tipo de comprobante)
     });
 
 };

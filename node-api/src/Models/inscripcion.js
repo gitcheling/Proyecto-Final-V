@@ -9,23 +9,6 @@ const Inscripcion = sequelize.define('Inscripcion', {
         autoIncrement: true 
     },
 
-    // ===============================================
-    // clave foránea para el estudiante
-    // ===============================================
-    id_estudiante : {
-        type: DataTypes.INTEGER,
-        allowNull: false, 
-        references: {
-
-            // Nombre exacto de la tabla foránea en la base de datos
-            model: 'estudiante', 
-
-            // El nombre exacto de la columna en la tabla foránea (model) a la que apunta. Que sería, la clave primaria
-            key: 'id_estudiante'
-        },
-        // El nombre del grupo: 'inscripcion_unica ' (para hacer una restriccion con varias columnas)
-        unique: 'inscripcion_unica'
-    },
 
     // ===============================================
     // clave foránea para el grupo 
@@ -45,10 +28,30 @@ const Inscripcion = sequelize.define('Inscripcion', {
         unique: 'inscripcion_unica'
     },
 
+
+    // ===============================================
+    // clave foránea para el estudiante
+    // ===============================================
+    id_estudiante : {
+        type: DataTypes.INTEGER,
+        allowNull: false, 
+        references: {
+
+            // Nombre exacto de la tabla foránea en la base de datos
+            model: 'estudiante', 
+
+            // El nombre exacto de la columna en la tabla foránea (model) a la que apunta. Que sería, la clave primaria
+            key: 'id_estudiante'
+        },
+        // El nombre del grupo: 'inscripcion_unica ' (para hacer una restriccion con varias columnas)
+        unique: 'inscripcion_unica'
+    },
+
+   
     // ===============================================
     // clave foránea para el estado de la inscripción
     // ===============================================
-    id_estado_inscripcion : {
+    id_estado : {
         type: DataTypes.INTEGER,
         allowNull: false, 
         references: {
@@ -61,10 +64,6 @@ const Inscripcion = sequelize.define('Inscripcion', {
         }
     },
 
-    costo_total_curso : {
-        type: DataTypes.NUMERIC(8, 2), // 8 dígitos en total, 2 decimales 
-        allowNull: false
-    },
     createdAt: {
         type: 'TIMESTAMP WITHOUT TIME ZONE'
     },
@@ -94,15 +93,16 @@ Inscripcion.associate = (models) => {
 
     // Una inscripcion solo puede tener un estado de incripción de "estado_inscripcion"
     Inscripcion.belongsTo(models.Estado_Inscripcion, {
-        foreignKey: 'id_estado_inscripcion', // La FK que está en ESTA MISMA tabla (en este caso que es el lado muchos)
+        foreignKey: 'id_estado', // La FK que está en ESTA MISMA tabla (en este caso que es el lado muchos)
         as: 'estado_inscripcion' // Usamos éste prefijo para obtener los datos del otro modelo (el estado de inscripción de una inscripción)
     });
 
-    // Una inscripción solo puede tener un plan de pago de "plan_pago"
-    Inscripcion.hasOne(models.Plan_Pago, {
-        foreignKey: 'id_inscripcion', // La FK que está en la tabla 'plan_pago'
-        as: 'plan_pago' // Usamos éste prefijo para obtener los datos del otro modelo (el plan de pago de una inscripcion)
-    });
+
+    //Una inscripción puede aparecer muchas veces en "obligacion_inscripcion"
+    Inscripcion.hasMany(models.Obligacion_Inscripcion, {
+        foreignKey: 'id_inscripcion', // La FK que está en la tabla 'obligacion_inscripcion'
+        as: 'obligaciones_inscripcion' // Usamos éste prefijo para obtener los datos del otro modelo (todas las obligaciones de inscripción de una inscripción)
+    }); 
 
 };
 

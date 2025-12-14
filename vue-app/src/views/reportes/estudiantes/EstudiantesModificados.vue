@@ -132,6 +132,7 @@
             :isLoading="isLoadingChart"
             initial-chart-type="bar"
             componentTitle="Conteo de Estudiantes por Mes"
+            y-axis-label="Cantidad de Estudiantes"
             :allowedChartTypes="['bar', 'line', 'area', 'pie', 'doughnut', 'polarArea']"
         />
         

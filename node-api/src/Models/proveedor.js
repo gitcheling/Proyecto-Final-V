@@ -90,12 +90,6 @@ Proveedor.associate = (models) => {
     });
 
 
-    // Un proveedor puede aparecer muchas veces en "facturas_gasto"
-    Proveedor.hasMany(models.Facturas_Gasto, {
-        foreignKey: 'id_proveedor', // La FK que está en la tabla 'facturas_gasto'
-        as: 'facturas_gasto' // Usamos éste prefijo para obtener los datos del otro modelo (todas las facturas de gasto de un proveedor)
-    });
-
 };
 
 module.exports = Proveedor;

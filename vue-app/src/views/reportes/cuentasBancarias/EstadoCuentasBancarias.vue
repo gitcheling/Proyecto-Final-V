@@ -152,6 +152,7 @@
             :isLoading="isLoadingChart"
             initial-chart-type="bar"
             componentTitle="Estado de Cuentas Bancarias"
+            y-axis-label="Cantidad de Cuentas Bancarias"
             :allowedChartTypes="['bar', 'pie', 'doughnut', 'polarArea']"
             :multiColorBars="true"
         />

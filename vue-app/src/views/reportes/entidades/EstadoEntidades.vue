@@ -101,6 +101,7 @@
             :isLoading="isLoadingChart"
             initial-chart-type="bar"
             componentTitle="Estado de Entidades"
+            y-axis-label="Cantidad de Entidades"
             :allowedChartTypes="['bar', 'pie', 'doughnut', 'polarArea']"
             :multiColorBars="true"
         />

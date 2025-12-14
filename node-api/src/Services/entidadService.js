@@ -284,7 +284,7 @@ class EntidadService {
         }
 
         // Se valida el id
-        validarIdNumerico(id, "El id es obligatorio");
+        validarIdNumerico(id, "El id no tiene el formato correcto");
 
         // Se valida que el id de la cuenta no sea el "1" (la cuenta interna)
         if(id === 1){

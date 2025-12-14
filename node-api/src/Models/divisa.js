@@ -44,18 +44,20 @@ Divisa.associate = (models) => {
 
     // Nota: ambas apuntan a un mismo registro en "tasa_cambio"
 
-    // Una divisa puede aparecer muchas veces en "pagos_estudiantes"
-    Divisa.hasMany(models.Pagos_Estudiantes, {
-        foreignKey: 'id_divisa_pagada', // La FK que está en la tabla 'pagos_estudiantes'
-        as: 'pagos_estudiantes' // Usamos éste prefijo para obtener los datos del otro modelo (todos los pagos de estudiantes de una divisa)
+
+    // Una divisa puede aparecer muchas veces en "obligacion_financiera"
+    Divisa.hasMany(models.Obligacion_Financiera, {
+        foreignKey: 'id_divisa', // La FK que está en la tabla 'obligacion_financiera'
+        as: 'obligaciones_financieras' // Usamos éste prefijo para obtener los datos del otro modelo (todas las obligaciones financieras de una divisa)
+    });
+
+    // Una divisa puede aparecer muchas veces en "registro_transaccion"
+    Divisa.hasMany(models.Registro_Transaccion, {
+        foreignKey: 'id_divisa', // La FK que está en la tabla 'registro_transaccion'
+        as: 'registros_transaccionales' // Usamos éste prefijo para obtener los datos del otro modelo (todos los registros transaccionales de una divisa)
     });
 
 
-    // Una divisa puede aparecer muchas veces en "facturas_gasto"
-    Divisa.hasMany(models.Facturas_Gasto, {
-        foreignKey: 'divisa_factura', // La FK que está en la tabla 'facturas_gasto'
-        as: 'facturas_gasto' // Usamos éste prefijo para obtener los datos del otro modelo (todas las facturas de gasto de una divisa)
-    });
 };
 
 module.exports = Divisa;

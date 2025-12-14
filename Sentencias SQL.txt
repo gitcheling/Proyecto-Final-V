@@ -4,7 +4,6 @@
 -- ##############################################################################################################
 
 
-
 -- #######################################################
 -- # 1. TABLAS MAESTRAS BÁSICAS (CATÁLOGOS)
 -- #######################################################
@@ -17,13 +16,6 @@ CREATE TABLE banco (
     "codigo_swift" VARCHAR(15) UNIQUE NOT NULL
 );
 
--- 1.2. TIPO_PAGO
-CREATE TABLE tipo_pago (
-    "id_tipo_pago" SERIAL PRIMARY KEY,
-    "nombre" VARCHAR(50) NOT NULL,
-    "requiere_referencia" BOOLEAN NOT NULL
-);
-
 -- 1.3. TIPO_IDENTIFICACION
 CREATE TABLE tipo_identificacion (
     "id_tipo_identificacion" SERIAL PRIMARY KEY,
@@ -34,17 +26,14 @@ CREATE TABLE tipo_identificacion (
 -- 1.4. TIPO_COMPROBANTE (Documento Legal/Fiscal)
 CREATE TABLE tipo_comprobante (
     "id_comprobante" SERIAL PRIMARY KEY,
-    "nombre_comprobante" VARCHAR(50) NOT NULL,
-    "es_egreso" BOOLEAN NOT NULL,
-    "es_ingreso" BOOLEAN NOT NULL
+    "nombre" VARCHAR(50) NOT NULL,
+    "descripcion" VARCHAR(255) NOT NULL,
+
+    --La columna es_legal es importante: si es TRUE, el documento tiene validez fiscal o contable externa; si es FALSE, es un 
+    --documento de soporte operativo interno o contractual.
+    "es_legal" BOOLEAN NOT NULL 
 );
 
--- 1.5. FUENTE_ASIENTO (Catálogo de Orígenes de Transacción)
-CREATE TABLE fuente_asiento (
-    "id_fuente" SERIAL PRIMARY KEY,
-    "nombre_tabla" VARCHAR(50) UNIQUE NOT NULL,
-    "descripcion" VARCHAR(100)
-);
 
 -- 1.6. DIVISA
 CREATE TABLE divisa (
@@ -90,7 +79,7 @@ CREATE TABLE categoria_curso (
 	"descripcion" VARCHAR(255) NOT NULL,
     "id_categoria_padre" INT, -- Clave foránea que apunta a esta misma tabla.
 
-    FOREIGN KEY (id_categoria_padre) REFERENCES categoria_curso(id_categoria)
+    FOREIGN KEY (id_categoria_padre) REFERENCES categoria_curso(id_categoria_curso)
 );
 
 -- 1.12. ESTADO_GRUPO
@@ -105,6 +94,8 @@ CREATE TABLE estado_grupo (
 CREATE TABLE estado_inscripcion (
     "id_estado_inscripcion" SERIAL PRIMARY KEY,
     "nombre" VARCHAR(50) NOT NULL,
+    "descripcion" VARCHAR(255) NOT NULL,
+    "puede_ver_clase" BOOLEAN NOT NULL,
 	"ciclo_cerrado" BOOLEAN NOT NULL
 );
 
@@ -120,11 +111,6 @@ CREATE TABLE clasificacion (
     "nombre" VARCHAR(50) NOT NULL
 );
 
--- 1.16. ESTADO_PLAN
-CREATE TABLE estado_plan (
-    "id_estado_plan" SERIAL PRIMARY KEY,
-    "nombre" VARCHAR(50) NOT NULL
-);
 
 -- 1.17. ESTADO_DOCENTE
 CREATE TABLE estado_docente (
@@ -133,12 +119,6 @@ CREATE TABLE estado_docente (
 	"descripcion" VARCHAR(100) NOT NULL,
 	"permite_asignacion" BOOLEAN NOT NULL,
 	"aplica_pago" BOOLEAN NOT NULL
-);
-
--- 1.18. ESTADO_FACTURA
-CREATE TABLE estado_factura (
-    "id_estado_factura" SERIAL PRIMARY KEY,
-    "estado" VARCHAR(50) NOT NULL
 );
 
 
@@ -196,6 +176,48 @@ CREATE TABLE modalidad_clase (
 );
 
 
+-- 1.25. ESTADO_OBLIGACION (Nueva tabla maestra para Pago, Vencimiento, etc.)
+CREATE TABLE estado_obligacion (
+    id_estado_obligacion SERIAL PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL UNIQUE,
+    descripcion VARCHAR(255) NOT NULL,
+    es_finalizado BOOLEAN NOT NULL
+);
+
+
+-- 1.26. TIPO_MOVIMIENTO (Si es Ingreso o Egreso, para la tabla "registro_transaccion)
+CREATE TABLE tipo_movimiento (
+    id_tipo_movimiento SERIAL PRIMARY KEY,
+    nombre VARCHAR(10) NOT NULL UNIQUE, -- 'INGRESO' o 'EGRESO'
+    descripcion VARCHAR(255) NOT NULL
+);
+
+
+
+-- 1.27. METODO_PAGO (NUEVA MAESTRA: Efectivo, Transferencia, Tarjeta, etc.)
+CREATE TABLE metodo_pago (
+    id_metodo_pago SERIAL PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL UNIQUE, 
+    descripcion VARCHAR(255) NOT NULL,
+    requiere_referencia BOOLEAN NOT NULL -- Si necesita número de cheque/transferencia
+);
+
+
+-- 1.28. CONCEPTO_FINANCIERO
+--La Causa del Ingreso/Gasto: Permite saber si una obligación es por "Pago de Matrícula", "Sueldo de Docente", "Compra de Equipos", etc.
+CREATE TABLE concepto_financiero (
+    id_concepto SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion VARCHAR(255) NOT NULL,
+	id_concepto_padre INT REFERENCES concepto_financiero(id_concepto),
+
+    -- Determina si es una obligación de un cliente (TRUE) o un gasto/nómina de la academia (FALSE)
+    es_por_cobrar BOOLEAN,
+
+    -- Determina si es una cuenta que invierte el flujo de cobro (e.g., "Reembolso" hace que la cuenta "cuentas por cobrar" se le
+    --asigne dinero por el lado contrario)
+    es_obligacion_negativa BOOLEAN NOT NULL 
+);
 
 
 
@@ -272,23 +294,6 @@ CREATE TABLE curso (
 );
 
 
--- 3.2. DIA
-CREATE TABLE dia (
-    "id_dia" SERIAL PRIMARY KEY,
-    "nombre" VARCHAR(10) NOT NULL
-);
-
-
--- 3.3. BLOQUE_HORARIO (Catálogo de Horarios Fijos: Lunes Bloque 1, etc.)
-CREATE TABLE bloque_horario (
-    "id_bloque" SERIAL PRIMARY KEY,
-    "id_dia" INT REFERENCES dia(id_dia) NOT NULL,
-    "bloque_numero" INT NOT NULL, 
-    "hora_inicio" TIME NOT NULL,
-    "hora_fin" TIME NOT NULL,
-    "nombre" VARCHAR(50) NOT NULL,
-    UNIQUE (id_dia, bloque_numero)
-);
 
 
 -- Tabla: PERIODO
@@ -318,37 +323,33 @@ CREATE TABLE grupo (
     "id_grupo" SERIAL PRIMARY KEY,
     "id_curso" INT REFERENCES curso(id_curso) NOT NULL,
     "id_periodo" INT REFERENCES periodo(id_periodo) NOT NULL,
+    "id_modalidad" INT REFERENCES modalidad_clase(id_modalidad) NOT NULL,
     "id_docente" INT REFERENCES docente(id_docente) NOT NULL,
     "cupo_maximo" INT NOT NULL,
     "nombre" VARCHAR(50) NOT NULL,
-	"id_estado_grupo" INT REFERENCES estado_grupo(id_estado_grupo) NOT NULL,
+    "costo_unitario_clase" NUMERIC(10, 2) NOT NULL, 
+    "costo_inscripcion" NUMERIC(10, 2) NOT NULL,
+	"id_estado" INT REFERENCES estado_grupo(id_estado_grupo) NOT NULL,
 	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
+	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    
+    UNIQUE (id_curso, id_periodo, nombre)
 );
 
 
--- 3.5. ASIGNACION_HORARIO_GRUPO (Unión entre Grupo y Bloques)
-CREATE TABLE asignacion_horario_grupo (
-    "id_asignacion" SERIAL PRIMARY KEY,
-    "id_grupo" INT REFERENCES grupo(id_grupo) NOT NULL,
-    "id_bloque" INT REFERENCES bloque_horario(id_bloque) NOT NULL,
-    UNIQUE (id_grupo, id_bloque)
-);
 
 
 -- 3.7. inscripcion (Estudiante inscrito en un grupo)
 CREATE TABLE inscripcion (
     "id_inscripcion" SERIAL PRIMARY KEY,
-    "id_estudiante" INT REFERENCES estudiante(id_estudiante) NOT NULL,
     "id_grupo" INT REFERENCES grupo(id_grupo) NOT NULL,
-	"id_estado_inscripcion" INT REFERENCES estado_inscripcion(id_estado_inscripcion) NOT NULL,
-	"costo_total_curso" NUMERIC(8, 2) NOT NULL,
+    "id_estudiante" INT REFERENCES estudiante(id_estudiante) NOT NULL,
+	"id_estado" INT REFERENCES estado_inscripcion(id_estado_inscripcion) NOT NULL,
 	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
 	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
 
     UNIQUE (id_estudiante, id_grupo)
 );
-
 
 
 
@@ -371,40 +372,7 @@ CREATE TABLE plan_cuenta (
 
 );
 
-
-
--- 4.2. ASIENTO_ENCABEZADO (Cabecera del Asiento Contable)
-CREATE TABLE asiento_encabezado (
-    "id_asiento" SERIAL PRIMARY KEY,
-    "id_fuente" INT REFERENCES fuente_asiento(id_fuente) NOT NULL,
-    "id_referencia_origen" INT NOT NULL, -- PK de la tabla de origen (e.g., pagos_estudiantes.id_pago_estudiante)
-    "id_tipo_comprobante" INT REFERENCES tipo_comprobante(id_comprobante) NOT NULL,
-    "numero_comprobante" VARCHAR(50) NOT NULL,
-    "fecha_transaccion" DATE NOT NULL,
-    "descripcion" VARCHAR(255) NOT NULL,
-    "total_debito" NUMERIC(12, 2) NOT NULL,
-    "total_credito" NUMERIC(12, 2) NOT NULL,
-	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-    
-    CHECK (total_debito = total_credito)
-);
-
-
-
--- 4.3. ASIENTO_DETALLE (Detalle de las Cuentas Afectadas)
-CREATE TABLE asiento_detalle (
-    "id_detalle" SERIAL PRIMARY KEY,
-    "id_asiento" INT REFERENCES asiento_encabezado(id_asiento) NOT NULL,
-    "id_plan_cuenta" INT REFERENCES plan_cuenta(id_plan_cuenta) NOT NULL,
-    "monto" NUMERIC(12, 2) NOT NULL DEFAULT 0,
-    "naturaleza_movimiento" INT REFERENCES naturaleza(id_naturaleza) NOT NULL,
-    "descripcion" VARCHAR(255),
-	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
-);
-
--- 4.4. CUENTA_BANCARIA (Almacena el registro único y físico de la cuenta)
+-- 4.2. CUENTA_BANCARIA (Almacena el registro único y físico de la cuenta)
 CREATE TABLE cuenta_bancaria (
 
     "id_cuenta_bancaria" SERIAL PRIMARY KEY,
@@ -435,7 +403,7 @@ CREATE TABLE cuenta_bancaria (
 
 
 
--- 4.5. ENTIDAD_CUENTA_ASOCIACION (Tabla de enlace entre la entidad asociada y la cuenta)
+-- 4.3. ENTIDAD_CUENTA_ASOCIACION (Tabla de enlace entre la entidad asociada y la cuenta)
 CREATE TABLE entidad_cuenta_asociacion (
 
     "id_asociacion" SERIAL PRIMARY KEY,
@@ -456,6 +424,127 @@ CREATE TABLE entidad_cuenta_asociacion (
     -- Una Entidad solo puede usar una Cuenta Maestra una vez para un Contexto de Rol (e.g., No puede tener la misma cuenta para dos roles de "docente").
     UNIQUE (id_entidad_asociada, id_tipo_rol, id_cuenta_bancaria)
 );
+
+
+
+
+-- 4.4. OBLIGACION_FINANCIERA (SUPER-TIPO: Centro de Unificación de Deudas - Instrumento Financiero)
+-- Lo que hace es generar el id de cualquier obligación financiera (hacia la academia o de la academia) y de darle ese id 
+--a las tablas "obligacion_inscripcion"
+CREATE TABLE obligacion_financiera (
+    id_obligacion SERIAL PRIMARY KEY, 
+    id_entidad INT NOT NULL, 
+    id_concepto INT NOT NULL, 
+    id_tipo_comprobante INT NOT NULL, 
+    id_estado INT NOT NULL, 
+
+ 
+    numero_documento VARCHAR(30) UNIQUE, -- No es "NOT NULL" ya que, aunque muchos comprobantes financieros (Facturas, Recibos de Nómina) tienen un número único, hay tipos de obligaciones que nacen de eventos internos o proyecciones que quizás no tienen un número de documento físico o legal inmediato.
+    fecha_emision DATE NOT NULL,
+    fecha_vencimiento DATE,
+    
+    monto_original DECIMAL(10, 2) NOT NULL,
+    id_divisa INT NOT NULL, 
+
+    "createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    
+    FOREIGN KEY (id_entidad) REFERENCES entidad(id_entidad),
+    FOREIGN KEY (id_concepto) REFERENCES concepto_financiero(id_concepto),
+    FOREIGN KEY (id_tipo_comprobante) REFERENCES tipo_comprobante(id_comprobante),
+    FOREIGN KEY (id_divisa) REFERENCES divisa(id_divisa), 
+    FOREIGN KEY (id_estado) REFERENCES estado_obligacion(id_estado_obligacion), 
+
+    CHECK (monto_original > 0)
+);
+
+-- 4.5. OBLIGACION_INSCRIPCION (SUB-TIPO 1: Enlace simple 1:N)
+-- Conecta a la tabla de obligacion_financiera con la de inscripcion, permitiendo mantener la integridad referencial y que si
+--existe una inscripcion para las obligaciones que puedan surgir de un estudiante (de pagar la inscripcion o las clases)
+CREATE TABLE obligacion_inscripcion (
+    id_obligacion INT PRIMARY KEY,  
+    id_inscripcion INT NOT NULL,    
+
+    FOREIGN KEY (id_obligacion) REFERENCES obligacion_financiera(id_obligacion),
+    FOREIGN KEY (id_inscripcion) REFERENCES inscripcion(id_inscripcion)
+);
+
+
+-- 4.6. REGISTRO_TRANSACCION (Tabla de Pagos/Cobros Centralizada - Sin detalles bancarios)
+CREATE TABLE registro_transaccion (
+    id_transaccion SERIAL PRIMARY KEY,
+    id_obligacion INT NOT NULL, 
+    id_entidad_realiza INT NOT NULL, 
+    id_tipo_movimiento INT NOT NULL, 
+    id_metodo_pago INT NOT NULL, 
+	id_divisa INT NOT NULL, 
+	
+    monto_transaccion DECIMAL(10, 2) NOT NULL,
+    referencia_transaccion VARCHAR(100), -- Permite NULL. La obligatoriedad depende del METODO_PAGO (transferencia, cheque, etc.)
+    fecha_transaccion DATE NOT NULL,
+
+    "createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+
+    FOREIGN KEY (id_obligacion) REFERENCES obligacion_financiera(id_obligacion),
+    FOREIGN KEY (id_entidad_realiza) REFERENCES entidad(id_entidad),
+    FOREIGN KEY (id_divisa) REFERENCES divisa(id_divisa), 
+    FOREIGN KEY (id_tipo_movimiento) REFERENCES tipo_movimiento(id_tipo_movimiento),
+	FOREIGN KEY (id_metodo_pago) REFERENCES metodo_pago(id_metodo_pago),
+    
+    CHECK (monto_transaccion > 0)
+);
+
+
+-- 4.7. TRANSACCION_BANCARIA_DETALLE (Detalle Opcional para Transacciones Bancarias)
+-- Esta tabla existe si el METODO_PAGO asociado a REGISTRO_TRANSACCION es 'TRANSFERENCIA' o 'PAGO MOVIL'
+CREATE TABLE transaccion_bancaria_detalle (
+    id_transaccion INT PRIMARY KEY, -- Clave Primaria y Foránea 1:1 con REGISTRO_TRANSACCION
+    id_cuenta_origen INT NOT NULL, 
+    id_cuenta_destino INT NOT NULL, 
+    
+    FOREIGN KEY (id_transaccion) REFERENCES registro_transaccion(id_transaccion),
+    FOREIGN KEY (id_cuenta_origen) REFERENCES cuenta_bancaria(id_cuenta_bancaria),
+    FOREIGN KEY (id_cuenta_destino) REFERENCES cuenta_bancaria(id_cuenta_bancaria)
+);
+
+
+
+-- 4.8. ASIENTO_ENCABEZADO (Cabecera del Asiento Contable)
+CREATE TABLE asiento_encabezado (
+    "id_asiento" SERIAL PRIMARY KEY,
+    "id_tipo_comprobante" INT REFERENCES tipo_comprobante(id_comprobante) NOT NULL,
+
+    -- Enlaces a la tabla Operacional que origina el asiento (la fuente de verdad del negocio)
+    "id_obligacion_origen" INT REFERENCES obligacion_financiera(id_obligacion), 
+    "id_transaccion_origen" INT REFERENCES registro_transaccion(id_transaccion),
+
+    "numero_comprobante" VARCHAR(50) NOT NULL,
+    "fecha_transaccion" DATE NOT NULL,
+    "descripcion" VARCHAR(255) NOT NULL,
+    "total_debito" NUMERIC(12, 2) NOT NULL,
+    "total_credito" NUMERIC(12, 2) NOT NULL,
+	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    
+    CHECK (total_debito = total_credito)
+);
+
+
+
+-- 4.9. ASIENTO_DETALLE (Detalle de las Cuentas Afectadas)
+CREATE TABLE asiento_detalle (
+    "id_detalle" SERIAL PRIMARY KEY,
+    "id_asiento" INT REFERENCES asiento_encabezado(id_asiento) NOT NULL,
+    "id_plan_cuenta" INT REFERENCES plan_cuenta(id_plan_cuenta) NOT NULL,
+    "monto" DECIMAL(12, 2) NOT NULL,
+    "naturaleza_movimiento" INT REFERENCES naturaleza(id_naturaleza) NOT NULL,
+    "descripcion" VARCHAR(255),
+	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
+);
+
+
 
 
 
@@ -490,33 +579,6 @@ CREATE TABLE regla_prefijo_documento(
 -- # 6. MÓDULO FINANCIERO: INGRESOS
 -- #######################################################
 
--- 6.1. PLAN_PAGO (Obligaciones del Estudiante)
-CREATE TABLE plan_pago (
-    "id_plan_pago" SERIAL PRIMARY KEY,
-    "id_inscripcion" INT REFERENCES inscripcion(id_inscripcion) NOT NULL,
-    "numero_cuota" INT NOT NULL,
-    "monto_cuota_usd" NUMERIC(8, 2) NOT NULL,
-    "fecha_vencimiento" DATE NOT NULL,
-    "id_estado_plan" INT REFERENCES estado_plan(id_estado_plan) NOT NULL,
-	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
-);
-
-
-
--- 6.2. PAGOS_ESTUDIANTES (Transacción de Ingreso Real)
-CREATE TABLE pagos_estudiantes (
-    "id_pago" SERIAL PRIMARY KEY,
-    "id_plan_pago" INT REFERENCES plan_pago(id_plan_pago) NOT NULL,
-    "fecha_pago" TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
-	"monto_pagado" NUMERIC(10, 2) NOT NULL,
-    "id_tipo_pago" INT REFERENCES tipo_pago(id_tipo_pago) NOT NULL,
-	"id_divisa_pagada" INT REFERENCES divisa(id_divisa) NOT NULL,
-	"id_tasa_cambio" INT REFERENCES tasa_cambio(id_tasa_cambio) NOT NULL,
-    "referencia_pago" VARCHAR(50) NOT NULL,
-	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
-);
 
 
 
@@ -525,107 +587,12 @@ CREATE TABLE pagos_estudiantes (
 -- # 7. MÓDULO FINANCIERO: EGRESOS (NÓMINA)
 -- #######################################################
 
--- 7.1. LIQUIDACION_NOMINA (Cálculo del período de pago)
-CREATE TABLE liquidacion_nomina (
-    "id_liquidacion" SERIAL PRIMARY KEY,
-    "id_docente" INT REFERENCES docente(id_docente) NOT NULL,
-    "fecha_inicio_periodo" DATE NOT NULL,
-    "fecha_fin_periodo" DATE NOT NULL,
-    "total_horas" NUMERIC(6, 2) NOT NULL,
-    "monto_calculado_usd" NUMERIC(10, 2) NOT NULL,
-    "pagado" BOOLEAN NOT NULL default FALSE, -- Ej: Pendiente de Pago
-	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
-);
-
-
-
--- 7.2. registro_horas (Horas trabajadas por clase)
-CREATE TABLE registro_horas (
-    "id_registro" SERIAL PRIMARY KEY,
-    "id_docente" INT REFERENCES docente(id_docente) NOT NULL,
-    "id_grupo" INT REFERENCES grupo(id_grupo) NOT NULL,
-    "fecha_clase" DATE NOT NULL,
-    "numero_clase_secuencial" INT NOT NULL, 
-    "horas_impartidas" NUMERIC(5, 2) NOT NULL,
-    "id_liquidacion" INT REFERENCES liquidacion_nomina(id_liquidacion), -- NULL si no ha sido pagado
-	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
-);
-
-
-
--- 7.3. PAGOS_DOCENTES (Transacción de Pago de Nómina)
-CREATE TABLE pagos_docentes (
-    "id_pago_docente" SERIAL PRIMARY KEY,
-    "id_liquidacion" INT REFERENCES liquidacion_nomina(id_liquidacion) NOT NULL,
-    "fecha_pago" TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
-    "id_tasa_cambio" INT REFERENCES tasa_cambio(id_tasa_cambio) NOT NULL,
-    "monto_pagado_bs" NUMERIC(10, 2) NOT NULL,
-    "referencia_pago" VARCHAR(50) NOT NULL,
-	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
-);
 
 
 
 -- #######################################################
 -- # 8. MÓDULO FINANCIERO: EGRESOS (GASTOS OPERACIONALES)
 -- #######################################################
-
--- 8.1. FACTURAS_GASTO (Cuentas por Pagar / Documento de Deuda)
-CREATE TABLE facturas_gasto (
-    "id_factura_gasto" SERIAL PRIMARY KEY,
-    "id_proveedor" INT REFERENCES proveedor(id_proveedor) NOT NULL,
-    "numero_factura" VARCHAR(50) NOT NULL,
-    "fecha_emision" DATE NOT NULL,
-    "fecha_vencimiento" DATE,
-    "id_tipo_comprobante" INT REFERENCES tipo_comprobante(id_comprobante) NOT NULL,
-    "monto_total" NUMERIC(12, 2) NOT NULL,
-    "divisa_factura" INT REFERENCES divisa(id_divisa) NOT NULL,
-    "id_tasa_registro" INT REFERENCES tasa_cambio(id_tasa_cambio), -- Tasa usada para registro interno
-    "id_estado_factura" INT REFERENCES estado_factura(id_estado_factura) NOT NULL,
-	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
-);
-
-
-
--- 8.2. DETALLE_FACTURA (Imputación Contable del Gasto)
-CREATE TABLE detalle_factura (
-    "id_detalle" SERIAL PRIMARY KEY,
-    "id_factura_gasto" INT REFERENCES facturas_gasto(id_factura_gasto) NOT NULL,
-    "descripcion" VARCHAR(255) NOT NULL,
-    "id_cuenta_gasto" INT REFERENCES plan_cuenta(id_plan_cuenta) NOT NULL,
-    "monto_usd" NUMERIC(12, 2) NOT NULL,
-    "monto_ves" NUMERIC(12, 2) NOT NULL, -- Monto para registro contable legal
-	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
-);
-
-
-
-
--- 8.3. PAGOS_PROVEEDORES (Transacción de Pago a Proveedor)
-CREATE TABLE pagos_proveedores (
-    "id_pago_proveedor" BIGSERIAL PRIMARY KEY,
-    "id_factura_gasto" INT REFERENCES facturas_gasto(id_factura_gasto) NOT NULL,
-    "fecha_pago" DATE NOT NULL,
-    "id_banco" INT REFERENCES banco(id_banco), 
-    "id_tasa_cambio" INT REFERENCES tasa_cambio(id_tasa_cambio) NOT NULL,
-    "monto_pagado_bs" NUMERIC(12, 2) NOT NULL,
-    "referencia_pago" VARCHAR(50),
-	"createdAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-	"updatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL
-);
-
-
-
-
-
-
-
-
 
 
 
@@ -658,6 +625,14 @@ TRUNCATE TABLE estado_proveedor RESTART IDENTITY CASCADE;
 TRUNCATE TABLE tipo_proveedor RESTART IDENTITY CASCADE;
 TRUNCATE TABLE categoria_curso RESTART IDENTITY CASCADE;
 TRUNCATE TABLE estado_curso RESTART IDENTITY CASCADE;
+TRUNCATE TABLE modalidad_clase RESTART IDENTITY CASCADE;
+TRUNCATE TABLE estado_grupo RESTART IDENTITY CASCADE;
+TRUNCATE TABLE estado_inscripcion RESTART IDENTITY CASCADE;
+TRUNCATE TABLE estado_obligacion RESTART IDENTITY CASCADE;
+TRUNCATE TABLE concepto_financiero RESTART IDENTITY CASCADE;
+TRUNCATE TABLE tipo_comprobante RESTART IDENTITY CASCADE;
+
+
 
 -- 1.1. NATURALEZA (Naturalezas de las cuentas)
 INSERT INTO naturaleza ("nombre") VALUES ('Deudora'), ('Acreedora');
@@ -981,138 +956,128 @@ INSERT INTO estado_grupo (nombre, descripcion, permite_inscripcion) VALUES
 ('Cancelado', 'El grupo fue cancelado antes o durante su ejecución (ej. por baja demanda o fuerza mayor).', FALSE);
 
 
+-- 1.20. MODALIDAD_CLASE
+INSERT INTO modalidad_clase (nombre, descripcion) VALUES
+('Presencial', 'Clases impartidas físicamente en un aula o centro académico.'),
+('Online', 'Clases impartidas de forma remota a través de plataformas de videoconferencia.'),
+('Híbrida', 'Combinación de sesiones presenciales y remotas.');
+
+
+-- 1.21. ESTADO_INSCRIPCION
+INSERT INTO estado_inscripcion (nombre, descripcion, puede_ver_clase, ciclo_cerrado) VALUES
+--('Solicitada', 'La solicitud de inscripción ha sido registrada, pero aún no ha sido revisada o aprobada.'),
+('Pendiente de Pago', 'La inscripción está aprobada por la administración y pendiente de la recepción del pago inicial para confirmarse.', false, false),
+('Activa', 'La inscripción está confirmada. El estudiante tiene un cupo activo y está participando en el grupo.', true, false),
+('Retirada', 'El estudiante ha solicitado formalmente el retiro del curso o grupo antes de su finalización.', false, true),
+('Anulada', 'Inscripción cancelada por la administración (e.g., por incumplimiento de pagos, cupo excedido o error administrativo).', false, true),
+('Completada', 'El estudiante ha finalizado satisfactoriamente todas las clases y requisitos del curso.', false, true),
+--('EN ESPERA', 'El estudiante está temporalmente pausado en el curso y planea retomar en un periodo futuro.'),
+('Desertada', 'El estudiante dejó de asistir a clases sin notificar formalmente el retiro. (Estado final negativo).', false, true);
+
+
+-- 1.22. ESTADO_OBLIGACION
+INSERT INTO estado_obligacion (nombre, descripcion, es_finalizado) VALUES
+('Emitida', 'La obligación ha sido creada y está pendiente de pago o ejecución.', FALSE),
+('Pagada', 'La obligación ha sido saldada en su totalidad.', TRUE),
+('Vencida', 'La fecha de vencimiento de la obligación ha pasado y sigue pendiente.', FALSE),
+('Anulada', 'La obligación ha sido cancelada por motivos administrativos o retiro.', TRUE),
+('Cobranza', 'La obligación se encuentra en proceso de cobro legal o externo.', FALSE); --Implica que la deuda es antigua, y el equipo de administración ha escalado la gestión. Puede involucrar: Agencias de cobro externas o Acciones legales.
 
 
 
+-- 1.23. CONCEPTO_FINANCIERO
+INSERT INTO concepto_financiero (nombre, descripcion, id_concepto_padre, es_por_cobrar, es_obligacion_negativa) VALUES
 
-
-
-
-
-
-
-
-
-
-
-------------------------------------------------------------------------------
-
-
-
-
-
--- Tabla: GRUPO (Oferta de un Curso en un Período con Docente, Estado Y TARIFA)
-CREATE TABLE GRUPO (
-    id_grupo INT PRIMARY KEY,
-    id_curso INT NOT NULL,
-    id_periodo INT NOT NULL,
-    nombre VARCHAR(100) NOT NULL, -- ¡NUEVA COLUMNA! Nombre descriptivo del grupo (Ej: Mañana, Intensivo 1)
-    id_docente INT, 
-    id_modalidad INT NOT NULL,
-    id_estado_actual INT NOT NULL, -- FK a ESTADO_GRUPO
+    -- =========================================================================================
+    -- Nodos Raíz (Categorías Principales)
+    -- =========================================================================================
     
-    cupo_maximo INT NOT NULL,
-
-    -- CAMPOS DE TARIFA
-    costo_inscripcion DECIMAL(10, 2) NOT NULL,
-    costo_clase_unitario DECIMAL(10, 2) NOT NULL,
-
-    FOREIGN KEY (id_curso) REFERENCES CURSO(id_curso),
-    FOREIGN KEY (id_periodo) REFERENCES PERIODO(id_periodo),
-    FOREIGN KEY (id_docente) REFERENCES DOCENTE(id_docente),
-    FOREIGN KEY (id_modalidad) REFERENCES MODALIDAD_CLASE(id_modalidad),
-    FOREIGN KEY (id_estado_actual) REFERENCES ESTADO_GRUPO(id_estado_grupo),
-
-    -- RESTRICCIÓN DE UNICIDAD AJUSTADA: 
-    -- Un curso solo puede tener un único grupo con un nombre dado en un período específico.
-    UNIQUE (id_curso, id_periodo, nombre)
-);
+    ('Ingresos Académicos', 'Agrupa todos los ingresos relacionados con la matrícula y el servicio educativo.', NULL, NULL, FALSE),
+    ('Ajustes Académicos', 'Agrupa los conceptos que reducen el ingreso (reembolsos, descuentos).', NULL, NULL, FALSE),
+    ('Costos de Nómina', 'Agrupa las obligaciones de pago al personal docente y administrativo.', NULL, NULL, FALSE),
+    ('Gastos Operativos', 'Agrupa los gastos necesarios para el funcionamiento de la academia (proveedores).', NULL, NULL, FALSE);
 
 
 
---CALENDARIO_CLASE (Padre): Almacena todo lo que está planificado (la intención: la clase 5 del grupo X con el Docente Y, el día Z).
- 
---REGISTRO_SESION_CLASE (Hija): Almacena todo lo que fue ejecutado y verificado (la realidad: la clase 5 realmente ocurrió, el docente efectivo fue W y se le pagan 2 horas).
+INSERT INTO concepto_financiero (nombre, descripcion, id_concepto_padre, es_por_cobrar, es_obligacion_negativa) VALUES
 
--- **NUEVA ESTRUCTURA Y RESTRICCIONES**
-CREATE TABLE CALENDARIO_CLASE (
-    id_clase_planificada INT PRIMARY KEY,
-    id_grupo INT NOT NULL,
-    id_docente INT NOT NULL,        -- NUEVO: Docente planificado para esta sesión
-    id_bloque INT NOT NULL,         -- El bloque de 2 horas (Ej: 9am-11am)
-    id_aula INT NOT NULL,
-    fecha_planificada DATE NOT NULL,
-    
-    numero_sesion INT NOT NULL,     -- MANTENIDO: Por rendimiento y reportes.
+    -- =========================================================================================
+    -- Conceptos Transaccionales (Hijos directos de 1 - Cuentas por Cobrar)
+    -- =========================================================================================
 
-    FOREIGN KEY (id_grupo) REFERENCES GRUPO(id_grupo),
-    FOREIGN KEY (id_docente) REFERENCES DOCENTE(id_docente), -- Nueva FK
-    FOREIGN KEY (id_bloque) REFERENCES BLOQUE_HORARIO(id_bloque),
-    FOREIGN KEY (id_aula) REFERENCES AULA(id_aula),
-
-    -- RESTRICCIÓN 1 (AULA/INFRAESTRUCTURA): No dos clases pueden usar la misma Aula/Bloque/Día.
-    UNIQUE (id_bloque, id_aula, fecha_planificada), 
-
-    -- RESTRICCIÓN 2 (DOCENTE/RECURSO): No dos clases pueden usar el mismo Docente/Bloque/Día.
-    UNIQUE (id_docente, id_bloque, fecha_planificada)
-    
-    -- NOTA: Se ha removido la restricción de unicidad para (id_grupo, fecha_planificada) 
-    --       para permitir múltiples sesiones por grupo en un mismo día.
-);
+    ('Inscripción', 'Costo inicial por matricularse en un grupo.', 1, TRUE, FALSE),
+    ('Cuota de Clase', 'Costo recurrente por el servicio educativo (clases).', 1, TRUE, FALSE),
+    ('Cuota de Material', 'Cargo por material didáctico, libros o licencias de software educativo.', 1, TRUE, FALSE),
+    ('Cuota de Certificación', 'Cargo por la emisión de diplomas o certificados de finalización.', 1, TRUE, FALSE),
+    ('Multa por Retraso', 'Penalidad aplicada por pagos realizados después de la fecha de vencimiento.', 1, TRUE, FALSE),
 
 
+    -- =========================================================================================
+    -- Conceptos Transaccionales (Hijos directos de 2 - Ajustes Cuentas por Cobrar)
+    -- =========================================================================================
+
+    ('Reembolso', 'Monto devuelto a un estudiante por retiro o anulación. (Deuda de la academia al estudiante).', 2, TRUE, TRUE), 
+    ('Descuento Promocional', 'Reducción en el monto de la obligación por la aplicación de una promoción.', 2, TRUE, TRUE),
 
 
--- Tabla: REGISTRO_CLASE (Clases Dadas - EJECUCIÓN/BASE PARA NÓMINA)
--- Simplificada: se asume que la duración pagable es igual a la duración del bloque horario asociado.
-CREATE TABLE REGISTRO_CLASE (
-    id_registro INT PRIMARY KEY,
-    id_clase_planificada INT NOT NULL, 
-    id_docente_efectivo INT NOT NULL, -- Docente que realmente impartió la clase
-    
-    -- Eliminado: horas_pagables (se calcula a partir de BLOQUE_HORARIO)
-    
-    FOREIGN KEY (id_clase_planificada) REFERENCES CALENDARIO_CLASE(id_clase_planificada),
-    FOREIGN KEY (id_docente_efectivo) REFERENCES DOCENTE(id_docente),
+    -- =========================================================================================
+    -- Conceptos Transaccionales (Hijos directos de 3 - Cuentas por Pagar: Nómina)
+    -- =========================================================================================
 
-    -- RESTRICCIÓN CLAVE: Máximo un registro de ejecución por clase planificada.
-    UNIQUE (id_clase_planificada)
-);
+    ('Remuneración Docente', 'Pago por las clases impartidas (Docente).', 3, FALSE, FALSE),
+    ('Bono Productividad', 'Pago adicional por cumplimiento de objetivos o mérito.', 3, FALSE, FALSE),
+    ('Salario Administrativo', 'Sueldo mensual fijo para personal de oficina o administración.', 3, FALSE, FALSE),
+    --('Aporte de Seguro Personal', 'Aportación de la academia a planes de seguro o beneficios.', 300, FALSE, FALSE),
+
+
+    -- =========================================================================================
+    -- Conceptos Transaccionales (Hijos directos de 400 - Cuentas por Pagar: Operativos)
+    -- =========================================================================================
+
+    ('Gasto de Alquiler', 'Pago mensual por arrendamiento de las instalaciones físicas.', 4, FALSE, FALSE),
+    ('Gasto por Mantenimiento de la Sede', 'Reparaciones y mejoras a la infraestructura (limpieza, mantenimiento).', 4, FALSE, FALSE),
+    ('Gasto de Servicios Básicos', 'Obligación por el consumo de luz, agua, gas e internet.', 4, FALSE, FALSE),
+    ('Gastos por Publicidad/Marketing', 'Obligación generada por campañas de marketing y promoción.', 4, FALSE, FALSE),
+    ('Gasto de Softwares/Licencias', 'Costo de licencias de software administrativo o educativo.', 4, FALSE, FALSE),
+    ('Compra de Equipo', 'Compra de computadoras, proyectores, mobiliario, etc.', 4, FALSE, FALSE);
 
 
 
 
+-- 1.24. TIPO_COMPROBANTE (se refiere al documento que crea la deuda o el crédito, no al medio por el cual se paga o se cobra)
+INSERT INTO tipo_comprobante (nombre, descripcion, es_legal) VALUES
+
+-- Propósito: Es el comprobante legal que formaliza una venta de bienes o servicios.
+--Uso: Se utiliza para dar soporte a las obligaciones de Cuentas por Cobrar a los estudiantes (Inscripción, Cuota Clase, Materiales). Es el documento que genera un ingreso para la academia.
+('Factura de Venta', 'Comprobante legal emitido al estudiante/cliente.', TRUE),
+
+
+--Propósito: Es el comprobante legal que la academia recibe de un proveedor al adquirir bienes o servicios.
+--Uso: Se utiliza para dar soporte a las obligaciones de Cuentas por Pagar por gastos operativos (Alquiler, Servicios, Equipos). Es el documento que genera un gasto o costo para la academia.
+('Factura de Compra', 'Comprobante legal recibido del proveedor.', TRUE),
+
+
+--Propósito: Es un documento fiscal que se emite para anular, disminuir o corregir una Factura de Venta previamente emitida.
+--Uso: Es clave para dar soporte a los AJUSTES ACADÉMICOS, específicamente cuando registras un REEMBOLSO o un DESCUENTO_PROMOCIONAL que afecta el saldo de un cliente. Invierte el efecto de la factura original.
+('Nota de Crédito', 'Documento que anula o disminuye una obligación (ej. para reembolsos o descuentos).', TRUE),
+
+
+--Propósito: Documento de carácter legal (no fiscal) que establece un acuerdo de pago periódico o la obligación de un servicio continuo.
+--Uso: Ideal para obligaciones que no tienen una factura por cada evento, sino por un acuerdo general, como la NÓMINA (el contrato docente establece la remuneración por clase) o el GASTO_ALQUILER (el contrato de arrendamiento genera la obligación mensual).
+('Contrato', 'Documento que genera la obligación (ej. pago de nómina o alquiler).', FALSE),
+
+
+--Propósito: Un documento interno de control que registra la recepción de un pago o la emisión de una obligación simple. Es provisional porque no sustituye una factura fiscal.
+--Uso: Se puede usar internamente para registrar la obligación de una CUOTA_CLASE antes de que se emita la FACTURA_VENTA formal, o simplemente para llevar un control interno de cobros menores.
+('Recibo Provisional', 'Documento interno o provisional de cobro de una cuota.', FALSE);
 
 
 
---La razón por la que usamos el id_inscripcion en ASISTENCIA_CLASE en lugar del id_estudiante es para asegurar la integridad referencial y la validez de las reglas de negocio.
-
---La función crucial de INSCRIPCION
---La tabla INSCRIPCION no es solo un registro del estudiante, sino que representa la membresía activa de un estudiante en un grupo específico durante un periodo específico.
-
---1. Evitar Registros Inválidos (Regla de Negocio)
---La asistencia solo tiene sentido si el estudiante está inscrito en el grupo al que pertenece la clase.
-
---ASISTENCIA_CLASE necesita saber: ¿Qué estudiante asistió a qué clase y cómo estaba ese estudiante en el momento del registro?
-
---Si usáramos solo id_estudiante, el sistema permitiría registrar la asistencia de cualquier estudiante a cualquier clase, incluso si ese estudiante no estaba inscrito en el grupo que impartió esa clase.
-
---2. Herencia de Contexto y Estado
---El id_inscripcion lleva consigo el contexto y el estado del estudiante en ese grupo (ej. ACTIVO, RETIRADO, COMPLETADO).
-
---Si un estudiante se retira de un grupo (cambia el estado de la inscripción a 'RETIRADO'), la inscripción permanece en la base de datos. Si intentas registrar una nueva asistencia usando ese id_inscripcion, el sistema podría (a través de lógica de aplicación) verificar el estado de esa inscripción antes de permitir el registro.
-
---Al usar id_inscripcion, la ruta para verificar todos los datos de la asistencia es limpia y directa:
--- Tabla: ASISTENCIA_CLASE (Asistencia de un Estudiante a una Sesión Registrada)
-CREATE TABLE ASISTENCIA_CLASE (
-    id_asistencia INT PRIMARY KEY,
-    id_inscripcion INT NOT NULL,
-    id_registro_clase INT NOT NULL,
-    id_estado_asistencia INT NOT NULL, 
-    
-    FOREIGN KEY (id_inscripcion) REFERENCES INSCRIPCION(id_inscripcion),
-    FOREIGN KEY (id_registro_clase) REFERENCES REGISTRO_SESION_CLASE(id_registro),
-    FOREIGN KEY (id_estado_asistencia) REFERENCES ESTADO_ASISTENCIA(id_estado_asistencia),
-
-    UNIQUE (id_inscripcion, id_registro_clase) 
-);
+-- 1.25. DIVISA
+INSERT INTO divisa (id_divisa, nombre, codigo, simbolo) VALUES
+(1, 'Bolívar Venezolano', 'VES', 'Bs.'), 
+(2, 'Dólar Estadounidense', 'USD', '$'), 
+(3, 'Euro', 'EUR', '€'),
+(4, 'Peso Colombiano', 'COP', 'COL\$'),
+(5, 'Peso Mexicano', 'MXN', 'MXN\$'),
+(6, 'Libra Esterlina', 'GBP', '£');

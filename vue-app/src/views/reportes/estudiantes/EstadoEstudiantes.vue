@@ -91,6 +91,7 @@
             :isLoading="isLoadingChart"
             initial-chart-type="bar"
             componentTitle="Estado de Estudiantes"
+            y-axis-label="Cantidad de Estudiantes"
             :allowedChartTypes="['bar', 'pie', 'doughnut', 'polarArea']"
             :multiColorBars="true"
         />

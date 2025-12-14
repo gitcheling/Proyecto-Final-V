@@ -579,7 +579,6 @@ h3 {
   opacity: 0; 
   /* Pointer-events: none (no clickeable, deja pasar el click) */
   pointer-events: none; 
-  background-color: rgba(0, 0, 0, 0.6); 
   display: flex;
   justify-content: center;
   align-items: center;

@@ -120,6 +120,7 @@
             :isLoading="isLoadingChart"
             initial-chart-type="bar"
             componentTitle="Conteo de Docentes por Mes"
+            y-axis-label="Cantidad de Docentes"
             :allowedChartTypes="['bar', 'line', 'area', 'pie', 'doughnut', 'polarArea']"
         />
         

@@ -8,7 +8,7 @@ const Entidad_Model = require('../Models/entidad');
 const Estado_Academico_Model = require('../Models/estado_academico'); 
 
 // Se importan las funciones comúnes de validación
-const { validarExistencia, validarIdNumerico, validarSoloTexto, validarSoloNumeros, parseAndValidateDate} = require('../Utils/validators');
+const { validarExistencia, validarIdNumerico, validarSoloTexto, validarSoloNumeros, parseAndValidateDate, validarBooleano} = require('../Utils/validators');
 
 // Se importan las funciones comúnes
 const { capitalizeFirstLetter, traducirMes} = require('../Utils/funciones');
@@ -189,6 +189,38 @@ class EstudianteService {
                     { 
                         association: 'estado_academico', 
                         attributes: ['id_estado_academico', 'nombre', 'permite_inscripcion'] 
+                    },
+                    { 
+                        association: 'inscripciones', 
+                        attributes: ['id_inscripcion'],
+                        include: [
+                            { 
+                                association: 'grupo', 
+                                attributes: ['id_grupo', 'id_curso', 'id_periodo', 'id_modalidad', 'nombre'],
+                                include: [
+                                    { 
+                                        association: 'curso', 
+                                        attributes: ['nombre'] 
+                                    },
+                                    { 
+                                        association: 'periodo', 
+                                        attributes: ['nombre'] 
+                                    },
+                                    {
+                                        association: 'modalidad',
+                                        attributes: ['nombre']
+                                    },
+                                    {
+                                        association: 'estado_grupo',
+                                        attributes: ['nombre']
+                                    }
+                                ]
+                            },
+                            { 
+                                association: 'estado_inscripcion', 
+                                attributes: ['id_estado_inscripcion', 'nombre'] 
+                            },
+                        ]
                     }
                 ]
         });
@@ -201,47 +233,43 @@ class EstudianteService {
     // Permite buscar estudiantes basandose en filtros
     async buscarEstudiantes(criteriosBusqueda = {}) {
         
-        const {estudianteWhere, entidadWhere} = this.generarWhereClause(criteriosBusqueda);
+        const { estudianteWhere, includeClauses } = this.generarWhereClause(criteriosBusqueda);
+
+        // Definir Includes Fijos (traen los datos, siempre LEFT JOIN por defecto)
+        // NOTA: Para evitar duplicados o conflictos, solo listamos las asociaciones para traer los campos.
+        // Los filtros (INNER JOIN) serán manejados por 'includeClauses'.
+        const fixedIncludes = [ 
+            { 
+                association: 'estado_academico', 
+                // Esto trae los campos. El filtro dinámico (si existe) estará en includeClauses.
+                attributes: ['id_estado_academico', 'nombre', 'permite_inscripcion'] 
+            },
+            { 
+                association: 'entidad', 
+                attributes: ['numero_identificacion', 'nombre', 'apellido', 'estado', 'telefono', 'email'],
+                // Inclusión anidada para el prefijo:
+                include: [
+                    { association: 'prefijo', attributes: ['id_prefijo', 'letra_prefijo'] }
+                ]
+            }
+        ];
 
 
-        // --- 3. Ejecutar la Consulta con Cláusulas WHERE separadas ---
+        // Combinamos los includes fijos (siempre traer datos) y los includes dinámicos (filtros).
+        const finalIncludes = [...fixedIncludes, ...includeClauses];
+
+
+        // --- 4. Ejecutar la Consulta ---
         const estudiantes = await Estudiante_Model.findAll({
-            // Aplicamos los filtros directos de la tabla Estudiante
             where: estudianteWhere, 
-            
-            include: [ // Define qué otras tablas deben unirse a la consulta y qué campos de esas tablas deben traerse.
-                { 
-                    association: 'entidad', // Realiza el JOIN desde "estudiante" a "entidad", basándose en la asociación Estudiante.belongsTo(Entidad, { as: 'entidad' }).
-
-                    // APLICAMOS LOS FILTROS DE ENTIDAD AQUÍ
-                    where: entidadWhere, // Usa el objeto where creado dinámicamente (es decir, se aplican los filtros de la tabla "entidad")
-                    required: Object.keys(entidadWhere).length > 0, /* Sequelize por defecto realiza un LEFT OUTER JOIN . Trae todos los estudiantes que cumplan los 
-                                                                    filtros de Estudiante, e incluye los datos de la Entidad si existen. El "required: true" hace que
-                                                                    se convierta a "INNER JOIN", haciendo que se traigan solo aquellos datos que cumplan las condiciones
-                                                                    indicadas, por lo que al decir "required: Object.keys(entidadWhere).length > 0", se está diciendo que
-                                                                    si hay filtros de entidad, que se ap´lique un INNER JOIN.*/
-                            
-                    include: [ /* Inclusión Anidada: Le dice a Sequelize que, dentro de la tabla "entidad", debe realizar otro JOIN para traer el 
-                                prefijo asociado (Entidad.belongsTo(Prefijo_Identificacion, { as: 'prefijo' })).
-
-                                Resultado: Los datos del prefijo aparecerán anidados dentro del objeto entidad en el JSON final.*/
-                        { association: 'prefijo', attributes: ['id_prefijo', 'letra_prefijo'] }
-                    ],
-                    // Atributos de la entidad que queremos traer:
-                    attributes: ['numero_identificacion', 'nombre', 'apellido', 'estado', 'telefono', 'email'] 
-                },
-                { 
-                    association: 'estado_academico', 
-                    attributes: ['id_estado_academico', 'nombre', 'permite_inscripcion'] 
-                }
-            ],
-
-            // Mantenemos el orden según las actualizaciones de la tabla "estudiante"
-            order: [ ['updatedAt', 'DESC'] ]
+            include: finalIncludes, // Usamos la lista combinada
+            order: [
+                ['updatedAt', 'DESC'] 
+            ]
         });
 
 
-        // --- Se devuelven los resultados formateados ---
+        // Se devuelven los resultados formateados ---
         return estudiantes.map(instancia => EstudianteService.formatearEstudiante(instancia));
     }
 
@@ -272,7 +300,12 @@ class EstudianteService {
                 columna = "Estudiante.createdAt";
         }
 
-        const {estudianteWhere, entidadWhere} = this.generarWhereClause(criteriosBusqueda);
+        const { 
+            estudianteWhere, 
+            entidadWhere,         
+            estadoAcademicoWhere, 
+            includeClauses        // <-- NO SE USA PERO SE DESESTRUCTURA
+        } = this.generarWhereClause(criteriosBusqueda); // <-- DEBE DEVOLVER TODAS LAS CLAVES
 
         // Se agregar el filtro de "Realmente Modificados"
         if (conceptoLimpio === "modificados") {
@@ -446,6 +479,15 @@ class EstudianteService {
 
         const estudiante = estudianteInstance.toJSON(); 
 
+        // -------------------------------------------------------------
+        // Procesar la lista de inscripciones (si existe)
+        // Se mapea la lista para formatear cada inscripción individualmente
+        // -------------------------------------------------------------
+        const inscripcionesFormateados = estudiante.inscripciones 
+            ? estudiante.inscripciones.map(g => EstudianteService.formatearInscripcion(g)) 
+            : []; // Devuelve un array vacío si no hay grupos (o si viene de buscarDocentes)
+            
+
         return {
             id: estudiante.id_estudiante, 
             codigo_estudiantil: estudiante.codigo_estudiantil.toString(),
@@ -468,6 +510,8 @@ class EstudianteService {
                 nombre: estudiante.estado_academico.nombre ? estudiante.estado_academico.nombre.toString() : null,
                 puede_inscribirse: estudiante.estado_academico.permite_inscripcion == true ? "Si" : "No",
             },
+
+            inscripciones: inscripcionesFormateados,
     
             fechaCreacion: estudiante.createdAt,
             fechaActualizacion: estudiante.updatedAt 
@@ -475,6 +519,28 @@ class EstudianteService {
 
     }
 
+    // Función auxiliar para formatear la estructura de una inscripción (ya que está anidado)
+    static formatearInscripcion= (inscripcion) => {
+        if (!inscripcion) return null;
+
+        return {
+            id: inscripcion.id_inscripcion,
+            estado: inscripcion.estado_inscripcion.nombre,
+            grupo: {
+                nombre: capitalizeFirstLetter(inscripcion?.grupo?.nombre ?? ""),
+            },
+        
+            curso: {
+                nombre: capitalizeFirstLetter(inscripcion?.grupo?.curso?.nombre ?? ""),
+            },
+            periodo: {
+                nombre: capitalizeFirstLetter(inscripcion?.grupo?.periodo?.nombre ?? ""),
+            },
+            modalidad: {
+                nombre: capitalizeFirstLetter(inscripcion?.grupo?.modalidad?.nombre ?? ""),
+            }
+        };
+    };
 
 
     // Función Auxiliar que genera la "whereClause" sin ejecutar la consulta
@@ -482,8 +548,12 @@ class EstudianteService {
         
         // Objeto para condiciones en la tabla Estudiante (base)
         const estudianteWhere = {};
+
         // Objeto para condiciones en la tabla Entidad (asociada)
         const entidadWhere = {};
+
+        // Objeto para condiciones en la tabla Estado_Academico (asociada)
+        const estadoAcademicoWhere = {};
 
         // Variable auxiliar para datos limpios
         let valorLimpio = null;
@@ -496,6 +566,7 @@ class EstudianteService {
             apellido,
             codigo_estudiantil,
             estado,
+            permite_inscripcion,
             creadosDesde,
             creadosHasta,
             modificadosDesde,
@@ -574,7 +645,7 @@ class EstudianteService {
             }
 
         
-            // Filtro 9: Estado 
+            // Filtro 6: Estado 
             if (validarExistencia(estado, "", false)) { 
 
                 // Limpieza y Validación:
@@ -593,8 +664,16 @@ class EstudianteService {
     
             }
 
+            // Filtro 7: Permite Inscripción (en Estado_Academico)
+            if (validarExistencia(permite_inscripcion, "", false)) { 
+                validarBooleano(permite_inscripcion, "El filtro 'permite_inscripcion' debe ser un valor booleano (true/false).");
 
-            //Filtro 10: Se verifica si el usuario ha proporcionado al menos una de las fechas de creación
+                // Si el valor es válido, se añade al WHERE de Estado_Academico
+                estadoAcademicoWhere.permite_inscripcion = permite_inscripcion;
+            }
+
+
+            //Filtro 8: Se verifica si el usuario ha proporcionado al menos una de las fechas de creación
             if (fechaCreacionDesde || fechaCreacionHasta) {
 
                 estudianteWhere.createdAt = {}; 
@@ -627,7 +706,7 @@ class EstudianteService {
                 }
             }
 
-            // Filtro 11: Se verifica si el usuario ha proporcionado al menos una de las fechas de modificación
+            // Filtro 9: Se verifica si el usuario ha proporcionado al menos una de las fechas de modificación
             if (fechamodificadosDesde || fechamodificadosHasta) {
 
                 estudianteWhere.updatedAt = {}; 
@@ -659,7 +738,36 @@ class EstudianteService {
                 }
             }
 
-        return {estudianteWhere,entidadWhere};
+        // 3. Crear el arreglo de includes dinámicos
+        const includeClauses = [];
+
+        // Incluir JOIN a Entidad si hay filtros en Entidad
+        if (Object.keys(entidadWhere).length > 0) {
+            includeClauses.push({
+                association: 'entidad',
+                required: true, // INNER JOIN para aplicar filtro
+                attributes: [], 
+                where: entidadWhere,
+            });
+        }
+
+        // Incluir JOIN a Estado_Academico si hay filtros en Estado_Academico
+        if (Object.keys(estadoAcademicoWhere).length > 0) {
+            includeClauses.push({
+                association: 'estado_academico', // Alias en el modelo Estudiante
+                required: true, // INNER JOIN para aplicar filtro
+                attributes: [], 
+                where: estadoAcademicoWhere,
+            });
+        }
+
+
+        return {
+            estudianteWhere: estudianteWhere,
+            entidadWhere: entidadWhere, 
+            estadoAcademicoWhere: estadoAcademicoWhere, 
+            includeClauses: includeClauses
+        };
     }   
 
 

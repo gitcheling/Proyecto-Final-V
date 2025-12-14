@@ -79,6 +79,7 @@
             :isLoading="isLoadingChart"
             initial-chart-type="bar"
             componentTitle="Estado de Proveedores"
+            y-axis-label="Cantidad de Proveedores"
             :allowedChartTypes="['bar', 'pie', 'doughnut', 'polarArea']"
             :multiColorBars="true"
         />

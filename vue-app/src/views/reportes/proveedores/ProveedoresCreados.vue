@@ -119,6 +119,7 @@
             :isLoading="isLoadingChart"
             initial-chart-type="bar"
             componentTitle="Conteo de Proveedores por Mes"
+            y-axis-label="Cantidad de Proveedores"
             :allowedChartTypes="['bar', 'line', 'area', 'pie', 'doughnut', 'polarArea']"
         />
         

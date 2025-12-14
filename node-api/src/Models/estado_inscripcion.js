@@ -12,6 +12,14 @@ const Estado_Inscripcion = sequelize.define('Estado_Inscripcion', {
         type: DataTypes.STRING(50),
         allowNull: false,
     },
+    descripcion: {
+        type: DataTypes.STRING(255),
+        allowNull: false,
+    },
+    puede_ver_clase: {
+        type:DataTypes.BOOLEAN,
+        allowNull: false // asegura que este campo siempre debe tener un valor; la base de datos no permitirá nulos.
+    },
     ciclo_cerrado: {
         type:DataTypes.BOOLEAN,
         allowNull: false // asegura que este campo siempre debe tener un valor; la base de datos no permitirá nulos.
@@ -30,7 +38,7 @@ Estado_Inscripcion.associate = (models) => {
     
     // Un estado de inscripción puede aparecer muchas veces en "inscripcion"
     Estado_Inscripcion.hasMany(models.Inscripcion, {
-        foreignKey: 'id_estado_inscripcion', // La FK que está en la tabla 'inscripcion'
+        foreignKey: 'id_estado', // La FK que está en la tabla 'inscripcion'
         as: 'inscripciones' // Usamos éste prefijo para obtener los datos del otro modelo (todas las inscripciones de un estado de inscripcion)
     });
 

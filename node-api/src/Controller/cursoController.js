@@ -35,7 +35,6 @@ exports.actualizarCurso = async (req, res) => {
     const { id } = req.params;
 
     const {nombre, descripcion, categoria, total_clases, estado} = req.body; 
-    
     try {
 
         const cursoActualizado = await cursoService.actualizarCurso(id, nombre, descripcion, categoria, total_clases, estado);

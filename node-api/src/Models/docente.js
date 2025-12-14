@@ -71,25 +71,6 @@ Docente.associate = (models) => {
 
 
 
-
-
-
-
-    //----------------------- revision--------------------
-
-
-    // Un docente puede aparecer muchas veces en "liquidacion_nomina"
-    Docente.hasMany(models.Liquidacion_Nomina, {
-        foreignKey: 'id_docente', // La FK que está en la tabla 'liquidacion_nomina'
-        as: 'liquidaciones' // Usamos éste prefijo para obtener los datos del otro modelo (todas las liquidaciones de un docente)
-    });
-
-    // Un docente puede aparecer muchas veces en "registro_horas"
-    Docente.hasMany(models.Registro_Horas, {
-        foreignKey: 'id_docente', // La FK que está en la tabla 'registro_horas'
-        as: 'horas_registradas' // Usamos éste prefijo para obtener los datos del otro modelo (todas las horas registradas de un docente)
-    });
-    
 };
 
 module.exports = Docente;

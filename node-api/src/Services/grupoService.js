@@ -4,6 +4,7 @@ const Periodo_Model = require('../Models/periodo');
 const Modalidad_Clase_Model = require('../Models/modalidad_clase');
 const Docente_Model = require('../Models/docente');
 const Estado_Grupo_Model = require('../Models/estado_grupo');
+const Inscripcion_Model = require('../Models/inscripcion');
 
 
 // Se importan las funciones comúnes de validación
@@ -48,17 +49,19 @@ class GrupoService {
             validarIdNumerico(docenteLimpio, "El docente no tiene el formato correcto");
 
             const nombreLimpio = String(nombre).trim().toLowerCase();  
-            validarSoloTexto(nombreLimpio, "El nombre debe contener solo texto y espacios en blanco.");
+            validarLongitudCadena(nombreLimpio, 5, 50, "El nombre no cumple con la longitud válida (de 5 a 50 caracteres).");
 
             const cupoMaximoLimpio = String(cupo_maximo).trim(); 
             validarIdNumerico(cupoMaximoLimpio, "El cupo máximo no tiene el formato correcto");
+            const cupoMaximoNumerico = parseInt(cupoMaximoLimpio, 10);
 
             const costoInscripcionLimpio = String(costo_inscripcion).trim(); 
             validarSoloNumerosEnterosYDecimales(costoInscripcionLimpio, "El costo de inscripción no tiene el formato correcto");
+            const costoInscripcionNumerico = parseFloat(costoInscripcionLimpio);
 
             const costoClaseLimpio = String(costo_clase).trim(); 
             validarSoloNumerosEnterosYDecimales(costoClaseLimpio, "El costo unitario de clase no tiene el formato correcto");
-
+            const costoClaseNumerico = parseFloat(costoClaseLimpio);
 
 
         // ----------------------- Validaciones de existencia en la base de datos ----------------------------
@@ -98,6 +101,30 @@ class GrupoService {
             if(!docenteObjeto){throw new Error(`El docente especificado no existe.`);}
 
 
+        // ----------------------- Validaciones de rangos ----------------------------
+            
+            // Se valida el cupo total según la modalidad de clases
+            if((modalidadObjeto.nombre == "Presencial" || modalidadObjeto.nombre == "Hibrida") && (cupoMaximoNumerico < 5 || cupoMaximoNumerico > 50 )){
+               
+                throw new Error(`El cupo máximo no cumple con la cantidad requerida para la modalidad ${modalidadObjeto.nombre} (de 5 a 50 estudiantes).`);
+            
+            }else if(modalidadObjeto.nombre == "Online" && (cupoMaximoNumerico < 5|| cupoMaximoNumerico > 400 )){
+                
+                throw new Error(`El cupo máximo no cumple con la cantidad requerida para la modalidad virtual (de 5 a 400 estudiantes).`);
+           
+            }
+
+            // Se valida el costo de inscripción de clase 
+            if(costoInscripcionNumerico < 1 || costoInscripcionNumerico > 1000){
+                throw new Error(`El costo de inscripción no cumple con el monto requerido (de 1 a 1000$).`);
+            }
+
+            // Se valida el costo unitario de clase 
+            if(costoClaseNumerico < 1 || costoClaseNumerico > 50){
+                throw new Error(`El costo unitario de cada clase no cumple con el monto requerido (de 1 a 50$).`);
+            }
+
+
 
         // ----------------------- Validaciones de si se permite o no crear el curso con esos datos ----------------------------
 
@@ -121,16 +148,6 @@ class GrupoService {
             }
 
     
-            // Comprobamos que no exista ya un grupo con ese nombre en la base de datos
-            if(await Grupo_Model.findOne({ where: { 
-                                                    id_curso: cursoObjeto.id_curso,
-                                                    id_periodo: periodoObjeto.id_periodo,
-                                                    nombre: nombreLimpio
-            } })){
-                throw new Error(`El grupo con el curso y el nombre especificados ya existen en éste periodo.`);
-            }
-
-
 
         // ----------------------- Creación ----------------------------
 
@@ -140,30 +157,44 @@ class GrupoService {
                 id_modalidad: modalidadObjeto.id_modalidad,
                 id_docente: docenteObjeto.id_docente,
                 nombre: nombreLimpio,
-                cupo_maximo: cupoMaximoLimpio,
+                cupo_maximo: cupoMaximoNumerico,
                 costo_inscripcion: costoInscripcionLimpio, 
-                costo_unitario_clase: costoClaseLimpio
+                costo_unitario_clase: costoClaseLimpio,
+                id_estado: 1,
             };
 
-            // Se manda a crear el nuevo grupo
-            const nuevoGrupo= await Grupo_Model.create(Data);
 
-            // Renombramos las propiedades a regresar (para que el cliente no vea los nombres de las columnas de la base de datos)
-            return {
-                id: nuevoGrupo.id_grupo, 
-                curso: nuevoGrupo.id_curso,
-                periodo: nuevoGrupo.id_periodo,
-                modalidad: nuevoGrupo.id_modalidad,
-                docente: nuevoGrupo.id_docente,
-                nombre: capitalizeFirstLetter(nuevoGrupo.nombre), 
-                cupo_maximo: nuevoGrupo.cupo_maximo,        
-                costo_inscripcion: nuevoGrupo.costo_inscripcion,
-                costo_clase: nuevoGrupo.costo_unitario_clase,
-                
-                fechaCreacion: nuevoGrupo.createdAt,
-                fechaActualizacion: nuevoGrupo.updatedAt
-                
-            };
+            try {
+
+                // Se manda a crear el nuevo grupo
+                const nuevoGrupo = await Grupo_Model.create(Data);
+
+                // Renombramos las propiedades a regresar (para que el cliente no vea los nombres de las columnas de la base de datos)
+                return {
+                    id: nuevoGrupo.id_grupo, 
+                    curso: nuevoGrupo.id_curso,
+                    periodo: nuevoGrupo.id_periodo,
+                    modalidad: nuevoGrupo.id_modalidad,
+                    docente: nuevoGrupo.id_docente,
+                    nombre: capitalizeFirstLetter(nuevoGrupo.nombre), 
+                    cupo_maximo: nuevoGrupo.cupo_maximo,        
+                    costo_inscripcion: nuevoGrupo.costo_inscripcion,
+                    costo_clase: nuevoGrupo.costo_unitario_clase,
+                    estado: "Planificado",
+                    fechaCreacion: nuevoGrupo.createdAt,
+                    fechaActualizacion: nuevoGrupo.updatedAt
+                    
+                };
+
+            } catch (error) {
+                // Manejar el error de unicidad garantizado por el modelo.
+                if (error.name === 'SequelizeUniqueConstraintError') {
+                    throw new Error(`El grupo con el curso y el nombre especificados ya existen en éste periodo.`);
+                }
+
+                // Re-lanzar cualquier otro error (DB, conexión, etc.)
+                throw error;
+            }
 
     }
 
@@ -187,14 +218,15 @@ class GrupoService {
         por los estudiantes.
 
         -"costo_inscripcion" y "costo_clase_unitario": No se pueden modificar si existe al menos una entrada en la tabla
-        "inscripcion".	Una vez que un estudiante se inscribe, el precio queda fijado. Modificarlo podría generar inconsistencias 
+        "inscripción".	Una vez que un estudiante se inscribe, el precio queda fijado. Modificarlo podría generar inconsistencias 
         contables.
 
-        -cupo_maximo: Se puede modificar, pero nunca se puede reducir por debajo del número actual de estudiantes inscritos.	
-        Es una regla operativa simple: se puede ampliar el cupo, pero no se puede forzar la salida de estudiantes ya inscritos.
+        -cupo_maximo: Se puede modificar, pero nunca se puede reducir por debajo del número actual de estudiantes inscritos.
+        
+        -id_estado: Se puede modificar siempre y cuando su periodo no haya finalizado
 
     */
-    async actualizarCurso(id, modalidad, docente, nombre, cupo_maximo, costo_inscripcion, costo_clase) {
+    async actualizarGrupo(id, modalidad, docente, nombre, cupo_maximo, costo_inscripcion, costo_clase, estado) {
 
         // ----------------------- Validaciones de existencia ----------------------------
 
@@ -205,6 +237,7 @@ class GrupoService {
             validarExistencia(cupo_maximo, "cupo_maximo", true);
             validarExistencia(costo_inscripcion, "costo_inscripcion", true);
             validarExistencia(costo_clase, "costo_clase", true);
+            validarExistencia(estado, "estado", true);
 
         // ----------------------- Validaciones de formato ----------------------------
 
@@ -218,23 +251,33 @@ class GrupoService {
             validarIdNumerico(docenteLimpio, "El docente no tiene el formato correcto");
 
             const nombreLimpio = String(nombre).trim().toLowerCase();  
-            validarSoloTexto(nombreLimpio, "El nombre debe contener solo texto y espacios en blanco.");
+            validarLongitudCadena(nombreLimpio, 5, 50, "El nombre no cumple con la longitud válida (de 5 a 50 caracteres).");
 
             const cupoMaximoLimpio = String(cupo_maximo).trim(); 
             validarIdNumerico(cupoMaximoLimpio, "El cupo máximo no tiene el formato correcto");
+            const cupoMaximoNumerico = parseInt(cupoMaximoLimpio, 10);
 
             const costoInscripcionLimpio = String(costo_inscripcion).trim(); 
             validarSoloNumerosEnterosYDecimales(costoInscripcionLimpio, "El costo de inscripción no tiene el formato correcto");
+            const costoInscripcionNumerico = parseFloat(costoInscripcionLimpio);
 
             const costoClaseLimpio = String(costo_clase).trim(); 
             validarSoloNumerosEnterosYDecimales(costoClaseLimpio, "El costo unitario de clase no tiene el formato correcto");
+            const costoClaseNumerico = parseFloat(costoClaseLimpio);
 
+            const estadoLimpio = String(estado).trim(); 
+            validarIdNumerico(estadoLimpio, "El estado no tiene el formato correcto");
+            const estadoNumerico = parseInt(estadoLimpio, 10);
 
 
         // ----------------------- Validaciones de existencia en la base de datos ----------------------------
 
             // Se valida que exista el grupo
-            const grupoObjeto = await Grupo_Model.findByPk(idLimpio);
+            const grupoObjeto = await Grupo_Model.findByPk(idLimpio, {
+                include: [
+                    { association: 'periodo', attributes: ['id_periodo', 'fecha_fin'] }
+                ]
+            });
             if(!grupoObjeto){throw new Error(`El grupo especificado no existe.`);}
 
 
@@ -255,237 +298,345 @@ class GrupoService {
             if(!docenteObjeto){throw new Error(`El docente especificado no existe.`);}
 
 
+            // Se valida que exista el estado
+            const estadoObjeto = await Estado_Grupo_Model.findByPk(estadoNumerico);
+            if(!estadoObjeto){throw new Error(`El estado especificado no existe.`);}
+
+
 
         // ----------------------- Validaciones de diferencia ----------------------------
 
+            const conteoInscripciones = await Inscripcion_Model.count({ where: { id_grupo: grupoObjeto.id_grupo } })
+            const hayInscripciones = conteoInscripciones > 0;
+
+            let data = {};
 
             // Se comprueba si la modalidad es distinta
-            if(modalidadObjeto.id_modalidad !== grupoObjeto.id_modalidad){
+            if(modalidadObjeto.id_modalidad != grupoObjeto.id_modalidad){
 
-                if(await Entidad_Model.findOne({ where: { email: correoEnMinuscula } })){
-                    throw new Error(`El email '${email}' ya está registrado.`);
+                if(hayInscripciones){
+                    throw new Error(`No se puede cambiar la modalidad, ya existen inscripciones para el grupo.`);
                 }
-
+                data.id_modalidad = modalidadObjeto.id_modalidad;
             }
 
             // Se comprueba si el docente es distinto
-            if(docenteObjeto.id_docente !== grupoObjeto.id_docente){
-
-                if(await Entidad_Model.findOne({ where: { email: correoEnMinuscula } })){
-                    throw new Error(`El email '${email}' ya está registrado.`);
-                }
+            if(docenteObjeto.id_docente != grupoObjeto.id_docente){
+                if(docenteObjeto.estado_docente.permite_asignacion == false){throw new Error(`No se le pueden asignar nuevos grupos al docente seleccionado.`);};       
                 
+                data.id_docente = docenteObjeto.id_docente;
+            
             }
 
             // Se comprueba si el nombre es distinto
             if(nombreLimpio !== grupoObjeto.nombre){
 
                 if(await Grupo_Model.findOne({ where: { 
-                                                    id_curso: Grupo_Model.id_curso,
-                                                    id_periodo: Grupo_Model.id_periodo,
+                                                    id_curso: grupoObjeto.id_curso,
+                                                    id_periodo: grupoObjeto.id_periodo,
                                                     nombre: nombreLimpio
                 } })){
-                    throw new Error(`El nombre especificados ya lo tiene asignado otro curso en éste periodo.`);
+                    throw new Error(`El nombre especificado ya lo tiene asignado otro curso en éste periodo.`);
                 }
                 
+                data.nombre = nombreLimpio;
             }
 
             
-
-            // Se comprueba si el cupo máximo, costo de inscripción o el costo por clase son distintos 
-            if( cupoMaximoLimpio !== grupoObjeto.cupo_maximo || 
-                costoInscripcionLimpio !== grupoObjeto.costo_inscripcion ||
-                costoClaseLimpio !== grupoObjeto.costo_unitario_clase
-            ){
-
-                if(await Entidad_Model.findOne({ where: { email: correoEnMinuscula } })){
-                    throw new Error(`El email '${email}' ya está registrado.`);
-                }
+            // Se comprueba si el cupo máximo es distinto
+            if(cupoMaximoNumerico != grupoObjeto.cupo_maximo){
                 
+                // La cantidad de cupo máximo no puede ser menor a la de estudiantes inscritos en ese momento
+                if(cupoMaximoNumerico < conteoInscripciones){throw new Error(`El nuevo cupo máximo (${conteoInscripciones}) no puede ser menor que la cantidad actual de estudiantes inscritos (${cuposOcupados}).`);};       
+            
+                
+                if((modalidadObjeto.nombre == "Presencial" || modalidadObjeto.nombre == "Hibrida") && (cupoMaximoNumerico < 5 || cupoMaximoNumerico > 50 )){        
+                    throw new Error(`El cupo máximo no cumple con la cantidad requerida para la modalidad ${modalidadObjeto.nombre} (de 5 a 50 estudiantes).`);                 
+                }else if(modalidadObjeto.nombre == "Online" && (cupoMaximoNumerico < 5|| cupoMaximoNumerico > 400 )){
+                    throw new Error(`El cupo máximo no cumple con la cantidad requerida para la modalidad virtual (de 5 a 400 estudiantes).`);
+                }  
+
+                data.cupo_maximo = cupoMaximoNumerico;   
+            }
+                
+
+            // Se comprueba si el costo de inscripción es distinto
+            if(costoInscripcionNumerico != grupoObjeto.costo_inscripcion){
+
+                // Si ya hay inscripciones, no se puede cambiar
+                if(hayInscripciones){ throw new Error(`No se puede cambiar el costo de inscripción cuando ya hay estudiantes inscritos al grupo.`)};
+                
+                if(costoInscripcionNumerico < 1 || costoInscripcionNumerico > 1000){
+                    throw new Error(`El costo de inscripción no cumple con el monto requerido (de 1 a 1000$).`);
+                }
+
+                data.costo_inscripcion = costoInscripcionNumerico;   
             }
 
 
+            // Se comprueba si el costo unitario de clase es distinto
+            if(costoClaseNumerico != grupoObjeto.costo_unitario_clase){
 
-        const [filasAfectadas] = await Entidad_Model.update(
-            { // Objeto con los campos a actualizar
-                nombre: nombreEnMinuscula,
-                apellido: apellidoEnMinuscula,
-                email: correoEnMinuscula,
-                telefono: telefono,
-                direccion: direccionEnMinuscula
-            }, 
-            
-            { where: { id_entidad: id } } // La condición para actualizar
-        );
+                // Si ya hay inscripciones, no se puede cambiar
+                if(hayInscripciones){ throw new Error(`No se puede cambiar el costo unitario de cada clase cuando ya hay estudiantes inscritos al grupo.`)};
+                
+                if(costoClaseNumerico < 1 || costoClaseNumerico > 50){
+                    throw new Error(`El costo unitario de cada clase no cumple con el monto requerido (de 1 a 50$).`);
+                }
 
-        // Se devuelve el objeto actualizado
-        if (filasAfectadas === 0) {
-            // Aunque improbable después de findByPk, se maneja.
-            return null;
-        }
-        
-        await entidadExistente.reload(); 
-
-        // Renombramos las propiedades a regresar (para que el cliente no vea los nombres de las columnas de la base de datos)
-        return {
-            id: entidadExistente.id_entidad, 
-            tipo_entidad: entidadExistente.id_tipo_entidad,
-            tipo_identificacion: entidadExistente.id_tipo_identificacion,
-            prefijo: entidadExistente.id_prefijo,
-            numero_identificacion: entidadExistente.numero_identificacion,
-            nombre: capitalizeFirstLetter(entidadExistente.nombre), 
-            apellido: capitalizeFirstLetter(entidadExistente.apellido),        
-            email: entidadExistente.email,
-            telefono: entidadExistente.telefono,
-            direccion: entidadExistente.direccion,
-            estado: entidadExistente.estado,
-            
-            fechaCreacion: entidadExistente.createdAt,
-            fechaActualizacion: entidadExistente.updatedAt
-            
-        };
-    }
+                data.costo_unitario_clase = costoClaseNumerico;   
+            }
 
 
-    // Ésta función simula el borrado de una entidad al desactivarla o activarla (ya que permitir borrados sería desastroso)
-    async cambiarEstadoEntidad(id, nuevoEstado) {
+            // Se comprueba si el estado es distinto
+            if(estadoNumerico != estadoObjeto.id_estado){
 
-        if(!validarExistencia(id, "id", false)){
-            return null;
-        }
+                // Validación de retroceso. No se puede volver a "Planificado" (ID 1) una vez el estado del grupo es distinto a él
+                if (grupoObjeto.id_estado > 1 && estadoNumerico === 1) {
+                    throw new Error(`No se puede cambiar el estado a 'Planificado' ya que el grupo ya ha iniciado o avanzado a una fase posterior.`);
+                }
 
-        // Se valida el id
-        validarIdNumerico(id, "El id es obligatorio");
+                // Verificación de Período Finalizado
+                const fechaFinPeriodo = new Date(grupoObjeto.periodo.fecha_fin);
+                const hoyNormalizado = new Date();
+                hoyNormalizado.setHours(0, 0, 0, 0);
 
-        // Se valida que el id de la cuenta no sea el "1" (la cuenta interna)
-        if(id === 1){
-            throw new Error("No puedes cambiar el estado de la cuenta interna de la academia");
-        };
-        
-        // Se valida el nuevo estado
-        validarBooleano(nuevoEstado, "El campo estado solo puede ser verdadero o falso (true/false).")
+                // Si el periodo ya terminó
+                if (fechaFinPeriodo < hoyNormalizado) {
 
-        // Se valida la existencia de la cuenta, si no existe se regresa null
-        if(!await Entidad_Model.findByPk(id)){
-            return null;
-        };
+                    // 1. Si el periodo terminó Y el estado actual es Finalizado, NO se permite cambiar.
+                    if (grupoObjeto.id_estado === 3) {
+                        throw new Error(`El periodo ha finalizado y el grupo ya está en estado 'Finalizado'. No se permiten más cambios de estado.`);
+                    }
+                    
+                    // 2. Si el periodo terminó, pero el grupo está en otro estado (ej. Activo),
+                    //    SOLO se permite el cambio HACIA el estado Finalizado.
+                    if (estadoNumerico !== 3) {
+                        throw new Error(`El periodo ha finalizado. La única transición de estado permitida es hacia 'Finalizado'.`);
+                    }
+                }
+                
+                // Si la validación pasa, se añade a la data
+                data.id_estado = estadoNumerico;
+            }
 
-        // Solo se actualiza la columna 'estado'
-        const [filasAfectadas] = await Entidad_Model.update(
-            { estado: nuevoEstado }, 
-            { where: { id_entidad: id } }
-        );
+        // ----------------------- Actualización ----------------------------
 
-        if (filasAfectadas === 0) {       
-            return null;      
-        }
-    
-        return true;
+            try {
+
+                const [filasAfectadas] = await Grupo_Model.update(data, 
+                    { where: { id_grupo: grupoObjeto.id_grupo } } // La condición para actualizar
+                );
+
+                // Se devuelve el objeto actualizado
+                if (filasAfectadas === 0) {
+                    // Aunque improbable después de findByPk, se maneja.
+                    return null;
+                }
+                
+                // Renombramos las propiedades a regresar (para que el cliente no vea los nombres de las columnas de la base de datos)
+                return true;
+
+            } catch (error) {
+                // Manejar el error de unicidad garantizado por el modelo.
+                if (error.name === 'SequelizeUniqueConstraintError') {
+                    throw new Error(`El grupo con el curso y el nombre especificados ya existen en éste periodo.`);
+                }
+                
+                // Re-lanzar cualquier otro error (DB, conexión, etc.)
+                throw error;
+            }
     }
 
 
 
 // -------------------------- Obtención ------------------------------------
 
-    // Se obtiene una sola entidad por el id
-    async obtenerEntidadPorId(id) {
+    // Se obtiene un solo grupo por el id
+    async obtenerGrupoPorId(id) {
 
         validarExistencia(id, "id", true);
 
-        validarIdNumerico(id, "El ID proporcionado no es un número entero válido o positivo.");
+        const idLimpio = String(id).trim();
+        validarIdNumerico(idLimpio, "El ID proporcionado no es un número entero válido o positivo.");
 
-        // Método de Sequelize para buscar una entidad por su Primary Key
-        const entidad = await Entidad_Model.findByPk(id, {
+        const grupo = await Grupo_Model.findByPk(idLimpio, {
 
-                attributes: [// Atributos de la tabla principal (entidad)                
-                    'id_entidad', 'id_tipo_entidad', 'id_tipo_identificacion', 'id_prefijo', 
-                    'numero_identificacion', 'nombre','apellido','email','telefono',
-                    'direccion', 'estado', 'createdAt', 'updatedAt'
-                ],
-                include: [ /*Le indica a Sequelize que debe realizar operaciones JOIN para traer datos de las 
-                    tablas relacionadas definidas en las asociaciones del modelo*/
+                include: [ 
+
+                    // Se traen los datos del estado del grupo
                     { 
-                        association: 'tipo_entidad', // Esto debe coincidir exactamente con el alias (as) que se le dió a la relación en el modelo (en este caso "entidad")
-                        attributes: ['id_tipo_entidad', 'nombre'] // Estos son los campos que se traerán de la tabla asociada (tipo_entidad)
+                        association: 'estado_grupo', // Esto debe coincidir exactamente con el alias (as) que se le dió a la relación en el modelo (en este caso "grupo")
+                        attributes: ['id_estado_grupo', 'nombre', 'permite_inscripcion'] // Estos son los campos que se traerán de la tabla asociada (estado_grupo)
                     },
+
+                    // Se traen los datos de la modalidad
                     { 
-                        association: 'tipo_identificacion', 
-                        attributes: ['id_tipo_identificacion', 'nombre'] 
+                        association: 'modalidad', 
+                        attributes: ['id_modalidad', 'nombre', 'descripcion'] 
                     },
+
+                    // Se traen los datos del periodo
                     { 
-                        association: 'prefijo', 
-                        attributes: ['id_prefijo', 'letra_prefijo'] 
+                        association: 'periodo', 
+                        attributes: ['id_periodo', 'nombre', 'fecha_inicio', 'fecha_fin']
+                    },
+
+                    // Se traen los datos del curso
+                    { 
+                        association: 'curso', 
+                        attributes: ['id_curso', 'nombre'],
+                        include: [
+                                    { 
+                                        association: 'categoria', 
+                                        attributes: ['id_categoria_curso', 'nombre', 'id_categoria_padre'],
+
+                                        // Se incluye la categoría padre
+                                        include: [ 
+                                            {
+                                                association: 'categoria_padre', // Se usa el alias definido en el modelo "categoria_curso"
+                                                attributes: ['id_categoria_curso', 'nombre'] 
+                                            }
+                                        ]
+                                    }
+                        ]
+                    },
+
+                    // Se traen los datos del docente
+                    { 
+                        association: 'docente', 
+                        attributes: [ 'id_docente' ],
+                            include: [ /*Le indica a Sequelize que debe realizar operaciones JOIN para traer datos de las 
+                                tablas relacionadas definidas en las asociaciones del modelo*/
+                                { 
+                                    association: 'entidad', // Esto debe coincidir exactamente con el alias (as) que se le dió a la relación en el modelo (en este caso "docente")
+                                    attributes: ['numero_identificacion', 'nombre', 'apellido'], // Estos son los campos que se traerán de la tabla asociada (tipo_entidad)
+                                
+                                    // Este include anidado es para tener acceso a los prefijos
+                                    include: [{
+                                        // 2. Incluye el Prefijo (desde el modelo Entidad)
+                                        association: 'prefijo', // Alias definido en el modelo Entidad: Entidad.belongsTo(Prefijo_Identificacion)
+                                        attributes: ['letra_prefijo'] // Campos que se quieren del Prefijo
+                                    }]
+                                        
+                                },
+                                { 
+                                    association: 'estado_docente', 
+                                    attributes: ['id_estado_docente', 'nombre'] 
+                                }
+                            ]
                     }
                 ]
         });
         
-        return EntidadService.formatearEntidad(entidad);
+        return GrupoService.formatearGrupo(grupo);
     
     }
 
 
-    // Se obtienen los prefijos según el tipo de identificación
-    async obtenerPrefijos(id) {
-
-        validarExistencia(id, "id", true);
-
-        validarSoloNumeros(id, "El tipo de identificación debe contener solo números (dígitos 0-9).")
-        const tipo_Identificacion_Numerica = parseInt(id, 10);
-        if (isNaN(tipo_Identificacion_Numerica) || tipo_Identificacion_Numerica < 1 || tipo_Identificacion_Numerica > 4) {
-            throw new Error("El tipo de identificación no es válido.");
-        }
-
-        const resultado = await Tipo_Identificacion_Model.findByPk(tipo_Identificacion_Numerica, {
-            // Usamos la asociación 'Prefijos' que definimos con 'as'
-            include: [{
-                model: Prefijo_Identificacion_Model, // El modelo de sequelize de la otra tabla
-                as: 'prefijos_sociados', // El "as" definido en "tipo_identificacion"
-                // Opcional: Especifica solo los atributos que se necesita del prefijo
-                attributes: ['id_prefijo', 'letra_prefijo', 'descripcion'],
-
-                through: {
-                    attributes: []
-                }
-            }],
-            // Opcional: No se necesita en éste caso los atributos del tipo_identificacion
-            attributes: [] 
-        });
-
-        // Verificar si el tipo de identificación fue encontrado
-        if (!resultado) { 
-            return [];
-        }
-        return resultado.prefijos_sociados;
-    
-    }
-
-
-    // Permite buscar entidades basandose en filtros
-    async buscarEntidades(criteriosBusqueda = {}) {
+    // Permite buscar grupos basandose en filtros
+    async buscargrupos(criteriosBusqueda = {}) {
         
-        const whereClause = this.generarWhereClause(criteriosBusqueda);
+        const whereClauses = this.generarWhereClause(criteriosBusqueda);
 
-        // --- Se ejecutar la Consulta con la Cláusula WHERE construida ---
-            
-        const entidades = await Entidad_Model.findAll({
-            // Aplicamos todas las condiciones construidas dinámicamente
-            where: whereClause, 
-            
-            // Mantenemos las asociaciones (includes) para traer los nombres de FKs
-            include: [ 
-                { 
-                    association: 'tipo_entidad', // Esto debe coincidir exactamente con el alias (as) que se le dió a la relación en el modelo (en este caso "entidad")
-                    attributes: ['id_tipo_entidad', 'nombre'] // Estos son los campos que se traerán de la tabla asociada (tipo_entidad)
+        // Bandera auxiliar para el filtro de Docente (simplifica la lectura)
+        const hayFiltroDocente = !!whereClauses.docente_entidad;
+
+        // 2. Definir los includes necesarios, aplicando el 'where' dinámicamente
+        const includes = [
+
+            // Filtro 1: Estado 
+            { 
+                association: 'estado_grupo', 
+                attributes: ['id_estado_grupo', 'nombre', 'permite_inscripcion'],
+
+                // Aplicamos la condición de filtro si existe
+                where: whereClauses.estado_grupo, 
+
+                // Requerido: Solo usar INNER JOIN si existe un filtro para esta asociación
+                required: !!whereClauses.estado_grupo, 
+            },
+
+            // Filtro 2: Modalidad
+            { 
+                association: 'modalidad', 
+                attributes: ['id_modalidad', 'nombre', 'descripcion'],
+                where: whereClauses.modalidad, 
+                required: !!whereClauses.modalidad, 
+            },
+
+            // Filtro 3: Período
+            { 
+                association: 'periodo', 
+                attributes: ['id_periodo', 'nombre'],
+                where: whereClauses.periodo, 
+                required: !!whereClauses.periodo, 
+            },
+
+            // Filtro 4: Curso 
+            { 
+                association: 'curso', 
+                attributes: ['id_curso', 'nombre'], 
+                
+                // Aplicamos el WHERE del curso
+                where: whereClauses.curso,
+                // INNER JOIN si hay filtro
+                required: !!whereClauses.curso,
+
+                include: [{ 
+                    association: 'categoria', 
+                    attributes: ['id_categoria_curso', 'nombre', 'id_categoria_padre'],
+                    include:[{ 
+                        association: 'categoria_padre', 
+                        attributes: ['id_categoria_curso', 'nombre'] 
+                    }]
+                }]
+            },
+
+            // Filtro 5: Docente (por Identificación)
+            { 
+                association: 'docente', 
+                attributes: ['id_docente'], 
+
+                // Si hay filtro anidado, el padre (docente) también debe ser required: true
+                required: hayFiltroDocente,
+                
+                // Aquí NO se pone el 'where' ni 'required', ya que el filtro está ANIDADO
+
+                include: [{ 
+                    // Modelo Entidad: Es el que tiene el campo 'numero_identificacion'
+                    association: 'entidad', 
+                    attributes: ['numero_identificacion', 'nombre', 'apellido'],
+                    
+                    // Aplicamos el WHERE
+                    where: whereClauses.docente_entidad, 
+                    
+                    // Requerido: Este es el segundo punto clave. Si hay filtro, se hace INNER JOIN.
+                    required: hayFiltroDocente, 
+
+                    include:[{ 
+                        association: 'prefijo', 
+                        attributes: ['letra_prefijo'] 
+                    }]
                 },
                 { 
-                    association: 'tipo_identificacion', 
-                    attributes: ['id_tipo_identificacion', 'nombre'] 
-                },
-                { 
-                    association: 'prefijo', 
-                    attributes: ['id_prefijo', 'letra_prefijo'] 
-                }
-            ],
+                    association: 'estado_docente', 
+                    attributes: ['id_estado_docente', 'nombre']
+                }]
+            }
+            
+        ];
+
+
+       // --- Se ejecuta la Consulta ---
+
+        const grupos = await Grupo_Model.findAll({
+            
+            // Se aplican las condiciones de la tabla principal
+            where: whereClauses.main, 
+            
+            // Se aplican los includes dinámicos
+            include: includes,
 
             // Mantenemos el orden por fecha de actualización
             order: [
@@ -493,413 +644,361 @@ class GrupoService {
             ]
         });
 
-        // --- Se devuelven los resultados formateados ---
-        return entidades.map(instancia => EntidadService.formatearEntidad(instancia));
+        //  Se devuelven los resultados formateados
+        return grupos.map(instancia => GrupoService.formatearGrupo(instancia));
     }
 
 
-    // Obtiene el conteo por mes de entidades, lo que es necesario para los gráficos
+    // Obtiene el conteo por mes de grupos, lo que es necesario para los gráficos
     async obtenerConteoPorMes(criteriosBusqueda = {}) {
 
         const concepto = criteriosBusqueda.concepto ?? null;
 
-        // Validamos que existan todos los datos
+        // 1. Validaciones y Columna de Fecha
         validarExistencia(concepto, "concepto", true);
 
         const conceptoLimpio = String(concepto).trim().toLowerCase();
-        // Se valida que el concepto sólo tenga texto 
         validarSoloTexto(concepto, "El concepto debe contener solo texto y espacios en blanco.");
 
-        let columna = "";
+        let columnaFecha = ""; // Columna de Grupo a usar (createdAt o updatedAt)
 
         switch (conceptoLimpio) {
             case "creados":
-                columna = "createdAt";
+                columnaFecha = "createdAt";
                 break;
             case "modificados":
-                columna = "updatedAt";
+                columnaFecha = "updatedAt";
                 break;
             default:
-                columna = "createdAt";
+                columnaFecha = "createdAt";
         }
-        
-        const whereClause = this.generarWhereClause(criteriosBusqueda);
 
-        /* Se agregar el filtro de "Realmente Modificados", y se hace debido a que, al registrar a una entidad, se coloca su
-        fecha de "updatedAt" en la misma que "createdAt", y si mandamos a contar sin mas las entidades actualizadas nos va a
-        salir la misma cantidad de modificados que de creados, por lo que si realmente queremos saber cuántas entidades fueron
-        modificadas, su fecha de "updatedAt" debe ser mayor que la de "createdAt" */
-        if (conceptoLimpio === "modificados") {
+
+
+        // Generación de las Cláusulas de Filtro (Reutilizando la lógica)
+        // Esto genera: whereClauses.main, whereClauses.modalidad, whereClauses.docente_entidad, etc.
+        const whereClauses = this.generarWhereClause(criteriosBusqueda);
+        const hayFiltroDocente = !!whereClauses.docente_entidad;
+
+        // Aplicación del Filtro de 'Realmente Modificados' a la tabla principal
+        let whereMainConFecha = { ...whereClauses.main }; // Copia las condiciones de la tabla principal
         
-            // La condición de que la fecha de actualización sea posterior a la de creación
-            // Esto asegura que solo contamos las modificaciones reales, no la creación inicial.
-            const whereModificado = { [Op.gt]: col('createdAt') }; 
+        // Si el conteo es por 'modificados', agregamos la condición de que updatedAt > createdAt
+        if (conceptoLimpio === "modificados") {
             
-            if (whereClause.updatedAt) {
-                // Si ya hay condiciones de fecha (Desde/Hasta) en updatedAt, las combinamos con Op.and
-                whereClause.updatedAt = {
+            const whereModificado = { [Op.gt]: col('Grupo.createdAt') }; // 💡 col('Grupo.createdAt') para asegurar la referencia
+            
+            if (whereMainConFecha.updatedAt) {
+                // Si ya hay filtros de rango de fechas en updatedAt, combinamos con Op.and
+                whereMainConFecha.updatedAt = {
                     [Op.and]: [
-                        whereClause.updatedAt, // Conserva los filtros de fecha (Desde/Hasta)
-                        whereModificado            // Agrega la condición de ser posterior a la creación
+                        whereMainConFecha.updatedAt, 
+                        whereModificado
                     ]
                 };
             } else {
                 // Si no hay filtros de fecha, solo agregamos la condición de ser posterior a la creación
-                whereClause.updatedAt = whereModificado;
+                whereMainConFecha.updatedAt = whereModificado;
             }
         }
 
 
-        /* Nota: El módulo "fn" permite invocar cualquier función nativa de la base de datos (como PostgreSQL, MySQL, etc.) dentro 
-        de una consulta. Llama a una función de la base de datos. Es usado para llamar a funciones como COUNT(), TRIM(), TO_CHAR(), 
-        y DATE_TRUNC().Sintaxisfn(nombreFuncionSQL, arg1, arg2, ...)fn('COUNT', col('id_entidad')). Su propósito es realizar 
-        operaciones que el servidor de la base de datos está optimizado para hacer, como cálculos, formateo de fechas o agregaciones.
-        Ejemplo: En la línea [fn('COUNT', col('id_entidad')), 'conteo'], le estás pidiendo a Sequelize que ejecute la función SQL "COUNT" 
-        sobre la columna "id_entidad" y llame al resultado conteo.
-        
+        // Definición de Includes (Reutilizando la lógica de "buscargrupos")
+        const includes = [
+            // Filtro 1: Estado (required si hay filtro)
+            { 
+                association: 'estado_grupo', 
+                attributes: [], // No necesitamos atributos en el conteo
+                where: whereClauses.estado_grupo, 
+                required: !!whereClauses.estado_grupo, 
+            },
 
-        El módulo "col" se utiliza como argumento dentro de otras funciones (como fn o literal) para indicar explícitamente que el valor 
-        que se está pasando es el nombre de una columna de la tabla, y no un string literal. Evitar ambigüedades en SQL. Si no se usa "col", 
-        Sequelize podría interpretar el nombre como una cadena que debe ser enviada a la base de datos (ej: 'id_entidad'), en lugar de la 
-        columna real ("id_entidad").
-        
-        */
-        
-        // 2. Definición del Conteo y Agrupación por Mes/Año
-        const resultadosAgregados = await Entidad_Model.findAll({
+            // Filtro 2: Modalidad (required si hay filtro)
+            { 
+                association: 'modalidad', 
+                attributes: [], 
+                where: whereClauses.modalidad, 
+                required: !!whereClauses.modalidad, 
+            },
 
-            where: whereClause,
+            // Filtro 3: Período (required si hay filtro)
+            { 
+                association: 'periodo', 
+                attributes: [],
+                where: whereClauses.periodo, 
+                required: !!whereClauses.periodo, 
+            },
+
+            // Filtro 4: Curso (required si hay filtro)
+            { 
+                association: 'curso', 
+                attributes: [], 
+                where: whereClauses.curso,
+                required: !!whereClauses.curso,
+                // Quitamos los includes anidados para simplificar el GROUP BY (no los necesitamos para el filtro)
+            },
+
+            // Filtro 5: Docente (requiere INNER JOIN en ambos niveles si hay filtro)
+            { 
+                association: 'docente', 
+                attributes: [], 
+                required: hayFiltroDocente, // INNER JOIN si hay filtro en la entidad anidada
+                
+                include: [{ 
+                    association: 'entidad', 
+                    attributes: [],
+                    where: whereClauses.docente_entidad, 
+                    required: hayFiltroDocente, // INNER JOIN si hay filtro
+                }]
+            }
+        ];
+
+
+        // Ejecución de la Consulta de Agregación
+        const resultadosAgregados = await Grupo_Model.findAll({
+
+            // Aplicamos las condiciones de la tabla principal (con filtros de fecha incluidos)
+            where: whereMainConFecha, 
+            
+            // Aplicamos los includes dinámicos
+            include: includes,
             
             attributes: [
-                /* A) Conteo: COUNT(*). Se compone de tres partes:
-
-                    -"fn('COUNT', ...)": Es la función de agregación. Le indica a Sequelize que debe aplicar la función SQL de conteo (COUNT).
-
-                    -"col('id_entidad')": Es la columna de Referencia. Especifica que la función "COUNT" debe contar los valores no nulos en 
-                    la columna "id_entidad" (que es la clave primaria y siempre existirá).
-
-                    -'conteo'. Es el alias (Nombre de Salida). Define cómo se llamará el resultado de esta operación en el JSON final que 
-                    JavaScript recibe.
-
-                El equivalente en sql es: 
-
-                    COUNT("id_entidad") AS "conteo"
-                */
-                [fn('COUNT', col('id_entidad')), 'conteo'],
+                // A) Conteo: COUNT(id_grupo)
+                [fn('COUNT', col('Grupo.id_grupo')), 'conteo'],
                 
-                /* B) Etiqueta de Mes (para el cliente): Usamos TO_CHAR. Se compone de:
-
-                    -"fn('TO_CHAR', ...)". Es la función SQL. Llama a la función TO_CHAR (To Character, "A Carácter") de la base de datos. Esta función convierte 
-                    un valor de fecha/tiempo a una cadena de texto según un formato específico.
-
-                    -"col('createdAt')": Es el dato de Entrada. Indica que el valor que se debe formatear es el contenido de la columna "createdAt" (la fecha y hora 
-                    en que se creó la entidad).
-
-                    -'Month YYYY'. Es el formato deseado. Es la plantilla que le dice a "TO_CHAR" cómo debe lucir la cadena de salida: "Month" (nombre completo del mes,
-                    con mayúscula inicial) seguido del "YYYY" (año completo de cuatro dígitos).
-
-                    -'mes': Es el alias (Nombre de Salida). Define el nombre con el que se accederá a esta cadena formateada en JavaScript. (ej: item.mes valdrá "Noviembre 2025").
-                
-                El equivalente en sql es (poniendo de ejemplo a "createdAt"): 
-
-                    TO_CHAR("createdAt", 'Month YYYY') AS "mes"
-                */
-                    [
+                // B) Etiqueta de Mes (usando la columna de fecha dinámica)
+                [
                     fn(
                         'TO_CHAR', 
-                        col(columna), 
+                        col(`Grupo.${columnaFecha}`), //  Referenciamos la columna de fecha dinámica en el modelo Grupo
                         'Month YYYY' 
                     ), 
                     'mes'
                 ],
                 
-                /*Llama a la función nativa "DATE_TRUNC" (Date Truncate o "Truncar Fecha") de PostgreSQL. Esta función "corta" la fecha/hora a una precisión específica.
-                Los componentes son:
-
-                    -'month': Especifica que la fecha debe truncarse al nivel de mes.
-
-                    -"col('createdAt')": La columna de fecha/hora a truncar.
-
-                    -'fecha_orden': El alias (Nombre de Salida). El nombre que se asigna a este valor truncado.
-                
-                El equivalente en sql es (poniendo de ejemplo a "createdAt"): 
-
-                    DATE_TRUNC('month', "createdAt") AS "fecha_orden"
-
-                Nota: Cuando se usa "DATE_TRUNC" con la unidad 'month' no es que corte la fecha de forma literal y se pierda todo lo demás, sino que la base de datos 
-                (PostgreSQL, en este caso) toma el valor de tiempo original y lo ajusta de la siguiente manera:
-
-                    -Año y Mes: El Año y el Mes originales se mantienen sin cambios.
-
-                    -Día: El Día se establece al valor mínimo posible para ese mes, que es el 1.
-
-                    -Hora, Minuto, Segundo, Milisegundo: Todos los componentes de la hora (que son más detallados que la unidad de truncamiento) se establecen a cero.
-                
-                Por ejemplo:
-
-                    Entidad	    Valor Original (createdAt)	    DATE_TRUNC('month', createdAt)
-                    A	        2025-11-09 14:30:55	            2025-11-01 00:00:00
-                    B	        2025-11-20 08:15:00	            2025-11-01 00:00:00
-                    C	        2025-12-05 10:00:00	            2025-12-01 00:00:00
-
-                Esto se hace con los elementos que ya trajo el "WHERE" previamente.
-                */
-                [fn('DATE_TRUNC', 'month', col(columna)), 'fecha_orden']
-
+                // C) Fecha de Orden (usando la columna de fecha dinámica)
+                [fn('DATE_TRUNC', 'month', col(`Grupo.${columnaFecha}`)), 'fecha_orden'] //  Referenciamos la columna de fecha dinámica
             ],
             
             // Este bloque es la cláusula GROUP BY
             group: [
                 // Agrupamos por la etiqueta de mes (TO_CHAR)
-                fn('TO_CHAR', col(columna), 'Month YYYY'),
+                fn('TO_CHAR', col(`Grupo.${columnaFecha}`), 'Month YYYY'),
 
                 // Agregamos el campo de ordenamiento/agrupación (DATE_TRUNC)
-                fn('DATE_TRUNC', 'month', col(columna))
+                fn('DATE_TRUNC', 'month', col(`Grupo.${columnaFecha}`))
             ],
             
-            // Ordenar por la fecha de creación (usando el campo DATE_TRUNC)
+            // Ordenar por la fecha de orden
             order: [
-                // Usamos el DATE_TRUNC aquí, que ahora es parte del GROUP BY
-                [fn('DATE_TRUNC', 'month', col(columna)), 'ASC'] 
+                [fn('DATE_TRUNC', 'month', col(`Grupo.${columnaFecha}`)), 'ASC'] 
             ],
             
+            // Es crucial para consultas de agregación y cuando se usan funciones de BD
             raw: true 
         });
 
+        // Formateo y retorno (Se mantiene igual)
         return resultadosAgregados.map(item => ({
             mes: traducirMes(item.mes), 
             conteo: parseInt(item.conteo, 10)
         }));
+
     }
 
 
-    // Obtiene la cantidad total de entidades activas e inactivas para los gráficos
+    // Obtiene la cantidad total de grupos según cada estado, aplicando los filtros de búsqueda
     async obtenerEstadosTotales(criteriosBusqueda = {}) {
         
-        const whereClause = this.generarWhereClause(criteriosBusqueda);
+        // 1. Generación de las Cláusulas de Filtro (Reutilizando la lógica anterior)
+        const whereClauses = this.generarWhereClause(criteriosBusqueda);
+        const hayFiltroDocente = !!whereClauses.docente_entidad;
+        
+        // 2. Definición de Includes para aplicar filtros complejos
 
-    
-        const resultadosAgregados = await Entidad_Model.findAll({
-
-            where: whereClause,
+        // NOTA: Solo se incluyen las asociaciones que tienen filtros definidos.
+        const includes = [
             
-            attributes: [
-                // A) Conteo total de entidades por grupo (estado)
-                [fn('COUNT', col('id_entidad')), 'conteo'],
+            // Filtro 1: Modalidad
+            { 
+                association: 'modalidad', 
+                attributes: [], 
+                where: whereClauses.modalidad, 
+                required: !!whereClauses.modalidad, 
+            },
+
+            // Filtro 2: Período
+            { 
+                association: 'periodo', 
+                attributes: [],
+                where: whereClauses.periodo, 
+                required: !!whereClauses.periodo, 
+            },
+
+            // Filtro 3: Curso (para aplicar filtros por nombre de curso)
+            { 
+                association: 'curso', 
+                attributes: [], 
+                where: whereClauses.curso,
+                required: !!whereClauses.curso,
+            },
+
+            // Filtro 4: Docente (por Identificación de Entidad)
+            { 
+                association: 'docente', 
+                attributes: [], 
+                required: hayFiltroDocente, 
                 
-                // B) Columna de Agrupación: Seleccionar el valor del estado
-                ['estado', 'estado_entidad'] 
-                // Esto selecciona el valor BOOLEAN de la columna 'estado' y lo aliasa como 'estado_entidad'
+                include: [{ 
+                    // Entidad: Es donde reside el filtro 'numero_identificacion'
+                    association: 'entidad', 
+                    attributes: [],
+                    where: whereClauses.docente_entidad, 
+                    required: hayFiltroDocente, 
+                }]
+            }
+            
+            // El Estado del Grupo (estado_grupo) se define como el objetivo principal abajo
+        ];
+
+
+        // 3. Ejecución de la Consulta de Agregación
+        const resultadosAgregados = await Grupo_Model.findAll({ 
+            
+            // Aplicamos los filtros de la tabla principal (nombre, rangos de cupo/costo, fechas)
+            where: whereClauses.main, 
+            
+            // Aplicamos los filtros asociados definidos arriba (Docente, Curso, Modalidad, Periodo)
+            include: [
+                ...includes,
+                { 
+                    // Asociacion Objetivo: Se incluye para AGREGAR y AGRUPAR
+                    association: 'estado_grupo', 
+                    attributes: ['nombre'], // Necesitamos el nombre para la etiqueta de agrupación
+                    // El filtro específico de 'estado' (id_estado_grupo) se aplicará aquí si existe
+                    where: whereClauses.estado_grupo,
+                    // Siempre debe ser INNER JOIN si se agrupa por esta asociación, o si hay un filtro aplicado
+                    required: true, 
+                },
             ],
             
-            // El bloque GROUP BY es el ÚNICO que define la división de los datos.
-                group: [
-                    // Agrupamos SOLAMENTE por la columna 'estado'
-                    col('estado')
-                ],
-                
-                // Ordenar opcionalmente para que el resultado sea predecible
-                order: [
-                    ['estado', 'DESC'] // Ordena 'true' antes de 'false' (si aplica)
-                ],
-                
-                raw: true 
-            });
+            attributes: [
+                // A) Conteo total de grupos
+                [fn('COUNT', col('Grupo.id_grupo')), 'conteo']
+            ],
+            
+            // 4. Agrupación: Agrupamos por el nombre del estado del grupo
+            group: [
+                // Referenciamos la columna 'nombre' a través de su alias de asociación
+                col('estado_grupo.nombre') 
+            ],
+            
+            // 5. Ordenamiento
+            order: [
+                [col('estado_grupo.nombre'), 'ASC'] 
+            ],
+            
+            // Configuraciones necesarias para consultas de agregación con JOINs
+            raw: true,
+            subQuery: false,
+            duplicating: false
+        });
 
-
-        // Formatear y Devolver el resultado
-        // El resultado de la consulta será algo como: 
-        // [{ conteo: '150', estado_entidad: true }, { conteo: '50', estado_entidad: false }]
+        // 6. Formatear y Devolver el resultado
+        const estadosTotales = {}; 
         
-        // Lo mapeamos al formato final deseado:
-        const estadosTotales = {
-            Activos: 0,
-            Inactivos: 0
-        };
-
         resultadosAgregados.forEach(item => {
+            // La clave del nombre del estado en el objeto 'raw' de Sequelize se construye con el alias
+            const nombreEstado = item['estado_grupo.nombre'];
             const conteoNumerico = parseInt(item.conteo, 10);
             
-            // Sequelize/raw:true puede devolver 'estado_entidad' como boolean o string ('true'/'false')
-            // Usamos una verificación explícita para asegurar la clasificación.
-            if (item.estado_entidad === true || item.estado_entidad === 'true') {
-                estadosTotales.Activos = conteoNumerico;
-            } else if (item.estado_entidad === false || item.estado_entidad === 'false') {
-                estadosTotales.Inactivos = conteoNumerico;
+            if (nombreEstado) {
+                estadosTotales[nombreEstado] = conteoNumerico;
             }
         });
 
-        // Devolver el objeto final: { activos: 150, inactivos: 50 }
+        // Ejemplo de retorno: { 'Activo': 15, 'Pendiente': 3, 'Cerrado': 7 }
         return estadosTotales;
     }
-
-
-    
-
-// -------------------------- Verificación ------------------------------------
-
-    /**
-    * Verifica si ya existe una cuenta con el mismo código o nombre, excluyendo un ID dado (en caso de que se estuviera modificando
-    * y no creando una cuenta).
-    * @param {string} email - El email a buscar (en minúsculas).
-    * @param {int} prefijo - El prefijo a buscar
-    * * @param {int} tipo_identificacion - El tipo de identificacion a buscar
-    * * @param {int} numero_identificacion - El numero de identificacion a buscar
-    * @param {number|null} idExcluido - El ID de la entidad actual (para exclusión).
-    * @returns {string|null} Retorna 'email', 'nombre', 'ambos', o null si no hay duplicados. */
-    
-    async verificarEntidadDuplicada(email, tipo_identificacion, prefijo, numero_identificacion, idExcluido) {
-
-        let condicionesDuplicidad = [];
-
-        validarExistencia(email, "email", true);
-
-        // Se valida que el correo sea válido
-        const correoEnMinuscula = email.toLowerCase();
-        validarEmail(correoEnMinuscula, "El correo electrónico no tiene un formato válido.");
-
-        let identificacionCompleta = false;
-        let tipo_Identificacion_Numerica = null;
-        let prefijo_Numerico = null;
-
-        if(validarExistencia(tipo_identificacion, "", false) && validarExistencia(prefijo, "", false) && validarExistencia(numero_identificacion, "", false)){
-
-            identificacionCompleta = true;
-
-            /* Se valida el tipo de identificación, solo puede ser un número del "1" al "4" (ya que solo se tienen y tendrán esas en la base de datos, y 
-            justo esos son sus ids). A su vez, se comprueba que el valor sea un número entero.
-            */
-            validarSoloNumeros(tipo_identificacion, "El tipo de identificación debe contener solo números (dígitos 0-9).")
-            tipo_Identificacion_Numerica = parseInt(tipo_identificacion, 10);
-            if (isNaN(tipo_Identificacion_Numerica) || tipo_Identificacion_Numerica < 1 || tipo_Identificacion_Numerica > 4) {
-                throw new Error("El tipo de identificación no es válido.");
-            }
-
-            /* Se valida el prefijo, solo puede ser un número del "1" al "5" (ya que solo se tienen y tendrán esas en la base de datos, y 
-            justo esos son sus ids). A su vez, se comprueba que el valor sea un número entero.
-            */
-            validarSoloNumeros(prefijo, "El prefijo debe contener solo números (dígitos 0-9).")
-            prefijo_Numerico = parseInt(prefijo, 10);
-            if (isNaN(prefijo_Numerico) || prefijo_Numerico < 1 || prefijo_Numerico > 5) {
-                throw new Error("El prefijo no es válido.");
-            }
-
-            // Se valida que el número de identificacion sólo tenga números
-            validarSoloNumerosYGuion(numero_identificacion, "El número de identificacion debe contener solo números (dígitos 0-9) o guión (-).")
-
-            // Definición de las condiciones de duplicidad (OR)
-            condicionesDuplicidad = [
-                // Condición OR 1: Duplicidad por Email
-                { email: correoEnMinuscula },
-
-                // Condición OR 2: Duplicidad por Identificación Compuesta (usando AND implícito)
-                {
-                    id_tipo_identificacion: tipo_Identificacion_Numerica, 
-                    id_prefijo: prefijo_Numerico,
-                    numero_identificacion: numero_identificacion
-                }
-            ];
-
-        }else{
-
-            // Definición de las condiciones de duplicidad (OR)
-            condicionesDuplicidad = [
-                // Condición OR 1: Duplicidad por Email
-                { email: correoEnMinuscula }
-            ];
-        }
-
-
-
-        // Creación de la Cláusula WHERE final
-        const whereClause = {
-            [Op.or]: condicionesDuplicidad
-        };
-
-
-        // Aplicar la Exclusión del ID SOLO si se está en modo ACTUALIZACIÓN
-        // Usamos el idExcluido pasado como parámetro, y verificamos si es un valor "truthy" (no null, no 0, no "")
-        if (validarExistencia(idExcluido, "", false)) {
-            validarIdNumerico(idExcluido, "El id es obligatorio");
-            // La condición de exclusión (ID != idExcluido) debe aplicarse a TODO el WHERE
-            whereClause.id_entidad = {
-                [Op.ne]: idExcluido
-            };
-        }
-
-
-        // Ejecutar una única consulta FINDONE
-        const duplicado = await Entidad_Model.findOne({
-            where: whereClause
-        });
-
-        // Análisis del Resultado
-        if (!duplicado) {
-            return null; // No hay duplicados
-        }
-
-
-        // El email y la identidad pueden ser iguales, por lo que verificamos qué falló:
-        const esEmailDuplicado = duplicado.email === correoEnMinuscula;
         
-        let esIdentidadDuplicada = false;
-        // Solo intentar la comparación si la identificación fue enviada y procesada.
-        if (identificacionCompleta) {
-            esIdentidadDuplicada = (
-                duplicado.id_tipo_identificacion == tipo_Identificacion_Numerica &&
-                duplicado.id_prefijo == prefijo_Numerico &&
-                duplicado.numero_identificacion == numero_identificacion
-            );
-        }
 
-        if (esEmailDuplicado && esIdentidadDuplicada) {
-            return 'ambos';
-        } else if (esEmailDuplicado) {
-            return 'email';
-        } else if (esIdentidadDuplicada) {
-            return 'identidad';
-        }
+ 
 
-    }
 
 // -------------------------- Auxiliar ------------------------------------
 
-    // Esta función complementa a las funciones "buscarEntidades" y "obtenerEntidadPorId", y sirve para formatear las claves que le llegará al usuario
-    static formatearEntidad(entidadInstance) {
+    static formatearGrupo(grupoInstance) {
 
         // Si no existe la entidad se devuelve null
-        if (!entidadInstance) return null;
+        if (!grupoInstance) return null;
 
-        const entidad = entidadInstance.toJSON(); 
+        const grupo = grupoInstance.toJSON(); 
+
 
         return {
-            id: entidad.id_entidad, 
+            id: grupo.id_grupo, 
 
-            tipo_entidad: {
-                id: entidad.tipo_entidad ? entidad.tipo_entidad.id_tipo_entidad : null,
-                nombre: entidad.tipo_entidad ? entidad.tipo_entidad.nombre : null,
+            estado: {
+                id: grupo.estado_grupo?.id_estado_grupo ?? null,
+                nombre: grupo.estado_grupo?.nombre ?? null,
+                permite_inscripcion: grupo.estado_grupo.permite_inscripcion == true ? "Si" : "No",
             },
 
-            tipo_identificacion: {
-                id: entidad.tipo_identificacion ? entidad.tipo_identificacion.id_tipo_identificacion : null,
-                nombre: entidad.tipo_identificacion ? entidad.tipo_identificacion.nombre : null,
+            modalidad: {
+                id: grupo.modalidad?.id_modalidad ?? null,
+                nombre: grupo.modalidad?.nombre ?? null,
             },
 
-            prefijo: {
-                id: entidad.prefijo ? entidad.prefijo.id_prefijo : null,
-                letra_prefijo: entidad.prefijo ? entidad.prefijo.letra_prefijo : null,
+            periodo: {
+                id: grupo.periodo?.id_periodo ?? null,
+                nombre: capitalizeFirstLetter(grupo.periodo?.nombre ?? ""),
+                inicio: grupo.periodo?.fecha_inicio ?? null,
+                fin: grupo.periodo?.fecha_fin ?? null,
             },
 
-            numero_identificacion: entidad.numero_identificacion,
-            nombre: capitalizeFirstLetter(entidad.nombre), 
-            apellido: capitalizeFirstLetter(entidad.apellido),        
-            email: entidad.email,
-            telefono: entidad.telefono,
-            direccion: entidad.direccion,
-            estado: entidad.estado,
-            
-            fechaCreacion: entidad.createdAt,
-            fechaActualizacion: entidad.updatedAt 
+            curso: {
+                id: grupo.curso?.id_curso ?? null,
+                nombre: capitalizeFirstLetter(grupo.curso?.nombre ?? ""),
+
+                categoria: {
+                    id: grupo.curso?.categoria?.id_categoria_curso ?? null,
+                    nombre: grupo.curso?.categoria?.nombre ?? null,
+                   
+                    categoria_padre: {
+                        id: grupo.curso?.categoria?.categoria_padre?.id_categoria_curso ?? null,
+                        nombre: grupo.curso?.categoria?.categoria_padre?.nombre ?? null,
+                    }
+                }
+                
+            },
+
+
+            docente: {
+                id: grupo.docente?.id_docente ?? null,
+
+                entidad: {       
+                    numero_identificacion: grupo.docente?.entidad?.numero_identificacion ?? null,
+                    nombre: capitalizeFirstLetter(grupo.docente?.entidad?.nombre ?? ""),
+                    apellido: capitalizeFirstLetter(grupo.docente?.entidad?.apellido ?? ""),
+                
+                    prefijo: grupo.docente?.entidad?.prefijo?.letra_prefijo ?? null,
+                },
+
+                estado_docente: {
+                    id: grupo.docente?.estado_docente?.id_estado_docente ?? null,
+                    nombre: grupo.docente?.estado_docente?.nombre ?? null
+                }
+                
+            },
+
+            nombre: capitalizeFirstLetter(grupo.nombre),      
+            cupo_maximo: grupo.cupo_maximo,
+            costo_inscripcion: grupo.costo_inscripcion,
+            costo_clase: grupo.costo_unitario_clase,
+     
+            fechaCreacion: grupo.createdAt,
+            fechaActualizacion: grupo.updatedAt 
         };
 
     }
@@ -907,25 +1006,38 @@ class GrupoService {
     // Función Auxiliar que genera la "whereClause" sin ejecutar la consulta
     generarWhereClause(criteriosBusqueda = {}) {
         
-        // Objeto que contendrá todas las condiciones de filtro combinadas con AND
-        const whereClause = {};
+       // Objeto que contendrá las cláusulas WHERE separadas por modelo
+        const whereClauses = {
+            main: {}, // Condiciones para Grupo_Model (tabla principal)
+            estado_grupo: null, // Condiciones para Modalidad_Clase_Model (tabla asociada)
+            modalidad: null, 
+            periodo: null,
+            curso: null,         
+            docente_entidad: null
+            
+        };
 
         // 1. Obtener y limpiar los criterios de búsqueda (usando desestructuración)
         const { 
-            tipo_entidad, 
-            tipo_identificacion, 
-            prefijo, 
-            numero_identificacion, 
-            nombre, 
-            apellido,
-            email,
-            telefono,
+            // Filtros de la tabla "grupo"
+            nombre,
+            docente,
+            curso,
             estado,
+            permite_inscripcion,
+            modalidad,
+            periodo,
+            cupoDesde,
+            cupoHasta,
+            costoInscripcionDesde,
+            costoInscripcionHasta,
+            costoClaseDesde,
+            costoClaseHasta,
             creadosDesde,
             creadosHasta,
             modificadosDesde,
             modificadosHasta,
-            solo_personas_naturales // Para descartar personas jurídicas y gubernamentales
+
         } = criteriosBusqueda;
     
         // Se validan y parsean las fechas
@@ -933,6 +1045,10 @@ class GrupoService {
         const fechaCreacionHasta = parseAndValidateDate(creadosHasta);
         const fechamodificadosDesde = parseAndValidateDate(modificadosDesde);
         const fechamodificadosHasta = parseAndValidateDate(modificadosHasta);
+
+        // Variables auciliares para rangos
+        let min = null;
+        let max = null;
 
 
         // Variable para guardar los datos en limpio
@@ -944,177 +1060,165 @@ class GrupoService {
             const milisegundosEnUnDia = 24 * 60 * 60 * 1000;
 
 
-        // --- 2. Aplicar filtros solo si existen ---
+        // =================================================================
+        // A. Filtros por ID de Tablas Asociadas (Van en el 'where' del include)
+        // =================================================================
 
-            // Filtro 1: Tipo de entidad 
-            if (validarExistencia(tipo_entidad, "", false)) {  
+            // Filtro A1: Modalidad (Tabla Asociada)
+            if (validarExistencia(modalidad, "", false)) { 
+                validarIdNumerico(modalidad, "La modalidad debe ser numérica.");
+                const modalidadNumerica = parseInt(modalidad, 10);
                 
-                validarSoloNumeros(tipo_entidad, "El tipo de entidad debe contener solo números (dígitos 0-9).");
-                const tipo_Entidad_Numerica = parseInt(tipo_entidad, 10);
-                if ( !(isNaN(tipo_Entidad_Numerica) || tipo_Entidad_Numerica < 1 || tipo_Entidad_Numerica > 3)) {
-
-                    whereClause.id_tipo_entidad = tipo_Entidad_Numerica;
-                }; 
-
-            }
-
-            // Filtro 2: Tipo de identificación 
-            if (validarExistencia(tipo_identificacion, "", false)) {  
-        
-                validarSoloNumeros(tipo_identificacion, "El tipo de identificación debe contener solo números (dígitos 0-9).");
-                const tipo_Identificacion_Numerica = parseInt(tipo_identificacion, 10);
-                if ( !(isNaN(tipo_Identificacion_Numerica) || tipo_Identificacion_Numerica < 1 || tipo_Identificacion_Numerica > 4)) {
-
-                    whereClause.id_tipo_identificacion = tipo_Identificacion_Numerica;
-                }; 
-
-            }
-
-            // Filtro 3: Prefijo 
-            if (validarExistencia(prefijo, "", false)) {  
-                
-                validarSoloNumeros(prefijo, "El prefijo debe contener solo números (dígitos 0-9).");
-                const prefijo_Numerico = parseInt(prefijo, 10);
-                if ( !(isNaN(prefijo_Numerico) || prefijo_Numerico < 1 || prefijo_Numerico > 5)) {
-
-                    whereClause.id_prefijo = prefijo_Numerico;
-                }; 
-
-            }
-
-            
-            // Filtro 4: Número de identificación 
-            if (validarExistencia(numero_identificacion, "", false)) {
-
-                // Limpieza y Validación:
-                codigoLimpio = String(numero_identificacion).trim();
-
-                // Si después de limpiar quedó vacío, se salta el filtro.
-                if (codigoLimpio) {
-
-                    validarSoloNumeros(codigoLimpio, "El número de identificación debe contener solo números (dígitos 0-9).");
-
-
-                    whereClause.numero_identificacion = {
-                        [Op.iLike]: `%${codigoLimpio}%`
-                    }; 
+                if (!isNaN(modalidadNumerica)) {
+                    whereClauses.modalidad = {
+                        id_modalidad: modalidadNumerica
+                    };
                 }
             }
 
-
-            // Filtro 5: Nombre 
-            if (validarExistencia(nombre, "", false)) {
-
-                // Limpieza y Validación:
-                codigoLimpio = String(nombre).trim();
-
-                // Si después de limpiar quedó vacío, se salta el filtro.
-                if (codigoLimpio) {
-
-                    // Se valida que el nombre sólo tenga texto (enviando el nombre y el error que se lanzará si no es así)
-                    validarSoloTexto(codigoLimpio, "El nombre de la entidad debe contener solo texto o espacios en blanco, sin números.")
-
-                    whereClause.nombre = {
-                        [Op.iLike]: `%${codigoLimpio}%`
-                    }; 
-                }
-            }
-
-
-            // Filtro 6: Apellido 
-            if (validarExistencia(apellido, "", false)) {
-
-                // Limpieza y Validación:
-                codigoLimpio = String(apellido).trim();
-
-                // Si después de limpiar quedó vacío, se salta el filtro.
-                if (codigoLimpio) {
-
-                    // Se valida que el nombre sólo tenga texto (enviando el nombre y el error que se lanzará si no es así)
-                    validarSoloTexto(codigoLimpio, "El apellido de la entidad debe contener solo texto o espacios en blanco, sin números.")
-
-                    whereClause.apellido = {
-                        [Op.iLike]: `%${codigoLimpio}%`
-                    }; 
-                }
-            }
-
-            // Filtro 7: Email 
-            if (validarExistencia(email, "", false)) {
-
-                // Limpieza y Validación:
-                codigoLimpio = String(email).trim();
-
-                // Si después de limpiar quedó vacío, se salta el filtro.
-                if (codigoLimpio) {
-
-                    // Se valida que el correo sea válido
-                    validarEmail(email, "El correo electrónico no tiene un formato válido.");
-
-                    whereClause.email = {
-                        [Op.iLike]: `%${codigoLimpio}%`
-                    }; 
-                }
-            }
-
-            // Filtro 8: Teléfono 
-            if (validarExistencia(telefono, "", false)) {
-
-                // Limpieza y Validación:
-                codigoLimpio = String(telefono).trim();
-
-                // Si después de limpiar quedó vacío, se salta el filtro.
-                if (telefono) {
-
-                    // Se valida que el número de teléfono sólo tenga números y el formato correcto
-                    validarTelefonoVenezolano(telefono, "El número de teléfono debe tener solo números, y 11 digitos exactos")
-
-                    whereClause.telefono = {
-                        [Op.iLike]: `%${codigoLimpio}%`
-                    }; 
-                }
-            }
-
-            // Filtro 8: Teléfono 
-            if (validarExistencia(telefono, "", false)) {
-
-                // Limpieza y Validación:
-                codigoLimpio = String(telefono).trim();
-
-                // Si después de limpiar quedó vacío, se salta el filtro.
-                if (telefono) {
-
-                    // Se valida que el número de teléfono sólo tenga números y el formato correcto
-                    validarTelefonoVenezolano(telefono, "El número de teléfono debe tener solo números, y 11 digitos exactos")
-
-                    whereClause.telefono = {
-                        [Op.iLike]: `%${codigoLimpio}%`
-                    }; 
-                }
-            }
-
-
-            // Filtro 9: Estado 
+            // Filtro A2: Estado del Grupo (Tabla Asociada)
             if (validarExistencia(estado, "", false)) { 
-
-                // Limpieza y Validación:
-                codigoLimpio = String(estado).trim();
-
-                // Si después de limpiar quedó vacío, se salta el filtro.
-                if (codigoLimpio) {
-
-                    // Se valida el estado
-                    validarBooleano(estado, "El estado solo puede ser verdadero o falso (true/false).")
-
-                    whereClause.estado = estado;
-                } 
-    
+                validarIdNumerico(estado, "El estado debe ser numérico.");
+                const estadoNumerico = parseInt(estado, 10);
+                
+                if (!isNaN(estadoNumerico)) {
+                    whereClauses.estado_grupo = {
+                        id_estado_grupo: estadoNumerico
+                    };
+                }
             }
 
-            //Filtro 10: Se verifica si el usuario ha proporcionado al menos una de las fechas de creación
+            // Filtro A2.1: Permite Inscripción (Tabla Asociada: Estado_Grupo)
+            if (validarExistencia(permite_inscripcion, "", false)) { 
+                validarBooleano(permite_inscripcion, "El filtro 'permite_inscripcion' debe ser un valor booleano (true/false).");
+
+                // Si whereClauses.estado_grupo no existe (porque no se filtró por ID de estado), lo inicializamos
+                if (!whereClauses.estado_grupo) {
+                    whereClauses.estado_grupo = {};
+                }
+
+                // Añadimos la condición de permite_inscripcion
+                whereClauses.estado_grupo.permite_inscripcion = permite_inscripcion;
+            }
+
+            // Filtro A3: Período (Tabla Asociada)
+            if (validarExistencia(periodo, "", false)) { 
+                validarIdNumerico(periodo, "El ID de período debe ser numérico.");
+                const periodoNumerico = parseInt(periodo, 10);
+                
+                if (!isNaN(periodoNumerico)) {
+                    whereClauses.periodo = {
+                        id_periodo: periodoNumerico
+                    };
+                }
+            }
+
+
+        // =================================================================
+        // B. Filtros de Texto y Rango (Van en el 'where' de la tabla principal)
+        // =================================================================
+
+            // Filtro B1: Nombre del Grupo 
+            if (validarExistencia(nombre, "", false)) {
+                codigoLimpio = String(nombre).trim();
+                if (codigoLimpio) {
+                    validarSoloTexto(codigoLimpio, "El nombre del grupo debe contener solo texto y espacios en blanco.");
+                    whereClauses.main.nombre = { [Op.iLike]: `%${codigoLimpio}%` };
+                }
+            }
+
+
+            // Filtro B2: Rango de Cupo Máximo 
+            if (validarExistencia(cupoDesde, "", false) || validarExistencia(cupoHasta, "", false)) {
+                whereClauses.main.cupo_maximo = {}; // Campo en la tabla Grupo
+                min = null;
+                max = null;
+
+                if (validarExistencia(cupoDesde, "", false)) {
+                    validarSoloNumeros(cupoDesde, "El cupo máximo 'desde' debe ser numérico.");
+                    min = parseInt(cupoDesde, 10);
+                    if (!isNaN(min)) {
+                        whereClauses.main.cupo_maximo[Op.gte] = min;
+                    }
+                }
+                
+                if (validarExistencia(cupoHasta, "", false)) {
+                    validarSoloNumeros(cupoHasta, "El cupo máximo 'hasta' debe ser numérico.");
+                    max = parseInt(cupoHasta, 10);
+                    if (!isNaN(max)) {
+                        whereClauses.main.cupo_maximo[Op.lte] = max;
+                    }
+                }
+
+                // Si ambos existen y el cupo máximo es menor que el cupo mínimo
+                if((min && max) && (max < min)){
+                    throw new Error(`El cupo máximo no puede ser menor que el cupo mínimo.`);
+                }
+            }
+
+
+            // Filtro B3: Rango de Costo de Inscripción
+            if (validarExistencia(costoInscripcionDesde, "", false) || validarExistencia(costoInscripcionHasta, "", false)) {
+                whereClauses.main.costo_inscripcion = {}; // Campo en la tabla Grupo
+                min = null;
+                max = null;
+
+                if (validarExistencia(costoInscripcionDesde, "", false)) {
+                    validarSoloNumerosEnterosYDecimales(costoInscripcionDesde, "El costo de inscripción 'Desde', no tiene el formato correcto");
+                    min = parseFloat(costoInscripcionDesde);
+                    if (!isNaN(min)) {
+                        whereClauses.main.costo_inscripcion[Op.gte] = min;
+                    }
+                }
+                
+                if (validarExistencia(costoInscripcionHasta, "", false)) {
+                    validarSoloNumerosEnterosYDecimales(costoInscripcionHasta, "El costo de inscripción 'Hasta', no tiene el formato correcto");
+                    max = parseFloat(costoInscripcionHasta);
+                    if (!isNaN(max)) {
+                        whereClauses.main.costo_inscripcion[Op.lte] = max;
+                    }
+                }
+
+                // Si ambos existen y el costo de inscripción máximo es menor que el mínimo
+                if((min && max) && (max < min)){
+                    throw new Error(`El costo de inscripción máximo no puede ser menor que el costo mínimo.`);
+                }
+            }
+
+
+            // Filtro B4: Rango de Costo Unitario de Clase
+            if (validarExistencia(costoClaseDesde, "", false) || validarExistencia(costoClaseHasta, "", false)) {
+                whereClauses.main.costo_unitario_clase = {};
+                min = null;
+                max = null;
+
+                if (validarExistencia(costoClaseDesde, "", false)) {
+                    validarSoloNumerosEnterosYDecimales(costoClaseDesde, "El costo de clase 'Desde', no tiene el formato correcto");
+                    min = parseFloat(costoClaseDesde);
+                    if (!isNaN(min)) {
+                        whereClauses.main.costo_unitario_clase[Op.gte] = min;
+                    }
+                }
+                
+                if (validarExistencia(costoClaseHasta, "", false)) {
+                    validarSoloNumerosEnterosYDecimales(costoClaseHasta, "El costo de clase 'Hasta', no tiene el formato correcto");
+                    max = parseFloat(costoClaseHasta);
+                    if (!isNaN(max)) {
+                        whereClauses.main.costo_unitario_clase[Op.lte] = max;
+                    }
+                }
+
+                // Si ambos existen y el costo de clase máximo es menor que el mínimo
+                if((min && max) && (max < min)){
+                    throw new Error(`El costo de clase máximo no puede ser menor que el costo mínimo.`);
+                }
+            }
+
+
+            // Filtro B5: Rango de Fechas de creación
             if (fechaCreacionDesde || fechaCreacionHasta) {
 
-                whereClause.createdAt = {}; 
+                whereClauses.main.createdAt = {};
                 
                 /* [Op.gte]: Este es el operador "Greater Than or Equal" (Mayor o Igual que).
 
@@ -1124,7 +1228,7 @@ class GrupoService {
                 Traducción SQL: WHERE "createdAt" >= 'fecha_inicio'
                 */
                 if (fechaCreacionDesde) {
-                    whereClause.createdAt[Op.gte] = fechaCreacionDesde;
+                    whereClauses.main.createdAt[Op.gte] = fechaCreacionDesde;
                 }
 
                 if (fechaCreacionHasta) {
@@ -1139,15 +1243,15 @@ class GrupoService {
                     // Si la fecha inicial es 2025-11-09 00:00:00Z, esta línea la convierte a 2025-11-10 00:00:00Z
                     inicioDiaSiguiente.setTime(inicioDiaSiguiente.getTime() + milisegundosEnUnDia);
                     
-                    whereClause.createdAt[Op.lt] = inicioDiaSiguiente;
+                    whereClauses.main.createdAt[Op.lt] = inicioDiaSiguiente;
         
                 }
             }
 
-            // Filtro 11: Se verifica si el usuario ha proporcionado al menos una de las fechas de modificación
+            // Filtro B6: Rango de Fechas de modificación 
             if (fechamodificadosDesde || fechamodificadosHasta) {
 
-                whereClause.updatedAt = {}; 
+                whereClauses.main.updatedAt = {};
                 
                 /* [Op.gte]: Este es el operador "Greater Than or Equal" (Mayor o Igual que).
 
@@ -1157,7 +1261,7 @@ class GrupoService {
                 Traducción SQL: WHERE "createdAt" >= 'fecha_inicio'
                 */
                 if (fechamodificadosDesde) {
-                    whereClause.updatedAt[Op.gte] = fechamodificadosDesde;
+                    whereClauses.main.updatedAt[Op.gte] = fechamodificadosDesde;
                 }
 
                 if (fechamodificadosHasta) {
@@ -1172,25 +1276,46 @@ class GrupoService {
                     // Si la fecha inicial es 2025-11-09 00:00:00Z, esta línea la convierte a 2025-11-10 00:00:00Z
                     inicioDiaSiguiente.setTime(inicioDiaSiguiente.getTime() + milisegundosEnUnDia);
                     
-                    whereClause.updatedAt[Op.lt] = inicioDiaSiguiente;
+                    whereClauses.main.updatedAt[Op.lt] = inicioDiaSiguiente;
                 }
             }
 
-            // Filtro 12: Se verifica si solo se quieren entidades que sean personas 
-            if (validarExistencia(solo_personas_naturales, "", false)) {
 
-                validarBooleano(solo_personas_naturales, "Seleccionar solo a personas naturales necesita que sea o verdadero o falso (true/false).")
+        // =================================================================
+        // C. Filtros por Tablas Asociadas (Nuevas)
+        // =================================================================
 
-
-                if (solo_personas_naturales === true || solo_personas_naturales === 'true') {
-                    // IDs a excluir: 4 (Jurídica - J) y 5 (Gubernamental - G)
-                    // Usamos Op.notIn para que id_prefijo NO esté en el array [4, 5].
-                    whereClause.id_prefijo = { [Op.notIn]: [4, 5] };
+            // Filtro C1: Curso por Nombre (Tabla Asociada: Curso)
+            if (validarExistencia(curso, "", false)) {
+                codigoLimpio = String(curso).trim();
+                if (codigoLimpio) {
+                    validarLongitudCadena(codigoLimpio, 0, 50, "El nombre no cumple con la longitud requerida (de 5 a 50 caracteres).");
+                    whereClauses.curso = {
+                        nombre: { [Op.iLike]: `%${codigoLimpio}%` }
+                    };
                 }
-                
             }
 
-        return whereClause;
+
+            // Filtro C2: Docente por Identificación (Tablas Asociadas: Docente -> Entidad)
+            if (validarExistencia(docente, "", false)) {
+                let codigoLimpio = String(docente).trim();
+
+                if (codigoLimpio) {
+                    // Asumo que el número de identificación es una cadena (puede contener guiones, etc.)
+                    // y que la tabla Entidad usa el campo 'numero_identificacion'
+                    whereClauses.docente_entidad = {
+                        numero_identificacion: { [Op.iLike]: `%${codigoLimpio}%` }
+                    };
+                    // O si quieres que sea una coincidencia exacta:
+                    // whereClauses.docente_entidad = { numero_identificacion: codigoLimpio };
+                }
+            }
+
+
+        return whereClauses;
+
+
     }   
 
 

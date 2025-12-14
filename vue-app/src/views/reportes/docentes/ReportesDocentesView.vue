@@ -23,7 +23,7 @@
                         </div>
                         
                         <span class="accordion-icon">
-                            <i class="bi" :class="{'bi-chevron-up': activeCollapseId === 'collapse-1', 'bi-chevron-down': activeCollapseId !== 'collapse-1'}"></i>
+                            <i class="bi bi-chevron-down"></i>
                         </span>
                     </button>
                 </h2>
@@ -56,7 +56,7 @@
                             <span class="ms-2">2. Docentes Registrados a lo Largo del Tiempo</span>
                         </div>
                         <span class="accordion-icon">
-                            <i class="bi" :class="{'bi-chevron-up': activeCollapseId === 'collapse-2', 'bi-chevron-down': activeCollapseId !== 'collapse-2'}"></i>
+                            <i class="bi bi-chevron-down"></i>
                         </span>
                     </button>
                 </h2>
@@ -89,7 +89,7 @@
                             <span class="ms-2">3. Docentes Modificados a lo Largo del Tiempo</span>
                         </div>
                         <span class="accordion-icon">
-                            <i class="bi" :class="{'bi-chevron-up': activeCollapseId === 'collapse-3', 'bi-chevron-down': activeCollapseId !== 'collapse-3'}"></i>
+                            <i class="bi bi-chevron-down"></i>
                         </span>
                     </button>
                 </h2>
@@ -141,7 +141,7 @@
 </script>
 
 <style scoped>
-    /* Colores usados: Morado Oscuro: #5C1E7A, Rosa/Lavanda Claro: #F5E6FC, Rosa Fuerte: #E03B8D */
+    /* Colores base: Morado Oscuro: #5C1E7A, Rosa/Lavanda Claro: #F5E6FC, Rosa Fuerte/Intenso: #E03B8D */
 
     .page-container {
         max-width: 1200px;
@@ -159,8 +159,8 @@
         border-radius: 6px;
         overflow: hidden;
     }
-
-    /* === 1. Eliminar la flecha predeterminada de Bootstrap (Para usar la nuestra al final) === */
+    
+    /* === 1. Eliminar la flecha predeterminada de Bootstrap (Ya estaba, solo para referencia) === */
     .accordion-button::after {
         content: none !important; 
         display: none;
@@ -170,27 +170,42 @@
     .accordion-button {
         font-weight: 600;
         /* Fondo: Rosa/Lavanda muy claro */
-        background-color: #F5E6FC; 
+        background-color: #F5E6FC; /* Original */
         /* Texto: Morado Oscuro */
-        color: #7821a3;
+        color: #5C1E7A; /* Ajustado al Morado Oscuro de tu paleta */
         border: none;
-        /* Ajuste de padding por el uso de flexbox */
         padding-right: 1rem; 
+        transition: background-color 0.2s ease, color 0.2s ease; /* Transición para el hover */
+    }
+
+    /* Estilos del Botón Cerrado al pasar el mouse (Hover) */
+    .accordion-button.collapsed:hover {
+        /* Un lavanda/rosa más perceptible al pasar el mouse */
+         background-color: #e6d1f3; 
+        /* Texto ligeramente más oscuro */
+        color: #4a148c; 
+    }
+
+    /* Eliminar el anillo de foco azul de accesibilidad para evitar el borde sobrante */
+    .accordion-button:focus {
+        outline: 0 !important; 
+        box-shadow: none !important;
     }
 
     /* === 3. Estilos del Botón/Encabezado ACTIVO (Abierto) === */
     .accordion-button:not(.collapsed) {
         /* Fondo Activo: Morado Oscuro */
-        background-color: #7925a3;
+        background-color: #5C1E7A; /* Morado Oscuro de tu paleta */
         /* Texto Activo: Blanco */
         color: white; 
-        box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.125);
+        border-bottom: 3px solid #E03B8D; 
     }
     
-    /* === 4. Borde del Ítem Activo (Rosa Fuerte) === */
-    /* Este selector utiliza el pseudo-selector :has() para aplicar el borde solo si el botón interno está activo */
+    /* 4. Borde del Ítem Activo */
+    /* Este selector ya lo tenías, ajustado a tu color Morado Oscuro */
     .accordion-item:has(.accordion-button:not(.collapsed)) {
-        border-color: #7925a3; /* Rosa intenso para el borde */
+        border-color: #5C1E7A;
+        
     }
 
     /* === 5. Fondo del Cuerpo (Body) === */
@@ -200,11 +215,11 @@
 
     /* === ESTILOS PARA ÍCONOS Y FLECHA DE EXPANSIÓN === */
 
-    /* Estilo del Ícono de Reporte (al inicio, bi bi-...) */
+    /* Estilo del Ícono de Reporte (al inicio) */
     .report-icon {
         font-size: 1.25rem;
-        /* Color del Ícono de Reporte cuando está CERRADO (Rosa) */
-        color: #e03bbc; 
+        /* Color del Ícono de Reporte cuando está CERRADO (Rosa Fuerte de tu paleta) */
+        color: #E03B8D; 
         margin-right: 0.5rem;
     }
     
@@ -217,12 +232,21 @@
     .accordion-button .accordion-icon {
         min-width: 15px; 
         text-align: center;
-        color: inherit; /* Hereda el color del texto del botón (Morado u Blanco) */
+        /* Al usar 'color: inherit;' hereda el color del texto del botón:
+           - Cerrado: Morado Oscuro
+           - Abierto: Blanco (¡Logra el objetivo de la flecha blanca!) 
+        */
+        color: inherit; 
+    }
+
+    /* 🆕 NUEVO: Aplicar el color de hover a la flecha cuando está cerrado */
+    .accordion-button.collapsed:hover .accordion-icon {
+        color: #38006b; /* Hace juego con el texto oscuro del hover */
     }
 
     /* Base de la transición de giro de la flecha de Chevron */
     .accordion-button .accordion-icon i {
-        transition: transform 0.3s ease; /* Transición suave de 0.3 segundos */
+        transition: transform 0.3s ease; 
         display: inline-block; 
     }
     

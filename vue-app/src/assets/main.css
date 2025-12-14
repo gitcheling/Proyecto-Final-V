@@ -80,6 +80,29 @@ html, body {
 }
 
 
+/* Scroll vertical para todos los modals al desbordarse verticalmente el contenido*/
+.modal-content {
+    max-height: 90vh; /* Máximo 90% de la altura del viewport (pantalla) */
+    overflow-y: auto; /* Habilita el desplazamiento vertical si se excede la altura */
+    box-sizing: border-box; /* Asegura que el padding no afecte el cálculo de width/height */
+    
+}
+
+
+/* Estilo para que todos los modals que salgan en pantalla hagan que el fondo se ponga de color rosa con un blur */
+.modal-overlay, .confirmation-overlay, .modal-backdrop-custom {
+
+  /* --- CAMBIOS APLICADOS PARA EL EFECTO ROSA/BLUR --- */
+  /* ------------------------------------------------ */
+  /* Fondo con tinte morado/rosa (similar al anterior) */
+  background-color: rgba(123, 25, 168, 0.2); 
+  /* Aplicar desenfoque al fondo */
+  backdrop-filter: blur(3px); 
+  /* ------------------------------------------------ */
+
+}
+
+
 /* --- CLASE DE UTILIDAD: EFECTO ELEVACIÓN HOVER --- */
 
     /*

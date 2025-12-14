@@ -26,10 +26,18 @@ import CursosView from '../views/cursos/CursosView.vue'
 import DetallesCursoView from '../views/cursos/DetallesCursoView.vue'
 
 
+import GruposView from '../views/grupos/GruposView.vue'
+import DetallesGrupoView from '../views/grupos/DetallesGrupoView.vue'
+
+import InscripcionesView from '../views/inscripciones/InscripcionesView.vue'
+
+
 import ReportesEntidadesView from '../views/reportes/entidades/ReportesEntidadesView.vue'
 import ReportesEstudiantesView from '../views/reportes/estudiantes/ReportesEstudiantesView.vue'
 import ReportesDocentesView from '../views/reportes/docentes/ReportesDocentesView.vue'
 import ReportesProveedoresView from '../views/reportes/proveedores/ReportesProveedoresView.vue'
+import ReportesGruposView from '../views/reportes/grupos/ReportesGruposView.vue'
+import ReportesInscripcionesView from '../views/reportes/inscripciones/ReportesInscripcionesView.vue'
 import ReportesCuentasBancariasView from '../views/reportes/cuentasBancarias/ReportesCuentasBancariasView.vue'
 
 
@@ -97,11 +105,27 @@ const routes = [
     },
 
 
+    // Grupos
+    { path: '/Grupos', name: 'GestionGrupos', component: GruposView },
+    {
+      path: '/Grupos/:id',
+      name: 'GroupDetails', 
+      component: DetallesGrupoView, 
+      props: true 
+    },
+
+
+    // Inscripciones
+    { path: '/Inscripciones', name: 'GestionInscripciones', component: InscripcionesView },
+
+    
     // Reportes
     { path: '/ReportesEntidades', name: 'ReportesEntidades', component: ReportesEntidadesView },
     { path: '/ReportesEstudiantes', name: 'ReportesEstudiantes', component: ReportesEstudiantesView },
     { path: '/ReportesDocentes', name: 'ReportesDocentes', component: ReportesDocentesView },
     { path: '/ReportesProveedores', name: 'ReportesProveedores', component: ReportesProveedoresView },
+    { path: '/ReportesGrupos', name: 'ReportesGrupos', component: ReportesGruposView },
+    { path: '/ReportesInscripciones', name: 'ReportesInscripciones', component: ReportesInscripcionesView },
     { path: '/ReportesCuentasBancarias', name: 'ReportesCuentasBancarias', component: ReportesCuentasBancariasView },
 
 ]

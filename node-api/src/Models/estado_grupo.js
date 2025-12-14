@@ -33,7 +33,7 @@ Estado_Grupo.associate = (models) => {
 
     // Un estado de grupo puede aparecer muchas veces en "grupo"
     Estado_Grupo.hasMany(models.Grupo, {
-        foreignKey: 'id_estado_grupo', // La FK que está en la tabla 'grupo'
+        foreignKey: 'id_estado', // La FK que está en la tabla 'grupo'
         as: 'grupos' // Usamos éste prefijo para obtener los datos del otro modelo (todos los grupos de un estado de grupo)
     });
 

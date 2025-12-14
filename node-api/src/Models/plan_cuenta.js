@@ -210,11 +210,6 @@ Plan_Cuenta.associate = (models) => {
     });
 
 
-    // Una cuenta puede aparecer muchas veces en "detalle_factura"
-    Plan_Cuenta.hasMany(models.Detalle_Factura, {
-        foreignKey: 'id_cuenta_gasto', // La FK que está en la tabla 'detalle_factura'
-        as: 'detalles_facturas' // Usamos éste prefijo para obtener los datos del otro modelo (todos los detalles de facturas de una cuenta)
-    });
 };
 
 module.exports = Plan_Cuenta;

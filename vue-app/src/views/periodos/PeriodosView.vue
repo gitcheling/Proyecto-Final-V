@@ -142,6 +142,7 @@
                     
                         <button 
                         class="btn btn-sm btn-outline-info"
+                        :disabled="isPeriodFinalizado(period.estado)"
                         @click="openModal(period)"          
                         >
                         <i class="bi bi-pencil"></i>
@@ -411,6 +412,19 @@
 
                     error('Error al modificar el periodo', mensajeError);
                 }
+            };
+
+        // ----------------------------------- Lógica de Deshabilitado ----------------------------------------
+
+            /**
+             * Verifica si el periodo está en estado "Finalizado".
+             * @param {string} estado - El estado actual del periodo.
+             * @returns {boolean} True si el estado es 'Finalizado', false en caso contrario.
+             */
+            const isPeriodFinalizado = (estado) => {
+                // Hacemos una comprobación simple y sensible a mayúsculas/minúsculas.
+                // Si quieres que sea insensible, puedes usar: estado?.toLowerCase() === 'finalizado'.
+                return estado === 'Finalizado';
             };
 
 
@@ -738,28 +752,28 @@
 
         /* Columna inicio */
         .col-inicio {
-            width: 10%;
+            width: 14%;
             min-width: 130px; /* Asegura que el nombre sea legible */
             max-width: 250px; /* Evita que ocupe todo el ancho en pantallas gigantes */
         }
 
         /* Columna Fin */
         .col-fin {
-            width: 10%;
+            width: 14%;
             min-width: 130px; /* Asegura que el nombre sea legible */
             max-width: 250px; /* Evita que ocupe todo el ancho en pantallas gigantes */
         }
 
         /* Columna Meses */
         .col-meses {
-            width: 10%;
+            width: 6%;
             min-width: 80px; /* Asegura que el nombre sea legible */
             max-width: 250px; /* Evita que ocupe todo el ancho en pantallas gigantes */
         }
 
         /* Columna Días */
         .col-dias {
-            width: 10%;
+            width: 6%;
             min-width: 80px; /* Asegura que el nombre sea legible */
             max-width: 250px; /* Evita que ocupe todo el ancho en pantallas gigantes */
         }

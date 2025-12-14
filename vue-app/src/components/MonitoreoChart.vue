@@ -80,6 +80,11 @@
             type: String,
             default: 'Conteo por Mes',
         },
+        // Etiqueta para el eje Y (o radial)
+        yAxisLabel: {
+            type: String,
+            default: 'Cantidad de Elementos', 
+        },
         // Estado de carga controlado por el padre
         isLoading: {
             type: Boolean,
@@ -254,7 +259,7 @@ const chartData = ref({
                     beginAtZero: true, 
                     title: {
                         display: isAxisChart,
-                        text: 'Cantidad de Entidades'
+                        text: props.yAxisLabel
                     },
                     ticks: {
                         callback: function(value) { if (value % 1 === 0) { return value; } },
@@ -283,6 +288,11 @@ const chartData = ref({
                 // Si es polarArea, agregamos solo la escala 'r'
                 scales.r = {
                     display: true, // Siempre visible para polarArea
+                    title: { 
+                        display: true,
+                        text: props.yAxisLabel, // <-- ¡AQUÍ ESTÁ EL CAMBIO!
+                        padding: { top: 10, bottom: 0 }
+                    },
                     ticks: {
                         // Aseguramos que 'ticks' esté definido con 'callback'
                         color: '#495057', 

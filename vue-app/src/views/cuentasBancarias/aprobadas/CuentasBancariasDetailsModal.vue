@@ -162,7 +162,6 @@
     height: 100%;
     opacity: 0; 
     pointer-events: none; 
-    background-color: rgba(0, 0, 0, 0.6); 
     display: flex;
     justify-content: center;
     align-items: center;

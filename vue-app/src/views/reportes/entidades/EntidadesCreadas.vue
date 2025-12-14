@@ -131,6 +131,7 @@
             :isLoading="isLoadingChart"
             initial-chart-type="bar"
             componentTitle="Conteo de Entidades por Mes"
+            y-axis-label="Cantidad de Entidades"
             :allowedChartTypes="['bar', 'line', 'area', 'pie', 'doughnut', 'polarArea']"
         />
         

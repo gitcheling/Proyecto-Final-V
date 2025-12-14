@@ -12,7 +12,7 @@
         <i class="bi bi-list fs-4"></i>
       </button>
       
-      <a class="navbar-brand morado-oscuro fw-bold fs-4" href="#">Dashboard Principal</a>
+      <a class="navbar-brand morado-oscuro fw-bold fs-4" href="#"></a>
 
       <div class="collapse navbar-collapse">
         <ul class="navbar-nav ms-auto">

@@ -57,7 +57,7 @@
                                 <dt class="col-sm-5">Correo:</dt>
                                 <dd class="col-sm-7">{{ teacher.entidad.email || 'No registrado' }}</dd>
                                 
-                                <dt class="col-sm-5">¿Puede asignársele nuevos cursos?:</dt>
+                                <dt class="col-sm-5">¿Puede asignársele nuevos grupos?:</dt>
                                 <dd class="col-sm-7">{{ teacher.estado.permite_asignacion}}</dd>
 
                                 <dt class="col-sm-5">¿Aplica para recibir pagos?:</dt>
@@ -166,6 +166,64 @@
                         </div>
                     </div>
                 </div>
+
+
+                <div class="col-lg-6 mb-4">
+                    <div class="card h-100 data-card hover-lift">
+                        
+                        <div class="card-header data-header d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <h3 class="h5 mb-0 me-2">
+                                    <i class="bi bi-person-workspace me-2"></i> Grupos Asignados
+                                </h3>
+                                <span class="badge badge-group-count"> 
+                                    {{ teacher.grupos.length }} {{ teacher.grupos.length === 1 ? 'Grupo' : 'Grupos' }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="card-body">
+                            
+                            <div v-if="teacher.grupos.length === 0" class="alert alert-purple-info text-center">
+                                Este docente no tiene grupos asignados actualmente.
+                            </div>
+
+                            <ul v-else class="list-group list-group-flush group-list-container">
+                                <li v-for="grupo in teacher.grupos" :key="grupo.id" class="list-group-item group-card-template hover-lift">
+                                    
+                                    <div class="d-flex w-100 justify-content-between align-items-start">
+                                        <div class="group-info">
+                                            <h5 class="mb-1 group-name">
+                                                <i class="bi bi-book me-2 text-primary-custom"></i> {{ grupo.nombre }}
+                                            </h5> 
+                                            <small class="text-muted">
+                                                <i class="bi bi-calendar-event me-1"></i> Período: {{ grupo.periodo.nombre }} | 
+                                                <i class="bi bi-laptop me-1"></i> Modalidad: {{ grupo.modalidad.nombre }}
+                                            </small>
+                                        </div>
+                                        
+                                        <div class="text-end">
+                                            <span class="badge badge-course-name">{{ grupo.curso.nombre }}</span>
+                                            <div class="mt-4">
+                                                <button 
+                                                    class="btn btn-sm btn-outline-info-custom" 
+                                                    @click="openGroupDetailsModal(grupo.id)"
+                                                    title="Ver detalles completos del grupo"
+                                                >
+                                                    <i class="bi bi-eye"></i> Ver Detalles
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                </li>
+                            </ul>
+
+                        </div>
+                    </div>
+                </div>
+
+
             </div>
             
         </div> <div v-else class="alert alert-danger text-center py-5">
@@ -193,6 +251,15 @@
             />
         </Teleport>
 
+        <Teleport to="body">
+            <GrupoDetalleModal 
+                :isVisible="isGroupDetailsModalVisible"
+                :groupId="selectedGroupId"
+                @close="closeGroupDetailsModal"
+                @error-load="handleGroupDetailsError"
+            />
+        </Teleport>
+
     </div>
 </template>
 
@@ -209,6 +276,8 @@
     import DocenteModal from './FormularioDocentesView.vue'; 
 
     import AsociarCuentaModal from '../cuentasBancarias/asociacion/AsociarCuentaModal.vue'; 
+
+    import GrupoDetalleModal from './GrupoDetalleModal.vue'; 
 
 
     // ----------------------------------- Variables ----------------------------------------
@@ -342,6 +411,9 @@
             };
 
 
+            
+
+
         // ----------------------------------- Interfaz  ----------------------------------------
 
             // Función auxiliar para asignar una clase de badge basada en el estado
@@ -463,6 +535,39 @@
                     error('Error al actualizar', 'No se pudo actualizar el estado del docente. Intente de nuevo.');
                   
                 }
+            }
+
+
+        // ----------------------------------- Lógica del Modal de Grupos ----------------------------------------
+
+            const isGroupDetailsModalVisible = ref(false);
+            const selectedGroupId = ref(null); // Almacena el ID del grupo a consultar
+
+            /**
+             * Abre el modal de detalles del grupo y setea el ID.
+             * @param {number} groupId - El ID del grupo a cargar.
+             */
+            function openGroupDetailsModal(groupId) {
+                selectedGroupId.value = groupId;
+                isGroupDetailsModalVisible.value = true;
+                // La llamada a la API se hará automáticamente en el componente hijo (GrupoDetalleModal)
+            }
+
+            /**
+             * Cierra el modal de detalles del grupo.
+             */
+            function closeGroupDetailsModal() {
+                isGroupDetailsModalVisible.value = false;
+                selectedGroupId.value = null; // Limpiar el ID seleccionado
+            }
+
+            /**
+             * Maneja el error de carga emitido por el modal hijo.
+             */
+            function handleGroupDetailsError(errorMessage) {
+                // Muestra la notificación de error en el componente padre
+                error('Error al cargar detalles del grupo', errorMessage);
+                // El modal hijo se encarga de cerrarse al emitir el error
             }
 
 </script>
@@ -655,7 +760,7 @@
         --bs-btn-hover-color: white;
     }
     .btn-outline-info-custom {
-        --bs-btn-color: #ab47bc; /* Morado Claro */
+        --bs-btn-color: #d8d8d8; /* Morado Claro */
         --bs-btn-border-color: #ab47bc;
         --bs-btn-hover-bg: #ab47bc;
         --bs-btn-hover-border-color: #ab47bc;
@@ -800,4 +905,65 @@ para activar o desactivar, sino del que aparece al lado del texto "estado de la 
     color: white;
 }
 
+
+/* --- Estilos para la Nueva Sección de Grupos Asignados --- */
+
+    /* Estilo para el Badge del Contador de Grupos */
+    .badge-group-count {
+        background-color:#d735dd; /* Rosa Intenso */
+        color: white;
+        padding: 0.5em 0.8em;
+        font-size: 0.85em;
+        font-weight: bold;
+        border-radius: 0.35rem;
+    }
+
+
+    /* Contenedor con Scroll para la lista de grupos */
+    .group-list-container {
+        max-height: 400px; /* Ajusta la altura si es necesario */
+        overflow-y: auto; 
+        overflow-x: hidden;
+        padding-right: 5px; 
+    }
+
+    /* Estilo para cada elemento de grupo en la lista */
+    .group-card-template {
+        background-color: #ffffff; 
+        border-left: 5px solid #ab47bc; /* Borde Morado Claro como acento */
+        margin-bottom: 15px;
+        border-radius: 10px;
+        padding: 15px;
+        border: 1px solid #e0e0e0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        transition: box-shadow 0.2s;
+    }
+    .group-card-template:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Nombre del Grupo */
+    .group-name {
+        color: #4a148c; /* Morado oscuro */
+        font-weight: bold;
+    }
+
+    /* Badge para el Nombre del Curso */
+    .badge-course-name {
+        background-color: #d735dd; /* Rosa Intenso */
+        color: white;
+        font-weight: 600;
+        padding: 0.4em 0.7em;
+        font-size: 0.8em;
+    }
+
+    /* Botón Ver Detalles (similar al info-custom que ya tenías) */
+    .btn-outline-info-custom {
+        --bs-btn-color: #ab47bc; /* Morado Claro */
+        --bs-btn-border-color: #ab47bc;
+        --bs-btn-hover-bg: #ab47bc;
+        --bs-btn-hover-border-color: #ab47bc;
+        --bs-btn-hover-color: white;
+        font-weight: bold;
+    }
 </style>

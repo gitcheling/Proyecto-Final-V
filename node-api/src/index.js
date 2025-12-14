@@ -30,7 +30,37 @@ const path = require('path');
 
 
 // Middlewares globales (se ejecutan con cada petición)
-app.use(cors());
+
+// Lista de todos los orígenes que deberían ser permitidos en desarrollo
+const ALLOWED_ORIGINS = [
+    // 1. Origen para dispositivos externos 
+    'http://192.168.250.5:5173', 
+    
+    // 2. Origen para el navegador en la misma máquina
+    'http://localhost:5173', 
+    'http://127.0.0.1:5173' // A veces se usa 127.0.0.1 en lugar de localhost
+];
+
+const corsOptions = {
+    // Definimos una función que verifica si el 'origin' de la petición está en nuestra lista
+    origin: (origin, callback) => {
+        // Permitir solicitudes sin origen (como Postman o peticiones del mismo servidor)
+        if (!origin) return callback(null, true); 
+        
+        // Verificar si el origen solicitado está en la lista de permitidos
+        if (ALLOWED_ORIGINS.includes(origin)) {
+            callback(null, true); // Permitido
+        } else {
+            // Bloqueado
+            callback(new Error('No permitido por CORS'), false); 
+        }
+    },
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'], 
+    credentials: true 
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(logger);
 
@@ -68,11 +98,10 @@ async function iniciarServidor() {
         console.log('Modelos sincronizados con la base de datos.');
 
         // 4. Iniciar el servidor Express (SOLO si todo lo anterior tuvo éxito)
-        app.listen(PORT, () => {
-            console.log('🚀 Servidor Udemy iniciado');
-            console.log(`📍 Puerto: ${PORT}`);
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log('🚀 Servidor aCATdemy iniciado');
             console.log(`🌐 Ambiente: ${process.env.NODE_ENV || 'development'}`);
-            console.log(`📊 Health check: http://localhost:${PORT}/health`);
+            console.log(`🌐 Red: http://192.168.250.5:${PORT}`);
         });
 
     } catch (error) {
@@ -86,12 +115,12 @@ async function iniciarServidor() {
 
 
 // Ruta raíz
-const rutaRaiz = '/Udemy';
+const rutaRaiz = '/aCATdemy';
 
 // Asignamos la ruta raiz
 app.get(rutaRaiz, (req, res) => {
     res.json({
-        message: 'Bienvenido a la API Udemy',
+        message: 'Bienvenido a la API aCATdemy',
         endpoints: {
             health: '/health'
         },

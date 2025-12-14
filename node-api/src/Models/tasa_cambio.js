@@ -81,33 +81,6 @@ Tasa_Cambio.associate = (models) => {
     });
 
 
-    // Una tasa de cambio puede aparecer muchas veces en "pagos_docentes"
-    Tasa_Cambio.hasMany(models.Pagos_Docentes, {
-        foreignKey: 'id_tasa_cambio', // La FK que está en la tabla 'pagos_docentes'
-        as: 'pagos_docentes' // Usamos éste prefijo para obtener los datos del otro modelo (todos los pagos de docentes de una tasa de cambio)
-    });
-
-
-    // Una tasa de cambio puede aparecer muchas veces en "pagos_estudiantes"
-    Tasa_Cambio.hasMany(models.Pagos_Estudiantes, {
-        foreignKey: 'id_tasa_cambio', // La FK que está en la tabla 'pagos_estudiantes'
-        as: 'pagos_estudiantes' // Usamos éste prefijo para obtener los datos del otro modelo (todos los pagos de estudiantes de una tasa de cambio)
-    });
-
-
-    // Una tasa de cambio puede aparecer muchas veces en "facturas_gasto"
-    Tasa_Cambio.hasMany(models.Facturas_Gasto, {
-        foreignKey: 'id_tasa_registro', // La FK que está en la tabla 'facturas_gasto'
-        as: 'facturas_gasto' // Usamos éste prefijo para obtener los datos del otro modelo (todas las facturas de gasto de una tasa de cambio)
-    });
-
-
-    // Una tasa de cambio puede aparecer muchas veces en "pagos_proveedores"
-    Tasa_Cambio.hasMany(models.Pagos_Proveedores, {
-        foreignKey: 'id_tasa_cambio', // La FK que está en la tabla 'pagos_proveedores'
-        as: 'pagos_proveedores' // Usamos éste prefijo para obtener los datos del otro modelo (todos los pagos a proveedores de una tasa de cambio)
-    });
-
  
 };
 

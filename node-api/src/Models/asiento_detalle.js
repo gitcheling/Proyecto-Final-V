@@ -43,7 +43,7 @@ const Asiento_Detalle = sequelize.define('Asiento_Detalle', {
     },
 
     monto: {
-        type: DataTypes.NUMERIC(12, 2), // 12 dígitos en total, 2 decimales 
+        type: DataTypes.DECIMAL(12, 2), // 12 dígitos en total, 2 decimales 
         allowNull: false,
         defaultValue: 0
     },

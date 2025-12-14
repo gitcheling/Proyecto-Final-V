@@ -2,8 +2,8 @@ const Curso_Model = require('../Models/curso');
 const Categoria_Curso_Model = require('../Models/categoria_curso'); 
 const Estado_Curso_Model = require('../Models/estado_curso'); 
 
-const Grupo_Model = require('../models/Grupo'); 
-const Periodo_Model = require('../models/Periodo');
+const Grupo_Model = require('../Models/grupo'); 
+const Periodo_Model = require('../Models/periodo');
 
 // Se importan las funciones comúnes de validación
 const { validarExistencia, validarIdNumerico, validarSoloTexto, validarSoloNumeros, validarLongitudCadena, validarEmail, validarSoloNumerosYGuion, validarTelefonoVenezolano, validarBooleano, parseAndValidateDate} = require('../Utils/validators');
@@ -113,6 +113,7 @@ class CursoService {
     /*Nota: Los campos que no se deben modificar son:
 
         -id_curso	Llave Primaria (PK). Identificador único y absoluto. Nunca debe cambiar.
+        
         -total_clases: El total de clases (no debe permitirse modificar siempre y cuando se esté transcurriendo un periodo y haya
         un grupo en estado "en curso" en base al curso a editar)
     */
@@ -235,7 +236,6 @@ class CursoService {
             }
 
 
-        
     // Si pasa la validación, se hace la actualización
 
         const [filasAfectadas] = await Curso_Model.update(

@@ -1,139 +1,298 @@
 <script setup>
 import { useRouter, useRoute } from 'vue-router'
-import { ref } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 // Importamos el router y la ruta para la navegación y el estado activo
 const router = useRouter()
 const route = useRoute() 
 
-// Lista centralizada de Módulos Principales
-const menuItems = ref([
+
+// Ítems de navegación principales
+const mainItems = ref([
   //{ to: '/', icon: 'bi-house-door', text: 'Dashboard' },
   { to: '/Entidades', icon: 'bi-building', text: 'Entidades' },
   { to: '/Estudiantes', icon: 'bi-book', text: 'Estudiantes' },
   { to: '/Docentes', icon: 'bi-mortarboard', text: 'Docentes' },
   { to: '/Proveedores', icon: 'bi-truck', text: 'Proveedores' },
-  { to: '/CuentasBancariasAprobadas', icon: 'bi-bank', text: 'Cuentas Bancarias' },
-  { to: '/CuentasBancariasPorAprobar', icon: 'bi-question-square', text: 'Cuentas Bancarias Por Aprobar' },
   { to: '/PlanCuentas', icon: 'bi-list-task', text: 'Plan de Cuentas' },
   { to: '/Periodos', icon: 'bi bi-calendar3', text: 'Periodos' },
   { to: '/Cursos', icon: 'bi bi-palette-fill', text: 'Cursos' },
-  { to: '/ReportesEntidades', icon: 'bi bi-bar-chart-line-fill', text: 'Reportes de entidades' },
-  { to: '/ReportesEstudiantes', icon: 'bi bi-bar-chart-line-fill', text: 'Reportes de estudiantes' },
-  { to: '/ReportesDocentes', icon: 'bi bi-bar-chart-line-fill', text: 'Reportes de docentes' },
-  { to: '/ReportesProveedores', icon: 'bi bi-bar-chart-line-fill', text: 'Reportes de proveedores' },
-  { to: '/ReportesCuentasBancarias', icon: 'bi bi-bar-chart-line-fill', text: 'Reportes de cuentas bancarias' }
+  { to: '/Grupos', icon: 'bi bi-people-fill', text: 'Grupos' },
+  { to: '/Inscripciones', icon: 'bi bi-journal-text', text: 'Inscripciones' },
 ])
 
-// Lista centralizada de Herramientas
-const toolsItems = ref([
-  { href: '#', icon: 'bi-file-earmark-bar-graph', text: 'Reportes' },
-  { href: '#', icon: 'bi-gear', text: 'Ajustes' },
+
+
+
+// Ítems de reporte (sub-menú)
+const bankAccountsItems = ref([
+  { to: '/CuentasBancariasAprobadas', text: 'Cuentas Bancarias' },
+  { to: '/CuentasBancariasPorAprobar', text: 'Cuentas Bancarias Por Aprobar' },
 ])
+
+// Ítems de reporte (sub-menú)
+const reportItems = ref([
+  { to: '/ReportesEntidades', text: 'Reportes de Entidades' },
+  { to: '/ReportesEstudiantes', text: 'Reportes de Estudiantes' },
+  { to: '/ReportesDocentes', text: 'Reportes de Docentes' },
+  { to: '/ReportesProveedores', text: 'Reportes de Proveedores' },
+  { to: '/ReportesGrupos', text: 'Reportes de Grupos' },
+  { to: '/ReportesInscripciones', text: 'Reportes de Inscripciones' },
+  { to: '/ReportesCuentasBancarias', text: 'Reportes de Cuentas Bancarias' }
+])
+
+// Variable para controlar si la ruta actual es de reportes (ESTADO ACTIVO)
+const isReportesOpen = computed(() => {
+    // Comprueba si la ruta actual es alguna de las rutas de reportes
+    return reportItems.value.some(item => route.path === item.to)
+})
+
+// Variable para controlar si la ruta actual es de Cuentas Bancarias
+const isBankAccountsOpen = computed(() => {
+    // Comprueba si la ruta actual es alguna de las rutas de configuración
+    return bankAccountsItems.value.some(item => route.path === item.to)
+});
+
+
+// Variable para manejar el estado abierto/cerrado del acordeón por CLICK (solo para el ícono)
+const isReportsMenuManualOpen = ref(false)
+
+// Función para manejar la apertura/cierre manual del acordeón (solo para el icono)
+const toggleReportsMenu = () => {
+    isReportsMenuManualOpen.value = !isReportsMenuManualOpen.value;
+}
+
+
+// ===============================================
+// LÓGICA DE CIERRE AUTOMÁTICO (CSS + Eventos de Ratón)
+// ===============================================
+
+// Nuevo ref para indicar si el sidebar está plegado (se sale el ratón)
+const isSidebarCollapsed = ref(false);
+
+let sidebarElement = null; 
+
+const handleMouseLeave = () => {
+    // Al salir el ratón, forzamos el modo "plegado" y ocultamos los acordeones
+    isSidebarCollapsed.value = true;
+};
+
+const handleMouseEnter = () => {
+    // Al entrar el ratón, permitimos que se muestren los acordeones si están activos
+    isSidebarCollapsed.value = false;
+};
+
+onMounted(() => {
+    // Obtenemos la referencia al contenedor de la sidebar (solo escritorio)
+    sidebarElement = document.getElementById('sidebar-wrapper');
+    if (sidebarElement) {
+        // Adjuntamos los dos eventos
+        sidebarElement.addEventListener('mouseleave', handleMouseLeave);
+        sidebarElement.addEventListener('mouseenter', handleMouseEnter);
+    }
+});
+
+onUnmounted(() => {
+    // Limpiamos los event listeners
+    if (sidebarElement) {
+        sidebarElement.removeEventListener('mouseleave', handleMouseLeave);
+        sidebarElement.removeEventListener('mouseenter', handleMouseEnter);
+    }
+});
 
 /**
- * Función para manejar la navegación en el menú móvil.
- * Usa router.push() para garantizar la navegación y permite que 
- * data-bs-dismiss se encargue del cierre del offcanvas.
- * @param {string} toPath - La ruta a navegar.
+ * Función para manejar la navegación en el menú móvil (Offcanvas).
  */
-const navigateMobile = (toPath) => {
-    // 1. Forzar la navegación a la nueva ruta usando Vue Router
-    router.push(toPath);
-
-    // 2. El atributo data-bs-dismiss se encargará de cerrar el menú automáticamente.
+const navigateMobile = (path) => {
+    const offcanvasElement = document.getElementById('sidebarMenu');
+    if (offcanvasElement) {
+        // Solo intentamos cerrar si 'bootstrap' está definido (para evitar el error de referencia)
+        if (typeof bootstrap !== 'undefined') {
+            const offcanvas = bootstrap.Offcanvas.getInstance(offcanvasElement);
+            if (offcanvas) {
+                offcanvas.hide(); 
+            }
+        }
+    }
+    router.push(path);
 };
+
 </script>
 
+
 <template>
-  <!-- ---------------------------------------------------- -->
-  <!-- 1. Contenedor de ESCRITORIO (d-lg-block) - Plegable -->
-  <!-- ---------------------------------------------------- -->
-  <div class="d-none d-md-block sidebar-container" id="sidebar-wrapper">
+  <div 
+    :class="['d-none', 'd-md-block', 'sidebar-container']" 
+    id="sidebar-wrapper"
+  >
     <div class="sidebar-header">
-      <!-- Usamos una imagen circular placeholder -->
-      <img src="https://placehold.co/40x40/E0B0FF/4B0082?text=Logo" alt="Logo" class="header-logo">
-      <span>Mi Sistema</span>
+      <img src="../assets/img/logo.png" alt="Logo" class="header-logo">
+      <span>aCATdemy</span>
     </div>
     
-    <nav class="sidebar-nav">
-      <!-- MÓDULOS PRINCIPALES (ESCRITORIO) -->
-      <h6 class="section-title">MÓDULOS PRINCIPALES</h6>
-      <div class="menu-group">
-        <!-- BUCLE DE MÓDULOS PRINCIPALES: Usamos RouterLink (Funciona bien en escritorio) -->
-        <RouterLink 
-          v-for="item in menuItems"
-          :key="item.to"
-          :to="item.to" 
-          class="menu-link"
-        >
-          <i :class="item.icon"></i> <span>{{ item.text }}</span>
-        </RouterLink>
-      </div>
+    <div class="sidebar-content-scroll"> 
+        <nav class="sidebar-nav">
 
-      <!-- HERRAMIENTAS (ESCRITORIO) 
-      <h6 class="section-title">HERRAMIENTAS</h6>
-      <div class="menu-group">
-         BUCLE DE HERRAMIENTAS: Usamos enlace <a> 
-        <a 
-          v-for="tool in toolsItems"
-          :key="tool.text"
-          :href="tool.href" 
-          class="menu-link"
-        >
-          <i :class="tool.icon"></i> <span>{{ tool.text }}</span>
-        </a>
-      </div>-->
+          <div class="menu-group">
+
+               <!-- Opciones principales -->
+              <RouterLink 
+                v-for="item in mainItems"
+                :key="item.to"
+                :to="item.to" 
+                class="menu-link"
+              >
+                <span class="icon-wrapper"><i :class="item.icon"></i></span> <span>{{ item.text }}</span>
+              </RouterLink>
+
+              <!-- Acordeón de las cuentas bancarias -->
+              <div class="accordion-item-custom">
+                <a 
+                    href="#"
+                    role="button" 
+                    data-bs-toggle="collapse" 
+                    data-bs-target="#bankAccountCollapseDesktop"
+                    aria-expanded="false" 
+                    aria-controls="bankAccountCollapseDesktop"
+                    :class="['menu-link', 'accordion-toggle-link', {'router-link-active': isBankAccountsOpen}]" 
+                    >
+                    <span class="icon-wrapper"><i class="bi-bank"></i></span> <span>Cuentas Bancarias</span> 
+                </a>
+
+                <div 
+                    v-show="!isSidebarCollapsed || isBankAccountsOpen"
+                    :class="['collapse', 'accordion-menu-content', {'show': isBankAccountsOpen}]" 
+                    id="bankAccountCollapseDesktop"
+                >
+                    <RouterLink 
+                        v-for="account in bankAccountsItems"
+                        :key="account.to"
+                        :to="account.to" 
+                        class="menu-link sub-menu-link"
+                    >
+                        <span>{{ account.text }}</span>
+                    </RouterLink>
+                </div>
+              </div>
 
 
-    </nav>
+              <!-- Acordeón de los reportes -->
+              <div class="accordion-item-custom">
+                  <a 
+                      href="#"
+                      role="button" 
+                      data-bs-toggle="collapse" 
+                      data-bs-target="#reportsCollapseDesktop"
+                      aria-expanded="false" 
+                      aria-controls="reportsCollapseDesktop"
+                      :class="['menu-link', 'accordion-toggle-link', {'router-link-active': isReportesOpen}]"
+                  >
+                      <span class="icon-wrapper"><i class="bi bi-bar-chart-line-fill"></i></span> <span>Reportes</span> 
+                  </a>
+
+                  <div 
+                      v-show="!isSidebarCollapsed || isReportesOpen"
+                      :class="['collapse', 'accordion-menu-content', {'show': isReportesOpen}]" 
+                      id="reportsCollapseDesktop"
+                  >
+                      <RouterLink 
+                          v-for="report in reportItems"
+                          :key="report.to"
+                          :to="report.to" 
+                          class="menu-link sub-menu-link"
+                      >
+                          <span>{{ report.text }}</span>
+                      </RouterLink>
+                  </div>
+              </div>
+          </div>
+
+        </nav>
+    </div>
   </div>
 
-  <!-- ---------------------------------------------------- -->
-  <!-- 2. Contenedor de MÓVIL (Offcanvas de Bootstrap) -->
-  <!-- ---------------------------------------------------- -->
   <div class="offcanvas offcanvas-start sidebar-container-full" tabindex="-1" id="sidebarMenu" aria-labelledby="sidebarMenuLabel">
     <div class="offcanvas-header sidebar-header-offcanvas">
       <h5 class="offcanvas-title" id="sidebarMenuLabel">
-        <i class="bi bi-box-fill me-2"></i> Mi Sistema
+        <img src="../assets/img/logo.png" alt="Logo" class="header-logo"> aCATdemy
       </h5>
-      <!-- Botón nativo de Bootstrap para cerrar el Offcanvas -->
-      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    
     </div>
+    
     <div class="offcanvas-body">
       <nav class="sidebar-nav">
-        <!-- MÓDULOS PRINCIPALES (MÓVIL) -->
-        <h6 class="section-title section-title-offcanvas">MÓDULOS PRINCIPALES</h6>
         <div class="menu-group-offcanvas">
-          <!-- BUCLE DE MÓDULOS PRINCIPALES: Usamos <a> con @click.prevent para navegación forzada -->
-          <a
-            v-for="item in menuItems"
-            :key="item.to"
-            :href="item.to" 
-            class="menu-link" 
-            data-bs-dismiss="offcanvas"
-            @click.prevent="navigateMobile(item.to)"
-            :class="{ 'router-link-active': route.path === item.to }"
-          >
-            <i :class="[item.icon, 'me-3']"></i> <span>{{ item.text }}</span>
-          </a>
+
+            <!-- Opciones principales -->
+            <a
+              v-for="item in mainItems"
+              :key="item.to"
+              href="#"
+              class="menu-link" 
+              data-bs-dismiss="offcanvas"
+              @click.prevent="navigateMobile(item.to)"
+              :class="{ 'router-link-active': route.path === item.to }"
+            >
+              <span class="icon-wrapper"><i :class="[item.icon, 'me-3']"></i></span> <span>{{ item.text }}</span>
+            </a>
+
+            <!-- Acordeón de las cuentas bancarias -->
+            <div class="accordion-item-custom-offcanvas">
+                <a 
+                    data-bs-toggle="collapse" 
+                    href="#bankAccountsCollapseMobile" 
+                    role="button" 
+                    :aria-expanded="isBankAccountsOpen ? 'true' : 'false'" 
+                    aria-controls="bankAccountsCollapseMobile"
+                    :class="['menu-link', 'accordion-toggle-link', {'router-link-active': isBankAccountsOpen}]"
+                >
+                    <span class="icon-wrapper"><i class="bi bi-gear-fill me-3"></i></span> <span>Cuentas Bancarias</span> 
+                </a>
+
+                <div :class="['collapse', 'accordion-menu-content', {'show': isBankAccountsOpen}]" id="bankAccountsCollapseMobile">
+                    <a
+                        v-for="account in bankAccountsItems"
+                        :key="account.to"
+                        href="#"
+                        class="menu-link sub-menu-link"
+                        data-bs-dismiss="offcanvas"
+                        @click.prevent="navigateMobile(account.to)"
+                        :class="{ 'router-link-active': route.path === account.to }"
+                    >
+                        <span>{{ account.text }}</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Acordeón de los reportes -->
+            <div class="accordion-item-custom-offcanvas">
+                <a 
+                    data-bs-toggle="collapse" 
+                    href="#reportsCollapseMobile" 
+                    role="button" 
+                    :aria-expanded="isReportesOpen ? 'true' : 'false'" 
+                    aria-controls="reportsCollapseMobile"
+                    :class="['menu-link', 'accordion-toggle-link', {'router-link-active': isReportesOpen}]"
+                >
+                    <span class="icon-wrapper"><i class="bi bi-bar-chart-line-fill me-3"></i></span> <span>Reportes</span> 
+                </a>
+
+                <div :class="['collapse', 'accordion-menu-content', {'show': isReportesOpen}]" id="reportsCollapseMobile">
+                    <a
+                        v-for="report in reportItems"
+                        :key="report.to"
+                        href="#"
+                        class="menu-link sub-menu-link"
+                        data-bs-dismiss="offcanvas"
+                        @click.prevent="navigateMobile(report.to)"
+                        :class="{ 'router-link-active': route.path === report.to }"
+                    >
+                        <span>{{ report.text }}</span>
+                    </a>
+                </div>
+            </div>
+
         </div>
-
-        <!-- HERRAMIENTAS (MÓVIL)
-        <h6 class="section-title section-title-offcanvas">HERRAMIENTAS</h6>
-        <div class="menu-group-offcanvas">
-           BUCLE DE HERRAMIENTAS: Usamos <a> (solo cierra el menú, no navega) 
-          <a 
-            v-for="tool in toolsItems"
-            :key="tool.text"
-            :href="tool.href" 
-            class="menu-link" 
-            data-bs-dismiss="offcanvas"
-          >
-            <i :class="[tool.icon, 'me-3']"></i> <span>{{ tool.text }}</span>
-          </a>
-        </div> -->
-
 
       </nav>
     </div>
@@ -143,243 +302,331 @@ const navigateMobile = (toPath) => {
 
 <style scoped>
 /* ======================================= */
-/* ESTILOS BASE Y PLEGADO (Puro CSS)       */
+/* ESTILOS BASE Y PLEGADO (Puro CSS) */
 /* ======================================= */
 
-/* Estado inicial: Plegado */
+/* Estado inicial: Plegado (80px). Esta es la base. */
 .sidebar-container {
-  width: 80px; /* Ancho de Icono */
-
-  min-width: 80px; /* Evita que se encoja */
-  
-  /* Fija la barra lateral y le da altura completa */
-  position: fixed; 
-
-  overflow-x: hidden; 
-  transition: width 0.3s ease; 
-  
-  background-color: #4B0082; 
-  color: white;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
-  min-height: 100vh; 
-  z-index: 1020; 
+    width: 80px; 
+    min-width: 80px; 
+    position: fixed; 
+    overflow-x: hidden; 
+    transition: width 0.3s ease; 
+    background-color: #4B0082; 
+    color: white;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+    min-height: 100vh; 
+    z-index: 1020; 
 }
 
-/* Estado al pasar el cursor: Desplegado */
+/* Estado al pasar el cursor: Desplegado (300px) */
 .sidebar-container:hover {
-  width: 300px; 
+    width: 300px; 
+}
+
+/* 2. ESTILO PARA EL SCROLL (Escritorio) */
+.sidebar-content-scroll {
+    height: calc(100vh - 70px); 
+    overflow-y: auto; 
+    padding-bottom: 20px; 
+    scrollbar-width: thin; 
+    scrollbar-color: rgba(255, 255, 255, 0.3) #4B0082; 
+}
+.sidebar-content-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+.sidebar-content-scroll::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+}
+.sidebar-content-scroll::-webkit-scrollbar-track {
+    background: transparent;
 }
 
 
 /* ======================================= */
-/* HEADER Y TÍTULOS DE SECCIÓN             */
+/* HEADER Y TÍTULOS DE SECCIÓN */
 /* ======================================= */
 
 .sidebar-header {
-  font-size: 1.1rem; /* Ajuste de tamaño de fuente */
-  color: #E0B0FF; 
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  font-weight: 600;
-  
-  /* --- CLAVES: Estructura similar a menu-link (plegado/desplegado) --- */
-  display: flex;
-  align-items: center;
-  
-  /* Minimized state: Centered logo, narrow padding */
-  justify-content: center;
-  padding: 0.75rem 0; 
-  
-  white-space: nowrap; 
-  cursor: default; 
-  margin-bottom: 0.5rem; /* Margen para separarlo de los módulos */
-  transition: padding 0.3s ease;
+    font-size: 1.1rem; 
+    color: #E0B0FF; 
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 0; 
+    white-space: nowrap; 
+    cursor: default; 
+    transition: padding 0.3s ease;
 }
 
-/* Estado Expandido: Restaura la alineación y el padding */
-.sidebar-container:hover .sidebar-header {
-  justify-content: flex-start;
-  padding: 0.75rem 1rem; 
+/* ------------------------------------------- */
+/* REGLAS CRÍTICAS DE VISIBILIDAD DE CONTENIDO */
+/* ------------------------------------------- */
+
+/* 1. OCULTAR TODOS LOS TEXTOS POR DEFECTO (Plegado) */
+.sidebar-container .section-title,
+/* Solo ocultamos el SPAN que NO sea 'icon-wrapper' */
+.sidebar-container .menu-link > span:not(.icon-wrapper), 
+.sidebar-container .sidebar-header span {
+    display: none !important;
+    opacity: 0 !important;
+    transition: opacity 0.1s ease;
 }
 
-/* Estilos para el LOGO */
-.header-logo {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%; /* Lo hace circular */
-  object-fit: cover;
-  flex-shrink: 0; 
-  
-  /* Minimized state: No margin */
-  margin-right: 0;
-  transition: margin-right 0.3s ease;
-}
-
-/* Estilos para el LOGO en estado Desplegado */
-.sidebar-container:hover .header-logo {
-  margin-right: 0.75rem; 
-}
-
-/* Estilos para el texto del sistema (span) */
-.sidebar-header span {
-  /* Minimized state: Hidden */
-  display: none; 
-  opacity: 0;
-  transition: opacity 0.1s ease;
-}
-
-/* Estilos para el texto del sistema en estado Desplegado */
+/* 2. MOSTRAR TEXTOS AL EXPANDIR (Hover) */
+.sidebar-container:hover .section-title,
+.sidebar-container:hover .menu-link span, 
 .sidebar-container:hover .sidebar-header span {
-  display: initial; 
-  opacity: 1;
-  transition-delay: 0.2s; 
+    display: initial !important; 
+    opacity: 1 !important;
+    transition-delay: 0.2s; 
+    white-space: nowrap;
 }
 
-/* Estilos de los TÍTULOS DE SECCIÓN (Igual que antes) */
+
+/* EXPANSIÓN DE HEADER: HOVER */
+.sidebar-container:hover .sidebar-header {
+    justify-content: flex-start;
+    padding: 0.75rem 1rem; 
+}
+
+.header-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%; 
+    object-fit: cover;
+    flex-shrink: 0; 
+    margin-right: 0;
+    transition: margin-right 0.3s ease;
+}
+
+/* EXPANSIÓN DE LOGO: HOVER */
+.sidebar-container:hover .header-logo {
+    margin-right: 0.75rem; 
+}
+
 .section-title {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.5); 
-  padding: 1rem 1rem 0.2rem 1rem; 
-  margin-bottom: 0;
-    
-  opacity: 0; 
-  transition: opacity 0.2s ease;
-  white-space: nowrap;
-}
-
-/* Mostrar títulos al desplegar */
-.sidebar-container:hover .section-title {
-  opacity: 1;
-  transition-delay: 0.1s; 
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.5); 
+    padding: 1rem 1rem 0.2rem 1rem; 
+    margin-bottom: 0;
 }
 
 
 /* ======================================= */
-/* ENLACES (MENU LINKS) - CORRECCIÓN DE CENTRADO */
+/* ENLACES (MENU LINKS) */
 /* ======================================= */
 
 .sidebar-nav {
-  padding: 1rem 0; 
+    padding: 1rem 0; 
 }
 
 .menu-group {
-  padding: 0 0.5rem; 
-  margin-bottom: 1rem;
+    padding: 0 0.5rem; 
+    margin-bottom: 1rem;
 }
 
 .menu-link {
-  text-decoration: none;
-  color: inherit;
-  
-  /* Estilos de la "Tarjeta" */
-  display: flex;
-  align-items: center;
-  
-  /* --- ESTADO POR DEFECTO (MINIMIZADO) --- */
-  /* CLAVE 1: Centra el icono */
-  justify-content: center;
-  /* CLAVE 2: Eliminamos padding horizontal para que el centrado sea exacto en los 80px */
-  padding: 0.75rem 0; 
-  
-  border-radius: 6px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s ease, box-shadow 0.2s ease, padding 0.3s ease;
-  margin-bottom: 0.3rem;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center; /* Plegado: Centra el icono */
+    padding: 0.75rem 0; 
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease, padding 0.3s ease;
+    margin-bottom: 0.3rem;
+    width: 100%; 
 }
 
-/* Icono (visible en todo momento) */
-.menu-link i {
-  font-size: 1.2rem;
-  min-width: 25px; 
-  text-align: center;
-  /* CLAVE 3: Asegura que el icono no tenga margen a la derecha en estado minimizado */
-  margin-right: 0; 
-  transition: margin-right 0.3s ease;
+/* ---------------------------------------------------- */
+/* CONTENEDOR DE ÍCONO (icon-wrapper) */
+/* ---------------------------------------------------- */
+
+.icon-wrapper {
+    /* Define un ancho fijo de 25px para que todos los íconos ocupen el mismo espacio */
+    width: 25px; 
+    text-align: center;
+    margin-right: 0; 
+    flex-shrink: 0;
+    /* Forzamos la transición de margen aquí */
+    transition: margin-right 0.3s ease !important; 
+    display: initial !important; 
+    opacity: 1 !important;
 }
 
-/* Texto del Enlace (span) */
-.menu-link span {
-  /* CLAVE 4: Ocultamos el texto completamente del flujo en estado minimizado */
-  display: none; 
-  opacity: 0;
-  transition: opacity 0.1s ease;
-  margin-left: 1rem;
-  white-space: nowrap;
+.icon-wrapper i {
+    font-size: 1.2rem;
 }
 
-
-/* --- ESTADO DESPLEGADO (Hover) --- */
-
+/* AJUSTE DE JUSTIFICACIÓN Y PADDING DEL LINK: HOVER */
 .sidebar-container:hover .menu-link {
-  /* CLAVE 5: Restaura la alineación y el padding al desplegar */
-  justify-content: flex-start;
-  padding: 0.75rem 1rem; /* Padding original rectangular */
+    justify-content: flex-start;
+    padding: 0.75rem 1rem; 
 }
 
-.sidebar-container:hover .menu-link i {
-  /* Agrega un poco de margen al icono para separarlo del texto */
-  margin-right: 10px; 
+/* AJUSTE DE ÍCONO: HOVER (Maneja el movimiento lateral en el wrapper) */
+.sidebar-container:hover .icon-wrapper {
+    margin-right: 10px !important; /* Forzamos el margen */
 }
-
-.sidebar-container:hover .menu-link span {
-  /* CLAVE 6: Mostramos el span, ya no está oculto por display: none */
-  display: initial; 
-  opacity: 1;
-  transition-delay: 0.2s; 
-  margin-left: 0; /* Ya usamos margin-right en el icono */
-}
-
 
 /* Estado Hover y Activo */
 .menu-link:hover {
-  background-color: #8A2BE2; /* Morado Medio */
+    background-color: #8A2BE2; /* Morado Medio */
 }
 
 .menu-link.router-link-active {
-  background-color: #8A2BE2; 
-  color: white;
-  box-shadow: 0 0 5px rgba(0, 0, 0, 0.3); 
-  border: 1px solid #E0B0FF;
+    background-color: #8A2BE2; 
+    color: white;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.3); 
+    border: 1px solid #E0B0FF;
 }
 
+/* ---------------------------------------------------- */
+/* AJUSTES DE ACORDEÓN (SOLUCIÓN CENTRADO V15) */
+/* ---------------------------------------------------- */
+
+.accordion-toggle-link {
+    width: 100%; 
+    margin-bottom: 0; 
+    /* Forzamos la justificación para que siempre use el centro en estado plegado */
+    justify-content: center !important; 
+    padding: 0.75rem 0 !important; /* CRÍTICO: Eliminar padding lateral en estado plegado */
+}
+
+/* En el hover, volvemos a aplicar las reglas estándar para el despliegue */
+.sidebar-container:hover .accordion-toggle-link {
+    justify-content: flex-start !important; 
+    padding: 0.75rem 1rem !important;
+}
+
+/* Neutralizamos estilos de flecha */
+.accordion-icon {
+    display: none !important; 
+}
+
+
+/* ---------------------------------------------------- */
+/* AJUSTES DE SUB-LINKS Y GRUPOS */
+/* ---------------------------------------------------- */
+
+/* Anulamos cualquier margin que pudiera tener el <i> de los sub-links */
+.sub-menu-link .icon-wrapper {
+    margin-right: 0 !important;
+    width: 0 !important;
+}
+
+.accordion-item-custom, .accordion-item-custom-offcanvas {
+    margin-bottom: 0.3rem;
+    padding: 0; 
+    transition: background-color 0.2s ease;
+    width: 100%; 
+}
+
+/* APLICAMOS PADDING HORIZONTAL SOLO CUANDO ESTÁ PLEGADO EN LA VISTA COMPRIMIDA */
+.sidebar-container:not(:hover) .accordion-item-custom {
+    padding: 0; 
+}
+
+.sub-menu-link {
+    justify-content: flex-start !important; 
+    padding: 0.5rem 0.5rem 0.5rem 0.5rem; 
+    font-size: 0.95rem; 
+    margin-left: 0; 
+    border-radius: 0; 
+    margin-bottom: 0;
+}
+
+/* Ocultar el ícono en los sub-links, si es que tienen */
+.sidebar-container:hover .sub-menu-link .icon-wrapper {
+    margin-right: 0; 
+}
+
+/* ------------------------------------------- */
+/* AJUSTES DE VISIBILIDAD DE ACORDEÓN (Escritorio) */
+/* ------------------------------------------- */
+
+/* El acordeón solo se fuerza abierto si la sidebar está expandida (hover) Y tiene la clase 'show' */
+.sidebar-container:hover .collapse.show {
+    display: block !important;
+}
+
+/* Ajuste de padding y justificación al desplegar (Hover) */
+.accordion-item-custom .accordion-toggle-link,
+.sidebar-container:hover .accordion-toggle-link {
+    justify-content: flex-start; 
+    padding: 0.75rem 1rem; 
+}
+
+.accordion-item-custom .sub-menu-link,
+.sidebar-container:hover .sub-menu-link {
+    justify-content: flex-start;
+    padding: 0.5rem 1rem 0.5rem 2rem; /* Indentación para hijos */
+    border-radius: 0;
+    margin-bottom: 0.1rem;
+}
+
+
+/* ------------------------------------------- */
+/* ESTADO ACTIVO (Final) */
+/* ------------------------------------------- */
+
+/* Anulamos completamente el estilo de activo del SUB-LINK cuando la barra está plegada */
+.sidebar-container:not(:hover) .sub-menu-link.router-link-active {
+    background-color: transparent !important;
+    color: inherit !important; 
+    box-shadow: none !important;
+    border: none !important;
+}
+
+/* Estilo activo de los sub-links cuando están VISIBLES (barra expandida) */
+.sub-menu-link.router-link-active {
+    background-color: #A052E9 !important; 
+    border: none !important;
+    box-shadow: none !important;
+}
+
+
 /* ======================================= */
-/* OFFCANVAS (Sin plegado/desplegado)      */
+/* OFFCANVAS (Sin plegado/desplegado) */
 /* ======================================= */
 
-/* Necesitamos una clase de ancho completo para el Offcanvas que no se pliegue */
 .sidebar-container-full {
-  min-width: 250px;
-  background-color: #4B0082;
-  color: white;
+    min-width: 250px;
+    background-color: #4B0082;
+    color: white;
 }
 .sidebar-header-offcanvas {
-  /* Estilos del header del offcanvas */
-  padding: 1rem;
-  background-color: #4B0082;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 1rem;
+    background-color: #4B0082;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 .section-title-offcanvas {
-  opacity: 1; /* Forzamos que se muestre en el Offcanvas */
+    opacity: 1; 
 }
-/* En Offcanvas, el texto siempre debe verse (lo anulamos del display: none) */
+/* En Offcanvas, el texto siempre debe verse */
 .menu-group-offcanvas .menu-link span {
-  display: initial;
-  opacity: 1; 
-  margin-left: 0; /* Ya usamos margin-right en el icono */
+    display: initial;
+    opacity: 1; 
+    margin-left: 0; 
 }
-/* Aseguramos que los enlaces del Offcanvas tengan el mismo estilo pero sin transición */
 .menu-group-offcanvas {
-  padding: 0 1rem;
+    padding: 0 1rem;
 }
 .offcanvas-body {
-  padding: 0;
+    padding: 0;
 }
 .offcanvas-title {
-  color: #E0B0FF;
-  font-weight: 600;
+    color: #E0B0FF;
+    font-weight: 600;
 }
 .btn-close-white {
-  filter: invert(1) grayscale(100%) brightness(200%); 
+    filter: invert(1) grayscale(100%) brightness(200%); 
 }
 </style>

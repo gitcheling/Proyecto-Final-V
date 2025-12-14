@@ -167,6 +167,7 @@
             :isLoading="isLoadingChart"
             initial-chart-type="bar"
             componentTitle="Conteo de Cuentas Bancarias por Mes"
+            y-axis-label="Cantidad de Cuentas Bancarias"
             :allowedChartTypes="['bar', 'line', 'area', 'pie', 'doughnut', 'polarArea']"
         />
         

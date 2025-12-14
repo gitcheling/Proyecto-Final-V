@@ -99,7 +99,7 @@ const Grupo = sequelize.define('Grupo', {
     // ===============================================
     // clave foránea para el estado de grupo
     // ===============================================
-    id_estado_grupo : {
+    id_estado : {
         type: DataTypes.INTEGER,
         allowNull: false, 
         references: {
@@ -129,7 +129,7 @@ Grupo.associate = (models) => {
 
     // Un grupo solo puede tener un estado de grupo
     Grupo.belongsTo(models.Estado_Grupo, {
-        foreignKey: 'id_estado_grupo', // La FK que está en ESTA MISMA tabla (en este caso que es el lado muchos)
+        foreignKey: 'id_estado', // La FK que está en ESTA MISMA tabla (en este caso que es el lado muchos)
         as: 'estado_grupo' // Usamos éste prefijo para obtener los datos del otro modelo (el estado de un grupo)
     });
 
@@ -161,28 +161,6 @@ Grupo.associate = (models) => {
     });
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-    // --------------------------- Revision ------------------------
-
-    // Un grupo puede aparecer muchas veces en "asignacion_horario_grupo"
-    Grupo.hasMany(models.Asignacion_Horario_Grupo, {
-        foreignKey: 'id_grupo', // La FK que está en la tabla 'asignacion_horario_grupo'
-        as: 'asignaciones' // Usamos éste prefijo para obtener los datos del otro modelo (todas las asignaciones de un grupo)
-    });
-
-
-
     // Un grupo puede aparecer muchas veces en "inscripcion"
     Grupo.hasMany(models.Inscripcion, {
         foreignKey: 'id_grupo', // La FK que está en la tabla 'inscripcion'
@@ -190,11 +168,8 @@ Grupo.associate = (models) => {
     });
 
 
-    // Un grupo puede aparecer muchas veces en "registro_horas"
-    Grupo.hasMany(models.Registro_Horas, {
-        foreignKey: 'id_grupo', // La FK que está en la tabla 'registro_horas'
-        as: 'horas_registradas' // Usamos éste prefijo para obtener los datos del otro modelo (todas las horas registradas de un grupo)
-    });
+
+
 };
 
 module.exports = Grupo;

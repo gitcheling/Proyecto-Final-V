@@ -88,7 +88,7 @@ const docenteService = new DocenteService();
                 // 404 Not Found si la cuenta no existe
                 return res.status(404).json({
                     error: true,
-                    message: `Docente con ID ${id} no encontrada.`
+                    message: `Docente con ID ${id} no encontrado.`
                 });
             }
 

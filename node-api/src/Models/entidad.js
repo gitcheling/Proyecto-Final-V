@@ -163,6 +163,19 @@ Entidad.associate = (models) => {
         as: 'cuentas_pago' // Usamos éste prefijo para obtener los datos del otro modelo (todas las cuentas bancarias asociadas a una entidad)
     });
 
+
+    // Una entidad puede aparecer muchas veces en "obligacion_financiera"
+    Entidad.hasMany(models.Obligacion_Financiera, {
+        foreignKey: 'id_entidad', // La FK que está en la tabla 'obligacion_financiera'
+        as: 'obligaciones_financieras' // Usamos éste prefijo para obtener los datos del otro modelo (todas las obligaciones financieras de una entidad)
+    });
+
+    // Una entidad puede aparecer muchas veces en "registro_transaccion"
+    Entidad.hasMany(models.Registro_Transaccion, {
+        foreignKey: 'id_entidad_realiza', // La FK que está en la tabla 'registro_transaccion'
+        as: 'registros_transaccionales' // Usamos éste prefijo para obtener los datos del otro modelo (todos los registros transaccionales de una entidad)
+    });
+    
 };
 
 module.exports = Entidad;

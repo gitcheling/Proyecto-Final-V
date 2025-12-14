@@ -295,7 +295,6 @@
     height: 100%;
     opacity: 0; 
     pointer-events: none; 
-    background-color: rgba(0, 0, 0, 0.6); 
     display: flex;
     justify-content: center;
     align-items: center;
@@ -341,8 +340,6 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    /* Fondo semi-transparente para "enfocar" sobre el contenido de detalle */
-    background-color: rgba(0, 0, 0, 0.2); 
     z-index: 10; 
 }
 

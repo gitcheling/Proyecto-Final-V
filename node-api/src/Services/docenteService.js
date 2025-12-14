@@ -150,9 +150,33 @@ class DocenteService {
                     { 
                         association: 'estado_docente', 
                         attributes: ['id_estado_docente', 'nombre', 'descripcion', 'permite_asignacion', 'aplica_pago'] 
+                    },
+                    { 
+                        association: 'grupos', 
+                        attributes: ['id_grupo', 'id_curso', 'id_periodo', 'id_modalidad', 'nombre'],
+                        include: [
+                            { 
+                                association: 'curso', 
+                                attributes: ['nombre'] 
+                            },
+                            { 
+                                association: 'periodo', 
+                                attributes: ['nombre'] 
+                            },
+                            {
+                                association: 'modalidad',
+                                attributes: ['nombre']
+                            },
+                            {
+                                association: 'estado_grupo',
+                                attributes: ['nombre']
+                            }
+                        ]
                     }
                 ]
         });
+
+
         
         return DocenteService.formatearDocente(docente);
        
@@ -412,6 +436,15 @@ class DocenteService {
         // Nota: si recibe "undefined" sería: "undefined === true" es false
         const boolToText = (value) => value === true ? "Si" : "No";
 
+        // -------------------------------------------------------------
+        // Procesar la lista de grupos (si existe)
+        // Se mapea la lista para formatear cada grupo individualmente
+        // -------------------------------------------------------------
+        const gruposFormateados = docente.grupos 
+            ? docente.grupos.map(g => DocenteService.formatearGrupo(g)) 
+            : []; // Devuelve un array vacío si no hay grupos (o si viene de buscarDocentes)
+            
+
         return {
             id: docente.id_docente, 
 
@@ -439,12 +472,35 @@ class DocenteService {
                 permite_asignacion: boolToText(docente.estado_docente?.permite_asignacion),
                 aplica_pago: boolToText(docente.estado_docente?.aplica_pago)
             },
+            
+            grupos: gruposFormateados,
        
             fechaCreacion: docente.createdAt,
             fechaActualizacion: docente.updatedAt 
         };
 
     }
+
+
+    // Función auxiliar para formatear la estructura de un grupo (ya que está anidado)
+    static formatearGrupo = (grupo) => {
+        if (!grupo) return null;
+
+        return {
+            id: grupo.id_grupo,
+            nombre: capitalizeFirstLetter(grupo.nombre),
+        
+            curso: {
+                nombre: capitalizeFirstLetter(grupo.curso?.nombre ?? ""),
+            },
+            periodo: {
+                nombre: capitalizeFirstLetter(grupo.periodo?.nombre ?? ""),
+            },
+            modalidad: {
+                nombre: capitalizeFirstLetter(grupo.modalidad?.nombre ?? ""),
+            }
+        };
+    };
 
 
     // Función Auxiliar que genera la "whereClause" sin ejecutar la consulta
