@@ -155,6 +155,7 @@ class InscripcionService {
                     id_concepto: 5, // "Inscripción"
                     id_tipo_comprobante: 5, // "Recibo Provisional",
                     numero_documento: numeroReciboGenerado , 
+                    descripcion: "inscripción de estudiante",
                     fecha_emision: new Date(), // Creamos un objeto Date simple. Sequelize y DATEONLY se encargarán de truncar la hora.
                     fecha_vencimiento: new Date(), 
                     monto_original: grupoObjeto.costo_inscripcion, 

@@ -137,6 +137,19 @@ Cuenta_Bancaria.associate = (models) => {
         as: 'entidades_pago' // Usamos éste prefijo para obtener los datos del otro modelo (todas las entidades de pago asociadas a una cuenta bancaria)
     });
 
+    // Una cuenta bancaria puede aparecer muchas veces en "transaccion_bancaria"
+    Cuenta_Bancaria.hasMany(models.Transaccion_Bancaria, {
+        foreignKey: 'id_cuenta_origen', // La FK que está en la tabla 'transaccion_bancaria'
+        as: 'transacciones_origen' 
+    }); 
+
+    // Una cuenta bancaria puede aparecer muchas veces en "transaccion_bancaria"
+    Cuenta_Bancaria.hasMany(models.Transaccion_Bancaria, {
+        foreignKey: 'id_cuenta_destino', // La FK que está en la tabla 'transaccion_bancaria'
+        as: 'transacciones_destino' 
+    }); 
+
+
 };
 
 module.exports = Cuenta_Bancaria;

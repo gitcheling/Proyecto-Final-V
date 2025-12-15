@@ -107,7 +107,7 @@
             // Ruta base estados docente
             const rutaBaseEstadoDocente = "/EstadoDocente/"
 
-            // Buscar docentes
+            // Buscar entidades
             const rutaBuscar = `${rutaBase}Buscar`
 
             // obtener estados docente

@@ -168,9 +168,7 @@
             const rutaBuscarEstadosCurso = `${rutaBaseEstadoCurso}ObtenerEstadosCurso` 
 
 
-            
-
-
+   
 
       // ----------------------------------- Propiedades ----------------------------------------
 

@@ -51,7 +51,7 @@ const Asiento_Encabezado = sequelize.define('Asiento_Encabezado', {
             // ===============================================
             id_transaccion_origen: {
                 type: DataTypes.INTEGER,
-                allowNull: false, 
+                allowNull: true, 
                 references: {
 
                     // Nombre exacto de la tabla foránea en la base de datos

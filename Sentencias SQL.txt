@@ -210,13 +210,18 @@ CREATE TABLE concepto_financiero (
     nombre VARCHAR(100) NOT NULL,
     descripcion VARCHAR(255) NOT NULL,
 	id_concepto_padre INT REFERENCES concepto_financiero(id_concepto),
+    
 
     -- Determina si es una obligación de un cliente (TRUE) o un gasto/nómina de la academia (FALSE)
     es_por_cobrar BOOLEAN,
 
     -- Determina si es una cuenta que invierte el flujo de cobro (e.g., "Reembolso" hace que la cuenta "cuentas por cobrar" se le
     --asigne dinero por el lado contrario)
-    es_obligacion_negativa BOOLEAN NOT NULL 
+    es_obligacion_negativa BOOLEAN NOT NULL,
+
+    .. Para saber a que cuenta contable afecta (de esta forma al crear una obligación y crearle el asiento encabezado y detalle, sólo
+    --tomamos este id en vez de hacer cientos de comparaciones)
+    id_cuenta_afectada INT REFERENCES plan_cuenta(id_plan_cuenta)
 );
 
 
@@ -440,6 +445,7 @@ CREATE TABLE obligacion_financiera (
 
  
     numero_documento VARCHAR(30) UNIQUE, -- No es "NOT NULL" ya que, aunque muchos comprobantes financieros (Facturas, Recibos de Nómina) tienen un número único, hay tipos de obligaciones que nacen de eventos internos o proyecciones que quizás no tienen un número de documento físico o legal inmediato.
+    descripcion VARCHAR(255) NOT NULL,
     fecha_emision DATE NOT NULL,
     fecha_vencimiento DATE,
     
@@ -675,7 +681,33 @@ INSERT INTO plan_cuenta ("nombre", "codigo", "nivel", "id_naturaleza", "id_clasi
         ('costo contrato de construcción', '54', 2, 1, 2, true, 5, NOW(), NOW()),
 
         ('gastos operacionales', '61', 2, 1, 2, true, 6, NOW(), NOW()),
-        ('gastos no operacionales', '62', 2, 1, 2, true, 6, NOW(), NOW());
+        ('gastos no operacionales', '62', 2, 1, 2, true, 6, NOW(), NOW()),
+
+
+    -- Cuentas de nivel 3
+
+        ('cuentas por cobrar', '1120', 3, 1, 1, true, 7, NOW(), NOW()),
+        ('cuentas por pagar', '2120', 3, 2, 1, true, 9, NOW(), NOW()),
+        ('ingresos por servicio', '4120', 3, 2, 2, true, 13, NOW(), NOW()),
+        ('gastos de administración', '6130', 3, 1, 2, true, 19, NOW(), NOW()),
+
+    
+    -- Cuentas de nivel 4
+
+        ('personal administrativo', '613010', 4, 1, 2, true, 24, NOW(), NOW()),
+
+
+    -- Otras cuentas que conviene colocar
+
+        ('gastos de venta', '6120', 3, 1, 2, true, 19, NOW(), NOW()),
+        ('servicios no profesionales', '612030', 4, 1, 2, true, 26, NOW(), NOW()),
+        ('otros gastos de venta', '612090', 4, 1, 2, true, 26, NOW(), NOW()),
+        ('servicios profesionales', '612031', 4, 1, 2, true, 26, NOW(), NOW()),
+        ('bienes y suministros', '612020', 4, 1, 2, true, 26, NOW(), NOW()),
+        ('efectivo y equivalentes', '1110', 3, 1, 1, true, 7, NOW(), NOW())
+        ('efectivo en caja', '111010', 4, 1, 2, true, 31, NOW(), NOW()),
+        ('efectivo en banco', '111020', 4, 1, 2, true, 31, NOW(), NOW());
+
 
 
 
@@ -986,60 +1018,65 @@ INSERT INTO estado_obligacion (nombre, descripcion, es_finalizado) VALUES
 
 
 -- 1.23. CONCEPTO_FINANCIERO
-INSERT INTO concepto_financiero (nombre, descripcion, id_concepto_padre, es_por_cobrar, es_obligacion_negativa) VALUES
+INSERT INTO concepto_financiero (nombre, descripcion, id_concepto_padre, es_por_cobrar, es_obligacion_negativa, id_cuenta_afectada) VALUES
 
     -- =========================================================================================
     -- Nodos Raíz (Categorías Principales)
     -- =========================================================================================
     
-    ('Ingresos Académicos', 'Agrupa todos los ingresos relacionados con la matrícula y el servicio educativo.', NULL, NULL, FALSE),
-    ('Ajustes Académicos', 'Agrupa los conceptos que reducen el ingreso (reembolsos, descuentos).', NULL, NULL, FALSE),
-    ('Costos de Nómina', 'Agrupa las obligaciones de pago al personal docente y administrativo.', NULL, NULL, FALSE),
-    ('Gastos Operativos', 'Agrupa los gastos necesarios para el funcionamiento de la academia (proveedores).', NULL, NULL, FALSE);
+    ('Ingresos Académicos', 'Agrupa todos los ingresos relacionados con la matrícula y el servicio educativo.', NULL, NULL, FALSE, NULL),
+    ('Ajustes Académicos', 'Agrupa los conceptos que reducen el ingreso (reembolsos, descuentos).', NULL, NULL, FALSE, NULL),
+    ('Costos de Nómina', 'Agrupa las obligaciones de pago al personal docente y administrativo.', NULL, NULL, FALSE, NULL),
+    ('Gastos Operativos', 'Agrupa los gastos necesarios para el funcionamiento de la academia (proveedores).', NULL, NULL, FALSE, NULL);
 
 
 
-INSERT INTO concepto_financiero (nombre, descripcion, id_concepto_padre, es_por_cobrar, es_obligacion_negativa) VALUES
+INSERT INTO concepto_financiero (nombre, descripcion, id_concepto_padre, es_por_cobrar, es_obligacion_negativa, id_cuenta_afectada) VALUES
 
     -- =========================================================================================
     -- Conceptos Transaccionales (Hijos directos de 1 - Cuentas por Cobrar)
     -- =========================================================================================
 
-    ('Inscripción', 'Costo inicial por matricularse en un grupo.', 1, TRUE, FALSE),
-    ('Cuota de Clase', 'Costo recurrente por el servicio educativo (clases).', 1, TRUE, FALSE),
-    ('Cuota de Material', 'Cargo por material didáctico, libros o licencias de software educativo.', 1, TRUE, FALSE),
-    ('Cuota de Certificación', 'Cargo por la emisión de diplomas o certificados de finalización.', 1, TRUE, FALSE),
-    ('Multa por Retraso', 'Penalidad aplicada por pagos realizados después de la fecha de vencimiento.', 1, TRUE, FALSE),
+    -- El "23" es el id de "ingresos por servicio"
+    ('Inscripción', 'Costo inicial por matricularse en un grupo.', 1, TRUE, FALSE, 23),
+    ('Cuota de Clase', 'Costo recurrente por el servicio educativo (clases).', 1, TRUE, FALSE, 23),
+    ('Cuota de Material', 'Cargo por material didáctico, libros o licencias de software educativo.', 1, TRUE, FALSE, 23),
+    ('Cuota de Certificación', 'Cargo por la emisión de diplomas o certificados de finalización.', 1, TRUE, FALSE, 23),
+    ('Multa por Retraso', 'Penalidad aplicada por pagos realizados después de la fecha de vencimiento.', 1, TRUE, FALSE, 23),
 
 
     -- =========================================================================================
     -- Conceptos Transaccionales (Hijos directos de 2 - Ajustes Cuentas por Cobrar)
     -- =========================================================================================
 
-    ('Reembolso', 'Monto devuelto a un estudiante por retiro o anulación. (Deuda de la academia al estudiante).', 2, TRUE, TRUE), 
-    ('Descuento Promocional', 'Reducción en el monto de la obligación por la aplicación de una promoción.', 2, TRUE, TRUE),
+    -- El "23" es el id de "ingresos por servicio"
+    ('Reembolso', 'Monto devuelto a un estudiante por retiro o anulación. (Deuda de la academia al estudiante).', 2, TRUE, TRUE, 23), 
+    ('Descuento Promocional', 'Reducción en el monto de la obligación por la aplicación de una promoción.', 2, TRUE, TRUE, 23),
 
 
     -- =========================================================================================
     -- Conceptos Transaccionales (Hijos directos de 3 - Cuentas por Pagar: Nómina)
     -- =========================================================================================
 
-    ('Remuneración Docente', 'Pago por las clases impartidas (Docente).', 3, FALSE, FALSE),
-    ('Bono Productividad', 'Pago adicional por cumplimiento de objetivos o mérito.', 3, FALSE, FALSE),
-    ('Salario Administrativo', 'Sueldo mensual fijo para personal de oficina o administración.', 3, FALSE, FALSE),
-    --('Aporte de Seguro Personal', 'Aportación de la academia a planes de seguro o beneficios.', 300, FALSE, FALSE),
+    - El "24" es el id de "gastos administrativos para el personal administrativo"
+    ('Remuneración Docente', 'Pago por las clases impartidas (Docente).', 3, FALSE, FALSE, 24),
+    ('Bono Productividad', 'Pago adicional por cumplimiento de objetivos o mérito.', 3, FALSE, FALSE, 24),
+    ('Salario Administrativo', 'Sueldo mensual fijo para personal de oficina o administración.', 3, FALSE, FALSE, 24),
+    --('Aporte de Seguro Personal', 'Aportación de la academia a planes de seguro o beneficios.', 300, FALSE, FALSE, 24),
 
 
     -- =========================================================================================
-    -- Conceptos Transaccionales (Hijos directos de 400 - Cuentas por Pagar: Operativos)
+    -- Conceptos Transaccionales (Hijos directos de 4 - Cuentas por Pagar: Operativos)
     -- =========================================================================================
 
-    ('Gasto de Alquiler', 'Pago mensual por arrendamiento de las instalaciones físicas.', 4, FALSE, FALSE),
-    ('Gasto por Mantenimiento de la Sede', 'Reparaciones y mejoras a la infraestructura (limpieza, mantenimiento).', 4, FALSE, FALSE),
-    ('Gasto de Servicios Básicos', 'Obligación por el consumo de luz, agua, gas e internet.', 4, FALSE, FALSE),
-    ('Gastos por Publicidad/Marketing', 'Obligación generada por campañas de marketing y promoción.', 4, FALSE, FALSE),
-    ('Gasto de Softwares/Licencias', 'Costo de licencias de software administrativo o educativo.', 4, FALSE, FALSE),
-    ('Compra de Equipo', 'Compra de computadoras, proyectores, mobiliario, etc.', 4, FALSE, FALSE);
+    ('Gasto de Alquiler', 'Pago mensual por arrendamiento de las instalaciones físicas.', 4, FALSE, FALSE, 27),
+    ('Gasto por Mantenimiento de la Sede', 'Reparaciones y mejoras a la infraestructura (limpieza, mantenimiento).', 4, FALSE, FALSE, 27),
+    ('Gasto de Servicios Básicos', 'Obligación por el consumo de luz, agua, gas e internet.', 4, FALSE, FALSE, 27),
+
+    ('Gastos por Publicidad/Marketing', 'Obligación generada por campañas de marketing y promoción.', 4, FALSE, FALSE, 28),
+    ('Gasto de Softwares/Licencias', 'Costo de licencias de software administrativo o educativo.', 4, FALSE, FALSE, 29),
+    ('Compra de Equipo', 'Compra de computadoras, proyectores, mobiliario, etc.', 4, FALSE, FALSE, 30);
+
 
 
 
@@ -1081,3 +1118,31 @@ INSERT INTO divisa (id_divisa, nombre, codigo, simbolo) VALUES
 (4, 'Peso Colombiano', 'COP', 'COL\$'),
 (5, 'Peso Mexicano', 'MXN', 'MXN\$'),
 (6, 'Libra Esterlina', 'GBP', '£');
+
+
+-- 1.27. METODO_PAGO (NUEVA MAESTRA: Efectivo, Transferencia, Tarjeta, etc.)
+CREATE TABLE metodo_pago (
+    id_metodo_pago SERIAL PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL UNIQUE, 
+    descripcion VARCHAR(255) NOT NULL,
+    requiere_referencia BOOLEAN NOT NULL -- Si necesita número de cheque/transferencia
+);
+
+
+
+-- 1.26. METODO_PAGO
+INSERT INTO metodo_pago (nombre, descripcion, requiere_referencia) VALUES
+('Efectivo', 'Pago realizado en moneda física.', FALSE),
+('Transferencia Bancaria', 'Movimiento de fondos entre cuentas bancarias.', TRUE),
+('Tarjeta', 'Pago procesado a través de una tarjeta', TRUE),
+('Cheque', 'Documento negociable que requiere número de cheque y banco.', TRUE);
+--('Domiciliación Bancaria', 'Débito automático recurrente a una cuenta o tarjeta.', TRUE),
+--('Pasarela Digital', 'Pago a través de sistemas digitales de terceros (ej. Zelle, PayPal).', TRUE),
+--('Criptomoneda', 'Pago realizado con activos digitales.', TRUE),
+--('Compensación/Ajuste Interno', 'Saldar deudas sin movimiento de caja, usado para saldos a favor o notas de crédito.', FALSE);
+
+
+-- 1.27. TIPO_MOVIMIENTO
+INSERT INTO tipo_movimiento (nombre, descripcion) VALUES
+('Ingreso', 'Representa la entrada de fondos a la cuenta de Caja o Bancos (ej. cobros a clientes).'),
+('Egreso', 'Representa la salida de fondos de la cuenta de Caja o Bancos (ej. pagos a proveedores).');

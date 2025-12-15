@@ -3,7 +3,7 @@ import axios from 'axios';
 
 
 // La URL base del backend de Node/Express
-const API_BASE_URL = 'http://192.168.250.5:3000/aCATdemy/'; 
+const API_BASE_URL = 'http://192.168.250.4:3000/aCATdemy/'; 
 
 // Se crea una instancia personalizada de Axios (un objeto), la cual se usará en los componentes de Vue
 //Nota: Todas las llamadas que se hagas usando éste objeto tendrán las configuraciones definidas aquí.

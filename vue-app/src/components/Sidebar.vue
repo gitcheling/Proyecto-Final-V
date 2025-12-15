@@ -15,14 +15,14 @@ const mainItems = ref([
   { to: '/Docentes', icon: 'bi-mortarboard', text: 'Docentes' },
   { to: '/Proveedores', icon: 'bi-truck', text: 'Proveedores' },
   { to: '/PlanCuentas', icon: 'bi-list-task', text: 'Plan de Cuentas' },
+  { to: '/ObligacionesFinancieras', icon: 'bi bi-coin', text: 'Obligaciones Financieras' },
+  { to: '/RegistroTransacciones', icon: 'bi bi-currency-exchange', text: 'Transacciones' },
   { to: '/Periodos', icon: 'bi bi-calendar3', text: 'Periodos' },
   { to: '/Cursos', icon: 'bi bi-palette-fill', text: 'Cursos' },
   { to: '/Grupos', icon: 'bi bi-people-fill', text: 'Grupos' },
   { to: '/Inscripciones', icon: 'bi bi-journal-text', text: 'Inscripciones' },
+
 ])
-
-
-
 
 // Ítems de reporte (sub-menú)
 const bankAccountsItems = ref([
@@ -39,6 +39,10 @@ const reportItems = ref([
   { to: '/ReportesGrupos', text: 'Reportes de Grupos' },
   { to: '/ReportesInscripciones', text: 'Reportes de Inscripciones' },
   { to: '/ReportesCuentasBancarias', text: 'Reportes de Cuentas Bancarias' }
+])
+
+const bottomItems = ref([
+    { to: '/AcercaDe', icon: 'bi bi-info-circle-fill', text: 'Acerca De' },
 ])
 
 // Variable para controlar si la ruta actual es de reportes (ESTADO ACTIVO)
@@ -175,6 +179,11 @@ const navigateMobile = (path) => {
                 </div>
               </div>
 
+                
+
+
+              
+
 
               <!-- Acordeón de los reportes -->
               <div class="accordion-item-custom">
@@ -205,6 +214,21 @@ const navigateMobile = (path) => {
                       </RouterLink>
                   </div>
               </div>
+
+
+                <RouterLink 
+                    v-for="item in bottomItems"
+                    :key="item.to"
+                    :to="item.to" 
+                    class="menu-link"
+                >
+                    <span class="icon-wrapper"><i :class="item.icon"></i></span> <span>{{ item.text }}</span>
+                </RouterLink>
+
+
+
+
+
           </div>
 
         </nav>

@@ -83,6 +83,11 @@ const Obligacion_Financiera = sequelize.define('Obligacion_Financiera', {
         allowNull: false,
         unique: true
     },
+
+    descripcion: {
+        type: DataTypes.STRING(255),
+        allowNull: false,
+    },
     
     fecha_emision: {
         type: DataTypes.DATEONLY,

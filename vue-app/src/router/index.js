@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 import HomeView from '../views/HomeView.vue'
+import AcercaDeView from '../views/AcercaDe.vue'
 
 import EntidadesView from '../views/entidades/EntidadesView.vue'
 import DetallesEntidadView from '../views/entidades/DetallesEntidadView.vue'
@@ -18,6 +19,8 @@ import PlanCuentasView from '../views/contabilidad/PlanCuentasView.vue'
 import CuentaBancariaAprobadaView from '../views/cuentasBancarias/aprobadas/CuentasBancariasView.vue'
 import CuentaBancariaPorAprobarView from '../views/cuentasBancarias/porAprobar/CuentasBancariasView.vue'
 
+import ObligacionesFinancierasView from '../views/obligacionesFinancieras/obligacionesFinancierasView.vue'
+import RegistroTransaccionesView from '../views/registroTransacciones/RegistroTransaccionesView.vue'
 
 import PeriodosView from '../views/periodos/PeriodosView.vue';
 
@@ -43,6 +46,7 @@ import ReportesCuentasBancariasView from '../views/reportes/cuentasBancarias/Rep
 
 const routes = [
     { path: '/', component: HomeView },
+    { path: '/AcercaDe', component: AcercaDeView },
 
     // Entidades
     { path: '/Entidades', component: EntidadesView },
@@ -89,6 +93,15 @@ const routes = [
     // Cuentas Bancarias
     { path: '/CuentasBancariasAprobadas', component: CuentaBancariaAprobadaView },
     { path: '/CuentasBancariasPorAprobar', component: CuentaBancariaPorAprobarView },
+
+
+    // Obligaciones Financieras
+    { path: '/ObligacionesFinancieras', component: ObligacionesFinancierasView },
+
+    // Registro Transacciones
+    { path: '/RegistroTransacciones', component: RegistroTransaccionesView },
+
+
 
 
      // Periodos

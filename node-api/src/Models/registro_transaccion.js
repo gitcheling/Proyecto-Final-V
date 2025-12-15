@@ -168,6 +168,14 @@ Registro_Transaccion.associate = (models) => {
     }); 
 
 
+     // Un registro de transacción solo puede aparecer una vez en "transaccion_bancaria"
+    Registro_Transaccion.hasOne(models.Transaccion_Bancaria, {
+        foreignKey: 'id_transaccion', // La FK que está en la tabla 'transaccion_bancaria'
+        as: 'transaccion_bancaria' 
+    });
+
+
+
 };
 
 module.exports = Registro_Transaccion;

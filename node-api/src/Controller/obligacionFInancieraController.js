@@ -1,0 +1,244 @@
+const ObligacionFinancieraService = require('../Services/obligacionFinancieraService');
+
+const obligacionFinancieraService = new ObligacionFinancieraService();
+
+// -------------------------- Creación ------------------------------------
+
+
+    exports.crearObligacionFinanciera = async (req, res) => {
+        try {
+
+            const {entidad, concepto, tipo_comprobante, numero_documento, descripcion, fecha_emision, fecha_vencimiento, monto_original, divisa} = req.body || {};
+
+           
+            await obligacionFinancieraService.crearObligacionFinanciera({entidad, concepto, tipo_comprobante, numero_documento, descripcion, fecha_emision, fecha_vencimiento, monto_original, divisa});
+
+            // Se responde con éxito (201 Created)
+            res.status(201).json({
+                message: "Obligación financiera creada exitosamente.",
+                data: "Completado"
+            });
+
+        } catch (error) {
+            // La mayoría de los errores son de "Bad Request" (400) debido a la validación
+            const statusCode = error.message.includes('existe') || error.message.includes('válido') || error.message.includes('obligatorio') ? 400 : 500;
+            
+            res.status(statusCode).json({
+                error: true,
+                message: error.message
+            });
+        }
+    };
+
+
+// -------------------------- Modificación ------------------------------------
+
+    exports.actualizarObligacionFinanciera = async (req, res) => {
+
+        const { id } = req.params;
+
+        // Se obtienen los datos permitidos de modificar del cuerpo de la solicitud
+        const {fecha_vencimiento} = req.body; 
+        
+        try {
+            // 3. Delegar la tarea al servicio. El servicio valida, actualiza y recarga el objeto.
+            const obligacionActualizada = await obligacionFinancieraService.actualizarObligacionFinanciera(id, fecha_vencimiento);
+
+            if (!obligacionActualizada) {
+                // Si el servicio devuelve null (porque el findByPk falló)
+                return res.status(404).json({
+                    error: true,
+                    message: `Obligación con ID ${id} no encontrada.`
+                });
+            }
+
+            // Respuesta de éxito (200 OK)
+            res.status(200).json({
+                message: `Obligación ${id} actualizada exitosamente.`,
+                data: obligacionActualizada
+            });
+
+        } catch (error) {
+
+            const validationErrorMessages = [
+                'inválido', 'solo texto', 'true/false', 'duplicado', 'válido para actualizar'
+            ];
+
+            const isValidationError = validationErrorMessages.some(msg => error.message.includes(msg));
+            
+            const statusCode = isValidationError ? 400 : 500;
+            
+            res.status(statusCode).json({
+                error: true,
+                message: error.message
+            });
+        }
+    };
+
+
+
+
+// -------------------------- Obtención ------------------------------------
+
+
+    exports.obtenerObligacionPorId = async (req, res) => {
+
+        const { id } = req.params || {}; 
+
+        try {
+
+            const obligacion = await obligacionFinancieraService.obtenerObligacionPorId(id);
+
+            if (!obligacion) {
+                // 404 Not Found si la cuenta no existe
+                return res.status(404).json({
+                    error: true,
+                    message: `Obligación con ID ${id} no encontrada.`
+                });
+            }
+
+            // 200 OK y devuelve el objeto
+            res.status(200).json({
+                data: obligacion,
+                message: "Obligación obtenida exitosamente.",
+            });
+            
+        } catch (error) {
+            // Manejo de errores (ej. ID inválido, error de base de datos)
+            res.status(500).json({
+                error: true,
+                message: "Error al obtener la obligación: " + error.message
+            });
+        }
+    };
+
+
+
+
+    exports.buscarObligaciones = async (req, res) => {
+
+        const criteriosBusqueda = req.query || {};
+
+        try {
+
+            const obligacionesEncontradas = await obligacionFinancieraService.buscarObligaciones(criteriosBusqueda);
+
+
+            if (obligacionesEncontradas.length === 0) {
+                return res.status(200).json({ 
+                    message: "No se encontraron obligaciones que coincidan con los filtros.", 
+                    data: [] 
+                });
+            }
+
+            return res.status(200).json({ 
+                message: "Búsqueda de obligaciones completada exitosamente.", 
+                data: obligacionesEncontradas 
+            });
+
+        } catch (error) {
+            console.error("Error de Validación/Lógica en la búsqueda:", error.message);
+
+            // Si tiene un mensaje (y no es un error de sistema), lo asumimos como validación (400)
+            if (error.message) {
+                return res.status(400).json({ 
+                    error: true, 
+                    message: error.message 
+                });
+            }
+            
+            // Si no, devolvemos 500
+            return res.status(500).json({ 
+                error: true, 
+                message: "Error interno del servidor al procesar la búsqueda." 
+            });
+        }
+    }
+
+
+    exports.contarInscripciones = async (req, res) => {
+
+        const criteriosBusqueda = req.query || {};
+
+        try {
+
+            const inscripcionesEncontradas = await inscripcionService.obtenerConteoPorMes(criteriosBusqueda);
+
+            // Se devuelve la respuesta
+            if (inscripcionesEncontradas.length === 0) {
+                return res.status(200).json({ 
+                    message: "No se encontraron inscripciones que coincidan con los filtros.", 
+                    data: [] 
+                });
+            }
+
+            return res.status(200).json({ 
+                message: "Búsqueda de inscripciones completada exitosamente.", 
+                data: inscripcionesEncontradas 
+            });
+
+        } catch (error) {
+            console.error("Error de Validación/Lógica en la búsqueda:", error.message);
+
+            // Si tiene un mensaje (y no es un error de sistema), lo asumimos como validación (400)
+            if (error.message) {
+                return res.status(400).json({ 
+                    error: true, 
+                    message: error.message 
+                });
+            }
+            
+            // Si no, devolvemos 500
+            return res.status(500).json({ 
+                error: true, 
+                message: "Error interno del servidor al procesar la búsqueda." 
+            });
+        }
+    }
+
+
+    exports.obtenerEstadosTotales = async (req, res) => {
+
+        const criteriosBusqueda = req.query || {};
+
+        try {
+
+            const inscripcionesEncontradas = await inscripcionService.obtenerEstadosTotales(criteriosBusqueda);
+
+
+            if (inscripcionesEncontradas.length === 0) {
+                return res.status(200).json({ 
+                    message: "No se encontraron inscripciones que coincidan con los filtros.", 
+                    data: [] 
+                });
+            }
+
+            return res.status(200).json({ 
+                message: "Búsqueda de inscripciones completada exitosamente.", 
+                data: inscripcionesEncontradas 
+            });
+
+        } catch (error) {
+            console.error("Error de Validación/Lógica en la búsqueda:", error.message);
+
+            // Si tiene un mensaje (y no es un error de sistema), lo asumimos como validación (400)
+            if (error.message) {
+                return res.status(400).json({ 
+                    error: true, 
+                    message: error.message 
+                });
+            }
+            
+            // Si no, devolvemos 500
+            return res.status(500).json({ 
+                error: true, 
+                message: "Error interno del servidor al procesar la búsqueda." 
+            });
+        }
+    }
+
+
+
+
+
+

@@ -210,6 +210,13 @@ Plan_Cuenta.associate = (models) => {
     });
 
 
+    // Una cuenta puede aparecer muchas veces en "concepto_financiero"
+    Plan_Cuenta.hasMany(models.Concepto_Financiero, {
+        foreignKey: 'id_cuenta_afectada', // La FK que está en la tabla 'concepto_financiero'
+        as: 'conceptos_financieros' // Usamos éste prefijo para obtener los datos del otro modelo (todos los concepto financieros de una cuenta)
+    });
+
+
 };
 
 module.exports = Plan_Cuenta;

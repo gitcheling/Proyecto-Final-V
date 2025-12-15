@@ -33,7 +33,6 @@ class PeriodoService {
 
 
         // Se valida que ambas fechas sean futuras
-
         const fechaInicioLimpia = parseAndValidateDate(inicio);
         const fechaFinLimpia = parseAndValidateDate(fin);
 

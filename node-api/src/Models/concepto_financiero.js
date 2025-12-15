@@ -41,7 +41,20 @@ const Concepto_Financiero = sequelize.define('Concepto_Financiero', {
     es_obligacion_negativa: {
         type:DataTypes.BOOLEAN,
         allowNull: false 
-    }
+    },
+
+
+    // ===============================================
+    // CLAVE FORÁNEA PARA LA CUENTA AFECTADA
+    // ===============================================
+    id_cuenta_afectada: {
+        type: DataTypes.INTEGER,
+        allowNull: true, 
+        references: {
+            model: 'plan_cuenta', 
+            key: 'id_plan_cuenta'
+        }
+    },
 
 }, {
     // Configuraciones de Sequelize:
@@ -67,11 +80,18 @@ Concepto_Financiero.associate = (models) => {
         as: 'subconceptos', // (las subconceptos de un concepto)
     });
 
-    //Un concepto financiero puede aparecer muchas veces en "obligacion_financiera"
+    // Un concepto financiero puede aparecer muchas veces en "obligacion_financiera"
     Concepto_Financiero.hasMany(models.Obligacion_Financiera, {
         foreignKey: 'id_concepto', // La FK que está en la tabla 'obligacion_financiera'
         as: 'obligaciones_financieras' // Usamos éste prefijo para obtener los datos del otro modelo (todas las obligaciones financieras de un concepto)
     }); 
+
+
+    // Un concepto financiero solo puede tener una cuenta afectada de "plan_cuenta"
+    Concepto_Financiero.belongsTo(models.Plan_Cuenta, {
+        foreignKey: 'id_cuenta_afectada', // La FK que está en ESTA MISMA tabla (en este caso que es el lado muchos)
+        as: 'cuenta' // Usamos éste prefijo para obtener los datos del otro modelo (la cuenta afectada de un concepto financiero)
+    });
 
 };
 
